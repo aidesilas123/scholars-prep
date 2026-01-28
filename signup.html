@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scholars Prep — Sign Up</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+
+  <style>
+    :root {
+      --main-gradient: linear-gradient(135deg,#5d7dff,#7b4bd2 60%);
+      --card-bg: #ffffff;
+      --accent: #3f66ff;
+      --accent-dark: #2f4ed7;
+      --muted: #8f96a3;
+      --radius: 12px;
+    }
+    html,body{
+      height:100%; margin:0;
+      font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;
+      background: var(--main-gradient);
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+
+    .watermark{
+      position:fixed; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center;
+      z-index:0; opacity:.08; user-select:none; transform:rotate(-25deg);
+      font-size:38px; color:#fff; mix-blend-mode:overlay; font-weight:700; letter-spacing:6px;
+      animation:wm 30s linear infinite;
+    }
+    @keyframes wm { from{transform:rotate(-25deg) translateX(-30%);} to{transform:rotate(-25deg) translateX(30%);} }
+
+    .container{ min-height:100%; display:flex; align-items:center; justify-content:center; padding:40px 20px; position:relative; z-index:10; }
+    .card{ width:420px; background:var(--card-bg); border-radius:18px; padding:34px; box-shadow:0 10px 30px rgba(12,20,40,.25); }
+    h1{ text-align:center; margin:0 0 8px; color:#3858d8; font-size:32px; }
+    p.lead{ margin:0 0 20px; text-align:center; color:var(--muted); font-size:14px; }
+
+    .field{ margin-bottom:16px; }
+    label{ display:block; font-size:13px; color:#333; margin-bottom:6px; }
+    input[type="text"],input[type="email"],input[type="password"]{
+      width:100%; padding:14px 16px; border-radius:8px; border:1px solid #e6e9ef; font-size:14px; outline:none;
+      transition:box-shadow .15s, border-color .15s;
+    }
+    input:focus{ box-shadow:0 6px 18px rgba(63,102,255,.12); border-color:var(--accent); }
+    .btn{ width:100%; padding:12px 18px; border-radius:10px; border:none; background:linear-gradient(180deg,var(--accent),var(--accent-dark)); color:#fff; font-weight:600; font-size:16px; cursor:pointer; margin-top:6px; }
+
+    .muted-row{ text-align:center; margin-top:14px; color:var(--muted); font-size:13px; }
+    .muted-row a{ color:var(--accent-dark); text-decoration:none; font-weight:600; }
+
+    .modal-overlay{ position:fixed; inset:0; background:rgba(6,12,34,.45); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal{ background:#fff; border-radius:10px; padding:18px 20px; width:380px; box-shadow:0 10px 30px rgba(12,20,40,.25); }
+    .modal h3{ margin:0 0 8px; font-size:18px; color:#21324a; } .modal p{ margin:0 0 12px; color:#445; font-size:14px; }
+    .modal .close{ padding:8px 12px; border-radius:8px; border:0; background:#eee; cursor:pointer; }
+
+    .no-select{ user-select:none; -webkit-user-select:none; -moz-user-select:none; } input,textarea{ user-select:auto; }
+
+    @media (max-width:480px){ .card{ width:92%; padding:20px; } .watermark{ font-size:24px; opacity:.06; } }
+  </style>
+</head>
+<body class="no-select">
+
+  <div id="watermark" class="watermark" aria-hidden="true"></div>
+
+  <div class="container">
+    <div class="card" role="region" aria-label="signup card">
+      <h1>Create Account</h1>
+      <p class="lead">Sign up to access ABU PQ & Answers</p>
+
+      <form id="signupForm" autocomplete="off">
+        <div class="field">
+          <label for="signupName">Full Name</label>
+          <input id="signupName" type="text" placeholder="Your name" required />
+        </div>
+        <div class="field">
+          <label for="signupEmail">Email Address</label>
+          <input id="signupEmail" type="email" placeholder="Enter your email" required />
+        </div>
+        <div class="field">
+          <label for="signupPassword">Password</label>
+          <input id="signupPassword" type="password" placeholder="Create a password" required />
+        </div>
+        <button class="btn" id="signupBtn" type="submit">Create Account</button>
+      </form>
+
+      <div class="muted-row">
+        Already have an account? <a href="index.html">Log in</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalRoot" class="modal-overlay">
+    <div class="modal">
+      <h3 id="mTitle">Notice</h3>
+      <p id="mBody">Message</p>
+      <div style="text-align:right;"><button class="close" onclick="hideModal()">Close</button></div>
+    </div>
+  </div>
+<script>
+  const watermark = document.querySelector('#watermark');
+  const modalRoot = document.querySelector('#modalRoot');
+  const mTitle = document.querySelector('#mTitle');
+  const mBody = document.querySelector('#mBody');
+  const showModal = (t, m) => { mTitle.textContent = t; mBody.textContent = m; modalRoot.style.display = 'flex'; }
+  const hideModal = () => { modalRoot.style.display = 'none'; }
+
+  function setWatermark(text){ watermark.textContent = text || ''; }
+
+  // ✅ Signup flow (connects to backend instead of localStorage)
+  document.querySelector('#signupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name = document.querySelector('#signupName').value.trim();
+    const email = document.querySelector('#signupEmail').value.trim().toLowerCase();
+    const pw = document.querySelector('#signupPassword').value;
+
+    if(!name || !email || !pw){ 
+      showModal('Error', 'Please fill all fields.'); 
+      return; 
+    }
+
+    try {
+      const res = await fetch('http://localhost:5000/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pw })
+      });
+
+      const data = await res.json();
+
+      if(res.ok){
+        // store minimal info for watermark + redirect
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('abupq_logged_in_user', JSON.stringify({ email, name, loggedAt: Date.now() }));
+
+        setWatermark(email);
+        window.location.href = 'dashboard.html';
+      } else {
+        showModal('Signup failed', data.error || 'Unknown error');
+      }
+    } catch (err) {
+      showModal('Network error', 'Could not connect to server.');
+      console.error(err);
+    }
+  });
+
+  // 🔒 Deterrents
+  document.addEventListener('contextmenu', e=>e.preventDefault());
+  document.addEventListener('keydown', e=>{
+    const c=e.ctrlKey||e.metaKey;
+    if(c && ['c','x','s','p','u'].includes(e.key.toLowerCase())) e.preventDefault();
+    if(e.key==='PrintScreen'||e.code==='PrintScreen') e.preventDefault();
+  });
+  document.addEventListener('copy', e=>{
+    const el=document.activeElement?.tagName;
+    if(el!=='INPUT' && el!=='TEXTAREA'){ e.preventDefault(); }
+  });
+  document.addEventListener('selectstart', e=>{
+    const el=document.activeElement?.tagName;
+    if(el!=='INPUT' && el!=='TEXTAREA'){ e.preventDefault(); }
+  });
+</script>

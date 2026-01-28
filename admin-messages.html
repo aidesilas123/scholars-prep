@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Messages</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <style>
+    /* ... (Your existing CSS remains exactly the same) ... */
+     .back-btn {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #063b08, #083502); color: white; margin: 0; padding: 0; min-height: 100vh; }
+    .admin-container { display: grid; grid-template-columns: 350px 1fr; height: 100vh; }
+    .sidebar { background: rgba(0, 0, 0, 0.2); border-right: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; }
+    .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .back-btn { background: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; font-size: 14px; margin-top: 10px; }
+    .user-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .user-item { padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; cursor: pointer; transition: all 0.3s; margin-bottom: 10px; }
+    .user-item:hover { background: rgba(255, 255, 255, 0.15); }
+    .user-item.active { background: rgba(76, 175, 80, 0.3); border-left: 4px solid #4CAF50; }
+    .user-info { margin-bottom: 5px; }
+    .user-name { font-weight: bold; font-size: 14px; }
+    .user-email { font-size: 12px; opacity: 0.8; }
+    .last-message { font-size: 12px; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .unread-badge { background: #ff4b5c; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; float: right; }
+    .chat-area { display: flex; flex-direction: column; padding: 0; }
+    .chat-header { background: #4CAF50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 0; }
+    .selected-user-info { display: flex; flex-direction: column; }
+    .selected-user-name { font-weight: bold; font-size: 16px; }
+    .selected-user-email { font-size: 12px; opacity: 0.9; }
+    .chat-container { flex: 1; display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.05); }
+    .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #f0f0f0; color: #333; }
+    .message { margin-bottom: 15px; padding: 12px 15px; border-radius: 18px; max-width: 80%; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    .message.sent { background: #dcf8c6; margin-left: auto; border-bottom-right-radius: 5px; }
+    .message.received { background: white; margin-right: auto; border-bottom-left-radius: 5px; }
+    .message-sender { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+    .message-time { font-size: 11px; color: #666; margin-top: 5px; text-align: right; }
+    .chat-input { display: flex; padding: 15px; border-top: 1px solid #ddd; background: white; border-radius: 0 0 15px 15px; }
+    .chat-input input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 20px; margin-right: 10px; font-size: 14px; outline: none; color: #333; }
+    .chat-input input:focus { border-color: #4CAF50; }
+    .chat-input button { background: #4CAF50; color: white; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
+    .chat-input button:disabled { background: #cccccc; cursor: not-allowed; }
+    .empty-state { text-align: center; padding: 40px 20px; color: #666; }
+    .loading { text-align: center; padding: 20px; color: #666; }
+    .user-list::-webkit-scrollbar, .chat-messages::-webkit-scrollbar { width: 6px; }
+    .user-list::-webkit-scrollbar-track, .chat-messages::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+    .user-list::-webkit-scrollbar-thumb, .chat-messages::-webkit-scrollbar-thumb { background: #4CAF50; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>📨 Inbox</h2>
+        <a href="admin-dashboard.html" class="back-btn">← Back to Admin Panel</a>
+      </div>
+      <div id="userList" class="user-list">
+        <div class="loading">Loading users...</div>
+      </div>
+    </div>
+    
+    <div class="chat-area">
+      <div class="chat-header">
+        <div id="selectedUserInfo" class="selected-user-info">
+          <div class="selected-user-name">Select a user to start chatting</div>
+          <div class="selected-user-email">Choose from the sidebar</div>
+        </div>
+      </div>
+      
+      <div class="chat-container">
+        <div id="chatMessages" class="chat-messages">
+          <div class="empty-state">
+            <h3>Select a conversation</h3>
+            <p>Choose a user from the sidebar to view messages</p>
+          </div>
+        </div>
+        
+        <div class="chat-input">
+          <input type="text" id="chatInput" placeholder="Type your message..." disabled>
+          <button id="sendBtn" disabled>➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script>
+    const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let currentAdmin = null;
+    let selectedUserId = null;
+    let selectedUserEmail = '';
+    let pollInterval = null;
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('Admin messages page loading...');
+        
+        // KEY CHANGE: Check for 'abupq_admin_session' (not logged_in_user)
+        const sessionData = JSON.parse(localStorage.getItem('abupq_admin_session') || '{}');
+        
+        if (!sessionData.email || !sessionData.id) {
+            console.warn('Admin session missing');
+            window.location.href = 'admin-login.html'; // Redirect to admin login, not user login
+            return;
+        }
+        
+        currentAdmin = sessionData;
+        console.log('Admin user:', currentAdmin.email);
+        
+        // Load initial data
+        await loadUserList();
+        setupEventListeners();
+        startPolling();
+    });
+
+    function adminLogout() {
+        localStorage.removeItem('abupq_admin_session');
+        window.location.href = 'admin-login.html';
+    }
+    
+    // --- LOAD USERS SIDEBAR ---
+    async function loadUserList() {
+        try {
+            const userList = document.getElementById('userList');
+            
+            // 1. Get all regular users
+            const { data: users, error: usersError } = await supabaseClient
+                .from('users')
+                .select('id, email')
+                .order('email', { ascending: true });
+            
+            if (usersError) throw usersError;
+            
+            if (!users || users.length === 0) {
+                userList.innerHTML = '<div class="empty-state">No users found</div>';
+                return;
+            }
+            
+            // 2. Fetch last message stats for each user
+            const userPromises = users.map(async (user) => {
+                // Get last message
+                const { data: lastMessage } = await supabaseClient
+                    .from('messages')
+                    .select('message, created_at, is_read')
+                    .or(`and(sender_id.eq.${user.id},receiver_id.eq.${currentAdmin.id}),and(sender_id.eq.${currentAdmin.id},receiver_id.eq.${user.id})`)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                
+                // Count unread messages from this user
+                const { count: unreadCount } = await supabaseClient
+                    .from('messages')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('sender_id', user.id)
+                    .eq('receiver_id', currentAdmin.id)
+                    .eq('is_read', false);
+                
+                return {
+                    ...user,
+                    last_message: lastMessage?.message || 'No messages yet',
+                    last_message_time: lastMessage?.created_at,
+                    unread_count: unreadCount || 0
+                };
+            });
+            
+            const usersWithMessages = await Promise.all(userPromises);
+            
+            // Sort by most recent message
+            usersWithMessages.sort((a, b) => {
+                const timeA = a.last_message_time ? new Date(a.last_message_time) : new Date(0);
+                const timeB = b.last_message_time ? new Date(b.last_message_time) : new Date(0);
+                return timeB - timeA;
+            });
+
+            renderUserList(usersWithMessages);
+            
+        } catch (error) {
+            console.error('Error loading user list:', error);
+        }
+    }
+    
+    function renderUserList(users) {
+        const userList = document.getElementById('userList');
+        userList.innerHTML = users.map(user => {
+            const lastMsgTime = user.last_message_time ? formatTime(user.last_message_time) : '';
+            const isActive = user.id === selectedUserId ? 'active' : '';
+            return `
+                <div class="user-item ${isActive}" 
+                     data-user-id="${user.id}" 
+                     data-user-email="${user.email}">
+                    <div class="user-info">
+                        <div class="user-name">${escapeHtml(user.email)}</div>
+                        <div class="user-email">Last: ${lastMsgTime}</div>
+                    </div>
+                    <div class="last-message">${escapeHtml(user.last_message.substring(0, 30))}${user.last_message.length > 30 ? '...' : ''}</div>
+                    ${user.unread_count > 0 ? `<div class="unread-badge">${user.unread_count}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+    
+    // --- CHAT LOGIC ---
+    async function selectUser(userId, userEmail) {
+        selectedUserId = userId;
+        selectedUserEmail = userEmail;
+        
+        document.getElementById('selectedUserInfo').innerHTML = `
+            <div class="selected-user-name">${escapeHtml(userEmail)}</div>
+            <div class="selected-user-email">User</div>
+        `;
+        
+        document.getElementById('chatInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('chatInput').focus();
+        
+        const items = document.querySelectorAll('.user-item');
+        items.forEach(i => i.classList.remove('active'));
+        const activeItem = document.querySelector(`[data-user-id="${userId}"]`);
+        if(activeItem) activeItem.classList.add('active');
+        
+        await loadUserMessages(userId);
+        await markMessagesAsRead(userId);
+        loadUserList(); 
+    }
+    
+    async function markMessagesAsRead(userId) {
+        if(!userId) return;
+        try {
+            await supabaseClient
+                .from('messages')
+                .update({ is_read: true })
+                .eq('sender_id', userId)
+                .eq('receiver_id', currentAdmin.id)
+                .eq('is_read', false);
+        } catch (error) { console.error(error); }
+    }
+    
+    async function loadUserMessages(userId) {
+        const chatMessages = document.getElementById('chatMessages');
+        try {
+            if(!chatMessages.innerHTML.includes('message-sender')) {
+                 chatMessages.innerHTML = '<div class="loading">Loading messages...</div>';
+            }
+            const { data, error } = await supabaseClient
+                .from('messages')
+                .select('*')
+                .or(`and(sender_id.eq.${userId},receiver_id.eq.${currentAdmin.id}),and(sender_id.eq.${currentAdmin.id},receiver_id.eq.${userId})`)
+                .order('created_at', { ascending: true });
+            
+            if (error) throw error;
+            renderMessages(data || []);
+        } catch (error) { console.error(error); }
+    }
+    
+    function renderMessages(messages) {
+        const chatMessages = document.getElementById('chatMessages');
+        
+        if (!messages || messages.length === 0) {
+            chatMessages.innerHTML = `<div class="empty-state"><h3>No messages yet</h3><p>Start the conversation!</p></div>`;
+            return;
+        }
+        
+        const isScrolledToBottom = chatMessages.scrollHeight - chatMessages.clientHeight <= chatMessages.scrollTop + 100;
+
+        chatMessages.innerHTML = messages.map(msg => {
+            const isAdmin = msg.sender_id === currentAdmin.id;
+            const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            return `
+                <div class="message ${isAdmin ? 'sent' : 'received'}">
+                    <div class="message-sender">${isAdmin ? 'You' : selectedUserEmail}</div>
+                    <div>${escapeHtml(msg.message || '')}</div>
+                    <div class="message-time">
+                        ${time}
+                        ${isAdmin ? `<span class="message-status">${msg.is_read ? '✓✓ Read' : '✓ Sent'}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        if (isScrolledToBottom || messages.length < 5) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+    
+    async function sendChatMessage() {
+        if (!selectedUserId) return alert('Please select a user first');
+        const chatInput = document.getElementById('chatInput');
+        const message = chatInput.value.trim();
+        if (!message) return;
+        
+        const sendBtn = document.getElementById('sendBtn');
+        const originalText = sendBtn.innerText;
+        sendBtn.disabled = true; sendBtn.innerHTML = '...'; chatInput.disabled = true;
+        
+        try {
+            const newMessage = {
+                sender_id: currentAdmin.id,
+                sender_role: 'admin',
+                receiver_id: selectedUserId,
+                receiver_role: 'user',
+                message: message,
+                is_read: false,
+                created_at: new Date().toISOString()
+            };
+            const { error } = await supabaseClient.from('messages').insert([newMessage]);
+            if (error) throw error;
+            
+            chatInput.value = '';
+            await loadUserMessages(selectedUserId);
+            loadUserList();
+        } catch (error) {
+            console.error('Error sending:', error);
+            alert('Failed to send');
+        } finally {
+            sendBtn.disabled = false; sendBtn.innerHTML = originalText;
+            chatInput.disabled = false; chatInput.focus();
+        }
+    }
+    
+    function setupEventListeners() {
+        document.getElementById('sendBtn').addEventListener('click', sendChatMessage);
+        document.getElementById('chatInput').addEventListener('keypress', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        });
+        document.addEventListener('click', (event) => {
+            const userItem = event.target.closest('.user-item');
+            if (userItem) {
+                const userId = userItem.getAttribute('data-user-id');
+                const userEmail = userItem.getAttribute('data-user-email');
+                if(selectedUserId !== userId) selectUser(userId, userEmail);
+            }
+        });
+    }
+    
+    function startPolling() {
+        pollInterval = setInterval(async () => {
+            if(!document.hidden) {
+                await loadUserList();
+                if (selectedUserId) {
+                    await loadUserMessages(selectedUserId);
+                    await markMessagesAsRead(selectedUserId);
+                }
+            }
+        }, 3000);
+    }
+    
+    window.addEventListener('beforeunload', () => { if (pollInterval) clearInterval(pollInterval); });
+    
+    function formatTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
+        return date.toLocaleDateString();
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

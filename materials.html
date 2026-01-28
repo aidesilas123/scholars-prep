@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Available Materials - Scholars Prep</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #01200a, #043d06);
+      color: rgb(14, 0, 0);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      padding: 40px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.5rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .course-card {
+      background: rgba(1, 110, 11, 0.1);
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.3s;
+    }
+
+    .course-card:hover {
+      transform: translateY(-5px);
+      background: rgb(44, 235, 6);
+    }
+
+    a {
+      text-decoration: none;
+      color: white;
+      display: block;
+    }
+
+    /* Watermark */
+    .watermark {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0.08;
+      font-size: 4rem;
+      transform: rotate(-30deg);
+      white-space: nowrap;
+      animation: move 10s linear infinite;
+    }
+
+    @keyframes move {
+      from { transform: rotate(-30deg) translateY(0); }
+      to { transform: rotate(-30deg) translateY(-200px); }
+    }
+  </style>
+</head>
+<script>
+(async function checkLogin(){
+  const raw = localStorage.getItem("abupq_logged_in_user");
+  if(!raw){
+    window.location.href = "login.html";
+    return;
+  }
+
+  const u = JSON.parse(raw);
+
+  // verify with backend
+  const res = await fetch("/verify-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: u.email, sessionToken: u.sessionToken })
+  });
+
+  const data = await res.json();
+  if(!data.valid){
+    localStorage.removeItem("abupq_logged_in_user");
+    window.location.href = "login.html";
+  }
+})();
+</script>
+
+<body>
+    <!-- === ABU PQ: Drop-in NAV + SEARCH + WATERMARK (paste at very top of <body>) === -->
+<style>
+  :root{
+    --nav-grad: linear-gradient(135deg,#093605,#18860a 60%);
+    --nav-dark: #00020f;
+    --pill: #ffffff;
+    --text: #010611;
+    --muted: #8f96a3;
+    --radius: 14px;
+  }
+  /* Keep page content below sticky bar */
+  body{ margin:0; }
+  body.has-topbar{ padding-top: 76px; }
+
+  /* Sticky top bar */
+  .topbar{
+    position: fixed; inset: 0 0 auto 0; height: 64px; z-index: 9999;
+    display:flex; align-items:center; gap:16px;
+    padding: 10px 16px;
+    background: var(--nav-grad);
+    box-shadow: 0 6px 22px rgba(12, 82, 3, 0.25);
+  }
+  .topbar .brand{
+    display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px;
+    background: rgba(255,255,255,.18); color:#fff; padding:8px 12px; border-radius: 999px;
+    cursor:pointer; user-select:none;
+  }
+  .topbar nav{
+    display:flex; gap:8px; align-items:center; flex: 1 1 auto; overflow:auto;
+  }
+  .topbar nav a{
+    display:inline-flex; align-items:center; height:38px;
+    padding: 0 14px; border-radius: 999px; text-decoration:none;
+    background: rgba(255,255,255,.16); color:#fff; font-weight:600;
+    border:1px solid rgba(255,255,255,.22);
+    white-space:nowrap; transition: transform .12s ease, background .2s ease, box-shadow .2s ease;
+  }
+  .topbar nav a:hover{ transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+  .topbar nav a.active{ background:#fff; color:#000000; }
+
+  .topbar .actions{
+    display:flex; align-items:center; gap:10px;
+  }
+  .topbar .search{
+    position:relative; display:flex; align-items:center;
+    background:#fff; border-radius: 999px; padding: 0 12px; height:38px;
+    border:1px solid rgba(0,0,0,.06);
+    box-shadow: 0 4px 14px rgba(0,0,0,.08);
+  }
+  .topbar .search input{
+    border:0; outline:0; height:32px; width: 220px; font-size:14px; color: var(--text);
+  }
+  .topbar .btn{
+    height:38px; padding: 0 14px; border-radius: 999px; border:0; cursor:pointer;
+    font-weight:700;
+  }
+  .topbar .btn.logout{ background: #0f172a; color:#fff; }
+  .topbar .btn.logout:hover{ filter: brightness(1.08); }
+
+  /* Mobile menu */
+  .topbar .menu{
+    display:none; width:38px; height:38px; border-radius:10px; border:1px solid rgba(255,255,255,.35);
+    background: transparent; color:#fff; font-size:20px; cursor:pointer;
+  }
+  @media (max-width: 800px){
+    .topbar nav{ display:none; }
+    .topbar .menu{ display:inline-flex; align-items:center; justify-content:center; }
+    .topbar.open nav{
+      position:absolute; left:0; right:0; top:64px; display:flex; padding:10px;
+      background: var(--nav-grad);
+    }
+    .topbar .search input{ width: 150px; }
+  }
+
+  /* Watermark (user email) */
+  .page-watermark{
+    position: fixed; inset:0; pointer-events:none; z-index: 0;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; letter-spacing:6px; color:#ffffff; opacity:.08;
+    transform: rotate(-25deg);
+    font-size: 38px; user-select:none; mix-blend-mode: overlay;
+    animation: wm-move 16s ease-in-out infinite alternate;
+  }
+  @keyframes wm-move{
+    0%{ transform: rotate(-25deg) translate(-40px,-40px); }
+    100%{ transform: rotate(-25deg) translate(40px,40px); }
+  }
+</style>
+
+<header class="topbar" id="topbar">
+  <div class="brand" onclick="location.href='dashboard.html'"></div>
+
+  <nav>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="materials.html">Materials</a>
+    <a href="pastquestions.html">Past Questions</a>
+    <a href="cbt.html">CBT</a>
+    
+  </nav>
+
+  <div class="actions">
+    <label class="search" aria-label="Search">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#6b7280" d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input id="globalSearch" type="search" placeholder="Search" />
+    </label>
+        <button class="menu" id="menuBtn" aria-label="Toggle menu">☰</button>
+  </div>
+</header>
+
+<!-- Watermark (auto-fills with user email) -->
+<div id="pageWatermark" class="page-watermark" aria-hidden="true"></div>
+
+<script>
+  // Make room for sticky bar
+  document.body.classList.add('has-topbar');
+
+  // Highlight current page link
+  (function highlightActive(){
+    const here = location.pathname.split('/').pop();
+    document.querySelectorAll('.topbar nav a').forEach(a=>{
+      const href = a.getAttribute('href');
+      if(href && here && href === here){ a.classList.add('active'); }
+    });
+  })();
+
+  // Mobile menu toggle
+  document.getElementById('menuBtn')?.addEventListener('click', ()=>{
+    document.getElementById('topbar').classList.toggle('open');
+  });
+
+  
+  // Watermark: read email from login storage
+  (function hydrateWatermark(){
+    try{
+      const raw = localStorage.getItem('abupq_logged_in_user');
+      const wm = document.getElementById('pageWatermark');
+      if(raw && wm){
+        const u = JSON.parse(raw);
+        wm.textContent = (u && u.email) ? u.email : '';
+      }
+    }catch(e){}
+  })();
+
+  // Global Search:
+  // Filters any element that matches ONE of these selectors:
+  //   [data-search-item], .course-card, .course-item, .material-card
+  const searchInput = document.getElementById('globalSearch');
+  function runFilter(q){
+    const items = document.querySelectorAll('[data-search-item], .course-card, .course-item, .material-card');
+    const needle = q.trim().toLowerCase();
+    items.forEach(el=>{
+      const key = (el.getAttribute('data-search-item') || el.textContent || '').toLowerCase();
+      el.style.display = (needle === '' || key.includes(needle)) ? '' : 'none';
+    });
+  }
+  searchInput?.addEventListener('input', (e)=> runFilter(e.target.value));
+</script>
+<!-- === /ABU PQ: Drop-in NAV + SEARCH + WATERMARK === -->
+
+    
+
+  <div class="container">
+    <h1>Available Materials</h1>
+    <div class="grid">
+     <ul>
+  <div class="course-grid">
+  <a href="STAT102.html">STAT102</a>
+  <a href="MATH102.html">MATH102</a>
+  <a href="MATH104.html">MATH104</a>
+  <a href="MATH106.html">MATH106</a>
+  <a href="MATH103.html">MATH103</a>
+  <a href="MATH101.html">MATH101</a>
+  <a href="MATH105.html">MATH105</a>
+  <a href="GEOG102.html">GEOG102</a>
+  <a href="GEOG104.html">GEOG104</a>
+  <a href="GEOG106.html">GEOG106</a>
+  <a href="GEOG101.html">GEOG101</a>
+  <a href="GEOG103.html">GEOG103</a>
+  <a href="GENS101.html">GENS101</a>
+  <a href="GENS103.html">GENS103</a>
+  <a href="GENS102.html">GENS102</a>
+  <a href="GENS104.html">GENS104</a>
+  <a href="COSC101.html">COSC101</a>
+  <a href="BIOL112.html">BIOL112</a>
+  <a href="PHYS112.html">PHYS112</a>
+</div>
+
+<style>
+  .course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .course-grid a {
+    display: block;
+    padding: 15px;
+    text-align: center;
+    background: #95bd62;
+    color: #3909e9;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: background 0.3s, transform 0.2s;
+  }
+
+  .course-grid a:hover {
+    background: #0056b3;
+    transform: translateY(-3px);
+  }
+</style>
+
+
+      <!-- You can add more courses here -->
+    </div>
+  </div>
+
+  <!-- Watermark -->
+  <div class="watermark" id="watermark"></div>
+
+  <script>
+    // Load email/username from localStorage
+    const user = localStorage.getItem("userEmail") || "ABU PQ User";
+    document.getElementById("watermark").innerText = user;
+
+    // Disable right-click and copy
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+    document.addEventListener("copy", (e) => e.preventDefault());
+    document.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey && (e.key === "c" || e.key === "p" || e.key === "s" || e.key === "u")) ||
+          (e.key === "PrintScreen")) {
+        e.preventDefault();
+      }
+    });
+  </script>
+</body>
+</html>
+<script>
+  // ✅ Protect this page
+  const logged = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
+  if (!logged || !logged.email) {
+    window.location.href = "login.html"; // redirect to login if not logged in
+  }
+</script>
+

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Send Notifications</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <style>
+    :root {
+      --primary: #063b08;
+      --secondary: #083502;
+      --accent: #4CAF50;
+      --glass: rgba(255, 255, 255, 0.1);
+      --glass-hover: rgba(255, 255, 255, 0.15);
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+    }
+
+    /* Reuse Sidebar Style from Dashboard */
+    .sidebar {
+      background: rgba(0, 0, 0, 0.3);
+      border-right: 1px solid rgba(255,255,255,0.1);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .back-btn {
+      background: var(--glass);
+      color: white;
+      text-decoration: none;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      margin-bottom: 20px;
+      transition: 0.3s;
+    }
+    .back-btn:hover { background: var(--glass-hover); }
+
+    /* Main Content */
+    .main-content {
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    .header {
+      margin-bottom: 30px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 15px;
+    }
+
+    .notification-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    /* Form Section */
+    .compose-card {
+      background: var(--glass);
+      padding: 25px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      height: fit-content;
+    }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
+    
+    .form-control {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-control:focus { outline: none; border-color: var(--accent); }
+
+    /* User Selection List */
+    .user-select-card {
+      background: var(--glass);
+      padding: 25px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+    }
+
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .user-list {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: 0.2s;
+    }
+    .user-item:hover { background: rgba(255,255,255,0.05); }
+
+    /* Custom Checkbox */
+    .checkbox-wrapper {
+      margin-right: 15px;
+      display: flex;
+      align-items: center;
+    }
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .user-info { font-size: 14px; }
+    .user-email { color: #ccc; font-size: 12px; }
+
+    .btn-send {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: 0.3s;
+    }
+    .btn-send:hover { background: #45a049; }
+    .btn-send:disabled { background: #555; cursor: not-allowed; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="sidebar">
+    <a href="admin-dashboard.html" class="back-btn">← Back to Dashboard</a>
+    <h3>Admin Controls</h3>
+    <p style="font-size: 12px; opacity: 0.7;">Select users from the list on the right to send a notification.</p>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <h2>🔔 Send Notifications</h2>
+    </div>
+
+    <div class="notification-grid">
+      
+      <div class="compose-card">
+        <div class="form-group">
+          <label>Title / Subject</label>
+          <input type="text" id="notifTitle" class="form-control" placeholder="e.g., Exam Schedule Update">
+        </div>
+        <div class="form-group">
+          <label>Message Content</label>
+          <textarea id="notifMessage" class="form-control" rows="8" placeholder="Type your notification here..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Summary</label>
+          <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; font-size: 13px;">
+            Sending to: <strong id="selectedCount" style="color: var(--accent);">0</strong> users
+          </div>
+        </div>
+        <button id="sendBtn" class="btn-send" onclick="sendNotifications()">Send Notification</button>
+      </div>
+
+      <div class="user-select-card">
+        <div class="list-header">
+          <span>Select Users</span>
+          <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center;">
+            <input type="checkbox" id="selectAll" onchange="toggleAll(this)" style="margin-right: 8px;"> 
+            Select All
+          </label>
+        </div>
+        <div id="userList" class="user-list">
+          <div style="text-align: center; padding: 20px; opacity: 0.7;">Loading users...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let allUsers = [];
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Check Admin Session
+    const session = JSON.parse(localStorage.getItem('abupq_admin_session') || '{}');
+    if (!session.id) {
+        window.location.href = 'admin-login.html';
+        return;
+    }
+
+    await loadUsers();
+  });
+
+  async function loadUsers() {
+    const listContainer = document.getElementById('userList');
+    
+    // Fetch users ordered by email
+    const { data, error } = await supabaseClient
+        .from('users')
+        .select('id, email')
+        .order('email', { ascending: true });
+
+    if (error) {
+        console.error(error);
+        listContainer.innerHTML = '<div style="color: #ff4b5c; text-align: center;">Error loading users</div>';
+        return;
+    }
+
+    allUsers = data;
+    renderUserList();
+  }
+
+  function renderUserList() {
+    const listContainer = document.getElementById('userList');
+    
+    if (allUsers.length === 0) {
+        listContainer.innerHTML = '<div style="text-align: center; opacity: 0.6;">No users found</div>';
+        return;
+    }
+
+    listContainer.innerHTML = allUsers.map(user => `
+        <div class="user-item">
+            <div class="checkbox-wrapper">
+                <input type="checkbox" class="user-checkbox" value="${user.id}" onchange="updateCount()">
+            </div>
+            <div class="user-info">
+                <div class="user-email">${user.email}</div>
+            </div>
+        </div>
+    `).join('');
+  }
+
+  function toggleAll(source) {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateCount();
+  }
+
+  function updateCount() {
+    const checked = document.querySelectorAll('.user-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = checked;
+  }
+
+  async function sendNotifications() {
+    const title = document.getElementById('notifTitle').value.trim();
+    const message = document.getElementById('notifMessage').value.trim();
+    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // Validation
+    if (!title || !message) {
+        alert("Please enter a title and message.");
+        return;
+    }
+    if (checkboxes.length === 0) {
+        alert("Please select at least one user.");
+        return;
+    }
+
+    // UI Loading state
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = "Sending...";
+
+    try {
+        // Build array for batch insert
+        const notificationsPayload = Array.from(checkboxes).map(cb => ({
+            receiver_id: cb.value,
+            title: title,
+            message: message,
+            is_read: false,
+            sender_role: 'admin'
+        }));
+
+        const { error } = await supabaseClient
+            .from('notifications')
+            .insert(notificationsPayload);
+
+        if (error) throw error;
+
+        alert(`Successfully sent ${checkboxes.length} notifications!`);
+        
+        // Reset form
+        document.getElementById('notifTitle').value = '';
+        document.getElementById('notifMessage').value = '';
+        document.getElementById('selectAll').checked = false;
+        toggleAll(document.getElementById('selectAll')); // uncheck all
+
+    } catch (error) {
+        console.error("Send error:", error);
+        alert("Failed to send notifications. Check console.");
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = "Send Notification";
+    }
+  }
+</script>
+
+</body>
+</html>

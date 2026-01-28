@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifications - Scholars Prep</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+
+  <style>
+    :root {
+      --primary: #063b08;
+      --secondary: #083502;
+      --accent: #4CAF50;
+      --glass: rgba(255, 255, 255, 0.05);
+      --card-bg: rgba(255, 255, 255, 0.1);
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 15px;
+    }
+
+    .header h1 { margin: 0; font-size: 24px; }
+
+    .back-btn {
+      background: var(--accent);
+      color: white;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .notif-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .notif-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+      border-left: 4px solid transparent;
+      transition: transform 0.2s;
+    }
+
+    /* Style for unread messages */
+    .notif-card.unread {
+      background: rgba(255, 255, 255, 0.15);
+      border-left: 4px solid var(--accent);
+    }
+
+    .notif-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .notif-title {
+      font-weight: bold;
+      font-size: 18px;
+      color: var(--accent);
+    }
+
+    .notif-time {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .notif-body {
+      font-size: 15px;
+      line-height: 1.5;
+      opacity: 0.9;
+      white-space: pre-wrap; /* Keeps line breaks */
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 50px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .badge-new {
+      background: #ff4b5c;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🔔 Notifications</h1>
+    <a href="dashboard.html" class="back-btn">← Dashboard</a>
+  </div>
+
+  <div id="loading" style="text-align:center; padding:20px;">Loading updates...</div>
+  <div id="notifList" class="notif-list"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentUser = null;
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Check User Session
+    const userData = JSON.parse(localStorage.getItem('abupq_logged_in_user') || '{}');
+    
+    if (!userData.id) {
+        window.location.href = 'index.html';
+        return;
+    }
+    currentUser = userData;
+
+    await loadNotifications();
+  });
+
+  async function loadNotifications() {
+    const listEl = document.getElementById('notifList');
+    const loadingEl = document.getElementById('loading');
+
+    // Fetch notifications for this user
+    const { data, error } = await supabaseClient
+        .from('notifications')
+        .select('*')
+        .eq('receiver_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+    loadingEl.style.display = 'none';
+
+    if (error) {
+        console.error(error);
+        listEl.innerHTML = '<div class="empty-state">Error loading notifications</div>';
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-state">
+                <h3>All caught up!</h3>
+                <p>You have no notifications at the moment.</p>
+            </div>`;
+        return;
+    }
+
+    // Render list
+    listEl.innerHTML = data.map(n => {
+        const date = new Date(n.created_at).toLocaleDateString() + ' ' + new Date(n.created_at).toLocaleTimeString();
+        const unreadClass = n.is_read ? '' : 'unread';
+        const newBadge = n.is_read ? '' : '<span class="badge-new">NEW</span>';
+
+        return `
+            <div class="notif-card ${unreadClass}">
+                <div class="notif-header">
+                    <div class="notif-title">${escapeHtml(n.title)} ${newBadge}</div>
+                    <div class="notif-time">${date}</div>
+                </div>
+                <div class="notif-body">${escapeHtml(n.message)}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Mark all as read after loading (Simple approach)
+    // In a complex app, you might want to mark them read only when clicked
+    markAsRead(data);
+  }
+
+  async function markAsRead(notifications) {
+    const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+    
+    if (unreadIds.length > 0) {
+        await supabaseClient
+            .from('notifications')
+            .update({ is_read: true })
+            .in('id', unreadIds);
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+
+</body>
+</html>

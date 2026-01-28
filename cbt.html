@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CBT — Scholars Prep</title>
+  <!-- Fix for favicon error -->
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+
+  <style>
+    :root{
+      --grad: linear-gradient(135deg,#042209,#062712 60%);
+      --card: rgba(14, 224, 28, 0.12);
+      --panel: rgba(121, 22, 22, 0.18);
+      --text: #eef2ff;
+      --muted: #cbd5e1;
+      --accent: #3f66ff;
+      --accent-dark:#2f4ed7;
+      --danger:#ef4444;
+      --ok:#10b981;
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:var(--grad);color:var(--text);-webkit-font-smoothing:antialiased}
+    a{color:inherit}
+
+    /* Watermark (animated diagonal email) */
+    .wm {
+      position: fixed; inset: 0;
+      pointer-events: none; user-select: none;
+      z-index: 0; opacity: .08; overflow: hidden;
+    }
+    .wm .tile {
+      position:absolute; left:50%; top:50%;
+      transform: translate(-50%,-50%) rotate(-25deg);
+      white-space: nowrap; font-weight:800; letter-spacing:6px;
+      mix-blend-mode: overlay;
+      animation: drift 18s linear infinite;
+      font-size: 44px; color: #fff;
+    }
+    @keyframes drift {
+      0%   { transform: translate(-55%,-45%) rotate(-25deg); }
+      50%  { transform: translate(-45%,-55%) rotate(-25deg); }
+      100% { transform: translate(-55%,-45%) rotate(-25deg); }
+    }
+
+    /* NEW: Global Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+    
+    .page-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      background: var(--panel);
+      padding: 40px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    
+    .loading-spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 18px; background:rgba(0,0,0,0.25); position:sticky; top:0; z-index:5;
+      border-bottom:1px solid rgba(255,255,255,0.08)
+    }
+    header .title{font-weight:800}
+    header .right{display:flex; gap:10px; align-items:center}
+    .pill{padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.12); font-size:13px; color:var(--muted)}
+    .btn{
+      background: linear-gradient(180deg,var(--accent),var(--accent-dark));
+      border:0; color:#fff; font-weight:700; padding:10px 14px; border-radius:10px; cursor:pointer;
+    }
+    .btn.secondary{background:rgba(255,255,255,0.14)}
+    .btn.danger{background: linear-gradient(180deg,#ef4444,#dc2626)}
+
+    main{position:relative; z-index:1; padding:26px 16px; max-width:1050px; margin:0 auto}
+    .card{
+      background: var(--card); backdrop-filter: blur(8px);
+      border:1px solid rgba(255,255,255,0.12); border-radius: var(--radius);
+      padding: 18px; margin-bottom: 18px;
+      box-shadow: 0 10px 30px rgba(12,20,40,0.25);
+    }
+    .grid{display:grid; gap:14px}
+    .grid.cols-3{grid-template-columns: repeat(3, minmax(0,1fr))}
+    .grid.cols-4{grid-template-columns: repeat(4, minmax(0,1fr))}
+    @media (max-width:900px){ .grid.cols-4{grid-template-columns: repeat(2,1fr)} }
+    @media (max-width:640px){ .grid.cols-3,.grid.cols-4{grid-template-columns: 1fr} }
+
+    .course{
+      padding:16px; border-radius:14px; background:var(--panel);
+      border:1px solid rgba(255,255,255,0.12); cursor:pointer;
+      transition:.2s transform,.2s background;
+    }
+    .course:hover{ transform: translateY(-2px); background: rgba(255,255,255,0.24); }
+
+    label{font-size:13px; color:var(--muted); display:block; margin:8px 0 6px}
+    select, input[type="number"]{
+      width:100%; padding:12px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.2); color:#fff; outline: none;
+    }
+
+    /* Exam layout */
+    .exam-bar{
+      display:flex; align-items:center; gap:10px; justify-content:space-between;
+      background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:12px; margin-bottom:12px
+    }
+    .timer{font-weight:800; letter-spacing:1px}
+    .qwrap{display:grid; grid-template-columns: 260px 1fr; gap:14px}
+    @media (max-width:900px){ .qwrap{grid-template-columns:1fr} }
+
+    .qnav{
+      background:var(--panel); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:10px; max-height:70vh; overflow:auto
+    }
+    .qgrid{display:grid; grid-template-columns: repeat(5, 1fr); gap:8px}
+    .qbtn{
+      border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08);
+      color:#fff; border-radius:10px; padding:8px 0; cursor:pointer; font-weight:700
+    }
+    .qbtn.answered{background:rgba(16,185,129,0.25); border-color:#10b981}
+    .qbtn.current{outline:2px solid var(--accent)}
+    .qbtn.flag{background:rgba(234,179,8,0.25); border-color:#eab308}
+
+    .question-card{
+      background:var(--panel); border:1px solid rgba(26, 24, 24, 0.12);
+      border-radius:14px; padding:16px
+    }
+    .question-text{font-size:18px; margin:0 0 12px}
+    .opt{display:block; margin:8px 0; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.16); cursor:pointer}
+    .opt input{margin-right:8px}
+
+    .actions{display:flex; gap:10px; margin-top:12px}
+    .actions .spacer{flex:1}
+
+    /* Floating calculator */
+    .calc{
+      position: fixed; 
+      right: 16px; 
+      bottom: 16px; 
+      z-index: 10;
+      width: 280px; 
+      background: #001408;
+      border: 2px solid #022517;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(17, 71, 207, 0.45); 
+      overflow: hidden; 
+      display: none;
+    }
+    .calc header{
+      background: #334155;
+      cursor: move;
+      color: #fff;
+      text-align: center;
+      font-weight: bold;
+    }
+    .calc .pad{
+      display: grid; 
+      grid-template-columns: repeat(4,1fr); 
+      gap: 6px; 
+      padding: 10px;
+    }
+    .calc .pad button{
+      padding: 12px 0; 
+      border-radius: 10px; 
+      border: 1px solid #3b82f6; 
+      background: #0f172a;
+      color: #fff; 
+      font-weight: 700; 
+      cursor: pointer;
+    }
+    .calc .pad button:hover {
+      background: #3b82f6;
+    }
+
+    /* Modal */
+    .overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(6,12,34,0.55); z-index:20}
+    .modal{background:#fff; color:#111827; border-radius:14px; padding:18px; width: min(92vw, 460px)}
+    .modal h3{margin:0 0 8px}
+    .modal .row{display:flex; justify-content:flex-end; gap:10px; margin-top:10px}
+    .modal .btn{color:#fff}
+
+    /* Protections */
+    .noselect{user-select:none; -webkit-user-select:none; -ms-user-select:none}
+  </style>
+</head>
+<body class="noselect">
+  <!-- NEW: Global Loading Overlay -->
+  <div class="loading-overlay" id="globalLoading">
+    <div class="page-loading">
+      <div class="loading-spinner"></div>
+      <div style="font-size: 18px; font-weight: 600;">Loading...</div>
+      <div style="color: var(--muted); font-size: 14px;">Please wait</div>
+    </div>
+  </div>
+
+  <!-- Watermark -->
+  <div class="wm" aria-hidden="true"><div class="tile" id="wmText"></div></div>
+
+  <header>
+    <div class="title">CBT — ABU PQ & Answers</div>
+    <div class="right">
+      <span class="pill" id="userTag">User</span>
+      <button class="btn secondary" onclick="location.href='dashboard.html'">Back to Dashboard</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- STEP 0: Instructions Page -->
+    <section id="stepInstructions" class="card">
+      <h2 style="margin:6px 0 12px">CBT Instructions</h2>
+      <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+        <h3>Important Guidelines:</h3>
+        <ul style="line-height: 1.6;">
+          <li>Ensure you have stable internet connection throughout the exam</li>
+          <li>You cannot pause or restart the exam once started</li>
+          <li>All questions must be answered within the allocated time</li>
+          <li>Use the calculator for mathematical computations</li>
+          <li>Flag questions you want to review later</li>
+          <li>Submit your answers before time expires</li>
+          <li>note that answers can only be review after submission</li>
+        </ul>
+        
+        <h3>Exam Rules:</h3>
+        <ul style="line-height: 1.6;">
+          <li>Do not refresh the page during the exam</li>
+          <li>Do not switch browser tabs</li>
+          <li>All answers are final after submission</li>
+          <li>Technical issues should be reported immediately</li>
+        </ul>
+      </div>
+      
+      <div class="actions">
+        <button class="btn secondary" onclick="location.href='dashboard.html'">Back to Dashboard</button>
+        <div class="spacer"></div>
+        <button class="btn" onclick="proceedToCourseSelection()">I Understand - Proceed</button>
+      </div>
+    </section>
+
+    <!-- STEP 1: Select Course -->
+    <section id="stepCourse" class="card" style="display:none">
+      <h2 style="margin:6px 0 12px">Select Course and Exam Type</h2>
+      <div class="grid cols-4" id="courseGrid"></div>
+    </section>
+
+    <!-- STEP 2: Exam Settings -->
+    <section id="stepSettings" class="card" style="display:none">
+      <h2 style="margin:6px 0 12px">Exam Settings</h2>
+      <div class="grid cols-3">
+        <div>
+          <label for="year">Year</label>
+          <select id="year"></select>
+        </div>
+        <div>
+          <label for="duration">Time (minutes)</label>
+          <select id="duration">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="30">30</option>
+            <option value="45">45</option>
+            <option value="60">60</option>
+          </select>
+        </div>
+        <div>
+          <label for="qcount">Number of Questions</label>
+          <select id="qcount">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn secondary" onclick="goBackToCourses()">Back</button>
+        <div class="spacer"></div>
+        <button class="btn" onclick="startExam()">Start Exam</button>
+      </div>
+    </section>
+
+    <!-- STEP 3: Exam Environment -->
+    <section id="stepExam" style="display:none">
+      <div class="exam-bar">
+        <div><strong id="courseLabel">Course</strong> • Year <span id="yearLabel"></span></div>
+        <div class="pill">Answered: <span id="answeredCount">0</span>/<span id="totalCount">0</span></div>
+        <div style="display:flex; align-items:center; gap:10px">
+          <span class="timer" id="timer">--:--</span>
+          <button class="btn danger" onclick="confirmSubmit()">Submit</button>
+        </div>
+      </div>
+
+      <div class="qwrap">
+        <!-- Left: question navigator -->
+        <aside class="qnav">
+          <div class="actions" style="margin-bottom:8px">
+            <button class="btn secondary" onclick="toggleCalc()">Calculator</button>
+            <button class="btn secondary" onclick="toggleFlag()">Flag</button>
+          </div>
+          <div class="qgrid" id="qGrid"></div>
+        </aside>
+
+        <!-- Right: question card -->
+        <div class="question-card">
+          <p class="question-text" id="qText"></p>
+          <div id="qOptions"></div>
+
+          <div class="actions">
+            <button class="btn secondary" onclick="prevQ()">Previous</button>
+            <div class="spacer"></div>
+            <button class="btn" onclick="nextQ()">Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4: Results & Review -->
+    <section id="stepResult" class="card" style="display:none">
+      <h2 style="margin-top:6px">Submission Complete</h2>
+      <p id="scoreLine" style="margin:6px 0 12px"></p>
+      <div class="actions">
+        <button class="btn" onclick="showReview()">Review Answers</button>
+        <div class="spacer"></div>
+        <button class="btn secondary" onclick="location.href='dashboard.html'">Back to Dashboard</button>
+      </div>
+    </section>
+
+    <!-- Review list -->
+    <section id="stepReview" class="card" style="display:none">
+      <h3 style="margin:6px 0 12px">Review</h3>
+      <div id="reviewList"></div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn secondary" onclick="backToResults()">Back</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating Calculator -->
+  <div class="calc" id="calc">
+    <header style="padding:8px 12px; display:flex; justify-content:space-between; align-items:center">
+      <strong>Calculator</strong>
+      <button class="btn secondary" onclick="toggleCalc()">Close</button>
+    </header>
+    <div style="padding:10px">
+      <input id="calcInput" type="text" placeholder="e.g. (12+3)*4" style="width:100%; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.18); background:rgba(0,0,0,0.2); color:#fff">
+    </div>
+    <div class="pad">
+      <button onclick="ins('7')">7</button><button onclick="ins('8')">8</button><button onclick="ins('9')">9</button><button onclick="ins('/')">/</button>
+      <button onclick="ins('4')">4</button><button onclick="ins('5')">5</button><button onclick="ins('6')">6</button><button onclick="ins('*')">*</button>
+      <button onclick="ins('1')">1</button><button onclick="ins('2')">2</button><button onclick="ins('3')">3</button><button onclick="ins('-')">-</button>
+      <button onclick="ins('0')">0</button><button onclick="ins('.')">.</button><button onclick="ins('(')">(</button><button onclick="ins(')')">)</button>
+      <button onclick="clr()">C</button><button onclick="del1()">DEL</button><button onclick="ins('+')">+</button><button onclick="evalCalc()">=</button>
+    </div>
+    <div style="padding:10px; border-top:1px solid rgba(255,255,255,0.12); font-weight:700">Result: <span id="calcOut">—</span></div>
+  </div>
+
+  <!-- Modal -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h3 id="modalTitle">Confirm</h3>
+      <p id="modalMsg">Are you sure?</p>
+      <div class="row">
+        <button class="btn secondary" onclick="hideModal()">Cancel</button>
+        <button class="btn danger" id="modalOk">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    /***********************
+     * SUPABASE CONFIGURATION - FIXED
+     ***********************/
+    let supabaseClient;
+    
+    // Initialize Supabase safely
+    (function initSupabase() {
+      const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+      
+      // Always create a fresh client for this page
+      supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+      console.log('Supabase initialized:', !!supabaseClient);
+    })();
+
+    /***********************
+     * STATE
+     ***********************/
+    let selectedCourse = null;
+    let selectedCourseName = '';
+    let selectedYear = null;
+    let durationSec = 0;
+    let totalQuestions = 0;
+    let timerId = null;
+    let currentIndex = 0;
+    let questions = []; // [{q,opts,ans}]
+    let answers = [];   // user index or null
+    let flags = [];     // boolean
+
+    /***********************
+     * NEW FLOW FUNCTIONS
+     ***********************/
+    function showInstructionsFirst() {
+      document.getElementById('stepInstructions').style.display = 'block';
+      document.getElementById('stepCourse').style.display = 'none';
+      document.getElementById('stepSettings').style.display = 'none';
+      document.getElementById('stepExam').style.display = 'none';
+      document.getElementById('stepResult').style.display = 'none';
+      document.getElementById('stepReview').style.display = 'none';
+    }
+
+    // Make function globally available
+    window.proceedToCourseSelection = function() {
+      showLoading(true);
+      setTimeout(() => {
+        document.getElementById('stepInstructions').style.display = 'none';
+        document.getElementById('stepCourse').style.display = 'block';
+        loadCourses();
+        showLoading(false);
+      }, 500);
+    };
+
+    /***********************
+     * INIT + Email watermark
+     ***********************/
+    document.addEventListener('DOMContentLoaded', function() {
+      const user = (() => {
+        try {
+          const obj = JSON.parse(localStorage.getItem('abupq_logged_in_user')||'null');
+          if (obj && obj.email) return obj.email;
+        } catch(e){}
+        return localStorage.getItem('userEmail') || 'user@example.com';
+      })();
+      document.getElementById('wmText').textContent = user;
+      document.getElementById('userTag').textContent = user;
+
+      // Fill year dropdown (e.g., 2015 → current)
+      const yearSel = document.getElementById('year');
+      const nowY = new Date().getFullYear();
+      for(let y=nowY; y>=2015; y--){
+        const opt=document.createElement('option'); opt.value=String(y); opt.textContent=String(y);
+        yearSel.appendChild(opt);
+      }
+
+      // Show instructions first
+      showInstructionsFirst();
+    });
+
+    /***********************
+     * COURSE LOADING FROM SUPABASE
+     ***********************/
+    async function loadCourses() {
+      const courseGrid = document.getElementById('courseGrid');
+      courseGrid.innerHTML = '<div>Loading courses...</div>';
+
+      try {
+        console.log('Loading courses, supabaseClient type:', typeof supabaseClient);
+        
+        const { data: courses, error } = await supabaseClient
+          .from('courses')
+          .select('*')
+          .order('code');
+
+        if (error) throw error;
+
+        courseGrid.innerHTML = '';
+        
+        // Group courses by code to show one card per course
+        const courseGroups = {};
+        courses.forEach(course => {
+          if (!courseGroups[course.code]) {
+            courseGroups[course.code] = [];
+          }
+          courseGroups[course.code].push(course);
+        });
+
+        // Create one card per course with both Exam and Test buttons
+        Object.keys(courseGroups).forEach(courseCode => {
+          const courseGroup = courseGroups[courseCode];
+          const examCourse = courseGroup.find(c => c.type === 'exam');
+          const testCourse = courseGroup.find(c => c.type === 'test');
+          
+          const d = document.createElement('div');
+          d.className = 'course';
+          d.innerHTML = `
+            <div style="font-weight:800; font-size:18px">${courseCode}</div>
+            <div style="font-size:14px; margin:4px 0; color:var(--muted)">Select Exam Type:</div>
+            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap">
+              ${examCourse ? `<button class="btn" onclick="chooseCourse('${examCourse.id}', '${examCourse.name}', 'exam')">Exam</button>` : ''}
+              ${testCourse ? `<button class="btn secondary" onclick="chooseCourse('${testCourse.id}', '${testCourse.name}', 'test')">Test</button>` : ''}
+            </div>
+            <div style="font-size:12px; color:var(--muted); margin-top:8px">
+              ${(examCourse ? 'Exam' : '') + (examCourse && testCourse ? ' & ' : '') + (testCourse ? 'Test' : '')} Available
+            </div>
+          `;
+          courseGrid.appendChild(d);
+        });
+        
+      } catch (error) {
+        console.error('Error loading courses:', error);
+        courseGrid.innerHTML = '<div>Error loading courses. Please try again.</div>';
+      }
+    }
+
+    // Make chooseCourse globally available
+    window.chooseCourse = function(courseId, courseName, examType) {
+      showLoading(true);
+      setTimeout(() => {
+        selectedCourse = courseId;
+        selectedCourseName = courseName;
+        document.getElementById('stepCourse').style.display = 'none';
+        document.getElementById('stepSettings').style.display = 'block';
+        showLoading(false);
+      }, 500);
+    };
+
+    window.goBackToCourses = function(){
+      showLoading(true);
+      setTimeout(() => {
+        selectedCourse = null;
+        selectedCourseName = '';
+        document.getElementById('stepSettings').style.display = 'none';
+        document.getElementById('stepCourse').style.display = 'block';
+        showLoading(false);
+      }, 500);
+    };
+
+    /***********************
+     * START EXAM - FETCH FROM SUPABASE
+     ***********************/
+    async function startExam() {
+      if (!selectedCourse) return;
+
+      // Read settings
+      selectedYear = document.getElementById('year').value;
+      durationSec = parseInt(document.getElementById('duration').value, 10) * 60;
+      totalQuestions = parseInt(document.getElementById('qcount').value, 10);
+
+      // Show loading UI
+      showLoading(true);
+      setTimeout(() => {
+        document.getElementById('stepSettings').style.display = 'none';
+        document.getElementById('stepExam').style.display = 'block';
+        document.getElementById('courseLabel').textContent = 'Loading...';
+        document.getElementById('yearLabel').textContent = selectedYear;
+        document.getElementById('qText').textContent = 'Loading questions…';
+        document.getElementById('qOptions').innerHTML = '';
+        showLoading(false);
+      }, 500);
+
+      try {
+        // Fetch questions from Supabase
+        const { data: questionsData, error } = await supabaseClient
+          .from('questions')
+          .select('*')
+          .eq('course_id', selectedCourse)
+          .eq('year', selectedYear)
+          .limit(totalQuestions);
+
+        if (error) throw error;
+
+        console.log('Raw questions data:', questionsData); // Debug log
+
+        if (!questionsData || questionsData.length === 0) {
+          throw new Error('No questions found for the selected course and year');
+        }
+
+        // Transform data to match your expected format
+        questions = questionsData.map(item => {
+          console.log('Processing question:', item); // Debug log
+          
+          // Check what fields your questions actually have
+          const questionText = item.question_text || item.question || item.q || 'No question text';
+          const options = item.options || item.opts || item.choices || [];
+          let answer = item.answer || item.correct_answer || item.ans || 0;
+
+          // Convert letter answers (A,B,C,D) to numbers (0,1,2,3)
+          if (typeof answer === 'string') {
+            answer = answer.toUpperCase();
+            if (answer === 'A') answer = 0;
+            else if (answer === 'B') answer = 1;
+            else if (answer === 'C') answer = 2;
+            else if (answer === 'D') answer = 3;
+            else answer = parseInt(answer) || 0;
+          }
+
+          return {
+            q: questionText,
+            opts: options,
+            ans: parseInt(answer)
+          };
+        });
+
+        console.log('Processed questions:', questions); // Debug log
+
+        // Shuffle questions
+        shuffle(questions);
+
+        // Initialize exam state
+        totalQuestions = questions.length;
+        answers = Array(totalQuestions).fill(null);
+        flags = Array(totalQuestions).fill(false);
+        currentIndex = 0;
+
+        // Update UI
+        document.getElementById('courseLabel').textContent = selectedCourseName;
+        document.getElementById('yearLabel').textContent = selectedYear;
+        document.getElementById('totalCount').textContent = totalQuestions;
+
+        buildQGrid();
+        renderQuestion();
+        startTimer();
+
+      } catch (error) {
+        console.error('Error loading questions:', error);
+        showLoading(true);
+        setTimeout(() => {
+          document.getElementById('stepExam').style.display = 'none';
+          document.getElementById('stepSettings').style.display = 'block';
+          showLoading(false);
+          showModal('Error', 'Failed to load questions. Please try another year or contact admin if the problem persists.', hideModal);
+        }, 500);
+      }
+    }
+
+    // Make startExam globally available
+    window.startExam = startExam;
+
+    function shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]];
+      }
+      return arr;
+    }
+
+    /***********************
+     * TIMER (auto submit)
+     ***********************/
+    function startTimer(){
+      updateTimerLabel();
+      timerId = setInterval(()=>{
+        durationSec--;
+        if(durationSec<=0){
+          clearInterval(timerId);
+          doSubmit(true);
+        }
+        updateTimerLabel();
+      },1000);
+    }
+    function updateTimerLabel(){
+      const m = Math.floor(Math.max(0,durationSec)/60).toString().padStart(2,'0');
+      const s = (Math.max(0,durationSec)%60).toString().padStart(2,'0');
+      document.getElementById('timer').textContent = `${m}:${s}`;
+    }
+
+    /***********************
+     * RENDER + NAVIGATION
+     ***********************/
+    function buildQGrid(){
+      const grid = document.getElementById('qGrid');
+      grid.innerHTML = '';
+      for(let i=0;i<totalQuestions;i++){
+        const b=document.createElement('button');
+        b.className='qbtn';
+        b.textContent= i+1;
+        b.onclick = ()=> gotoQ(i);
+        if(answers[i]!=null) b.classList.add('answered');
+        if(flags[i]) b.classList.add('flag');
+        if(i===currentIndex) b.classList.add('current');
+        grid.appendChild(b);
+      }
+      updateAnsweredCount();
+    }
+    function updateAnsweredCount(){
+      const count = answers.filter(v=>v!=null).length;
+      document.getElementById('answeredCount').textContent = count;
+    }
+
+    function renderQuestion(){
+      const q = questions[currentIndex];
+      const qText = document.getElementById('qText');
+      const qOptions = document.getElementById('qOptions');
+      qText.textContent = `${currentIndex+1}. ${q.q}`;
+      qOptions.innerHTML = q.opts.map((t,idx)=>{
+        const checked = answers[currentIndex]===idx ? 'checked' : '';
+        return `<label class="opt"><input type="radio" name="opt" value="${idx}" ${checked}> ${t}</label>`;
+      }).join('');
+      // update grid highlight
+      buildQGrid();
+      // listen to option changes
+      qOptions.querySelectorAll('input[name="opt"]').forEach(inp=>{
+        inp.addEventListener('change', e=>{
+          answers[currentIndex] = parseInt(e.target.value,10);
+          buildQGrid();
+        });
+      });
+    }
+
+    function gotoQ(i){ currentIndex=i; renderQuestion(); }
+    window.prevQ = function(){ if(currentIndex>0){ currentIndex--; renderQuestion(); } }
+    window.nextQ = function(){ if(currentIndex<totalQuestions-1){ currentIndex++; renderQuestion(); } }
+
+    window.toggleFlag = function(){
+      flags[currentIndex] = !flags[currentIndex];
+      buildQGrid();
+    };
+
+    /***********************
+     * SUBMISSION + REVIEW
+     ***********************/
+    window.confirmSubmit = function(){
+      showModal('Submit Exam','Are you sure you want to submit? You cannot change answers after submission.', ()=> doSubmit(false));
+    };
+
+    function doSubmit(auto=false){
+      showLoading(true);
+      if(timerId) clearInterval(timerId);
+      
+      // Calculate score
+      let score=0;
+      questions.forEach((q,i)=>{ if(answers[i]===q.ans) score++; });
+
+      // Show results
+      setTimeout(() => {
+        document.getElementById('stepExam').style.display='none';
+        document.getElementById('stepResult').style.display='block';
+        document.getElementById('scoreLine').innerHTML =
+          `${auto? '⏰ Time up — ':''}You scored <strong>${score}</strong> out of <strong>${totalQuestions}</strong>.`;
+
+        hideModal();
+        showLoading(false);
+      }, 500);
+    }
+
+    window.showReview = function(){
+      showLoading(true);
+      setTimeout(() => {
+        const list = document.getElementById('reviewList');
+        list.innerHTML = questions.map((q,i)=>{
+          const userIdx = answers[i];
+          const ok = userIdx===q.ans;
+          const your = userIdx==null ? '<em>No answer</em>' : escapeHtml(q.opts[userIdx]);
+          const correct = escapeHtml(q.opts[q.ans]);
+          return `<div class="card" style="background:rgba(255,255,255,0.1)">
+            <div style="font-weight:700; margin-bottom:6px">Q${i+1}: ${escapeHtml(q.q)}</div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap">
+              <div class="pill" style="background:${ok?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.25)'}; border:1px solid ${ok?'#10b981':'#ef4444'}">
+                ${ok?'Correct':'Wrong'}
+              </div>
+              <div>Your answer: <strong>${your}</strong></div>
+              <div>Correct: <strong>${correct}</strong></div>
+            </div>
+          </div>`;
+        }).join('');
+
+        document.getElementById('stepResult').style.display='none';
+        document.getElementById('stepReview').style.display='block';
+        showLoading(false);
+      }, 500);
+    };
+    
+    window.backToResults = function(){
+      showLoading(true);
+      setTimeout(() => {
+        document.getElementById('stepReview').style.display='none';
+        document.getElementById('stepResult').style.display='block';
+        showLoading(false);
+      }, 500);
+    };
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+    }
+
+    /***********************
+     * CALCULATOR
+     ***********************/
+    const calc = document.getElementById('calc');
+    window.toggleCalc = function(){ calc.style.display = (calc.style.display==='none'||!calc.style.display)?'block':'none'; }
+    window.ins = function(ch){ document.getElementById('calcInput').value += ch; }
+    window.clr = function(){ document.getElementById('calcInput').value=''; document.getElementById('calcOut').textContent='—'; }
+    window.del1 = function(){
+      const el = document.getElementById('calcInput');
+      el.value = el.value.slice(0,-1);
+    }
+    window.evalCalc = function(){
+      const raw = document.getElementById('calcInput').value.trim();
+      if(!/^[0-9+\-*/().\s%^]+$/.test(raw)){ document.getElementById('calcOut').textContent='Invalid'; return; }
+      const expr = raw.replace(/\^/g,'**');
+      try{
+        const val = Function('"use strict";return('+expr+')')();
+        document.getElementById('calcOut').textContent = String(val);
+      }catch(e){ document.getElementById('calcOut').textContent='Error'; }
+    }
+
+    /***********************
+     * Modal (in-app popup)
+     ***********************/
+    function showModal(title,msg,onOk){
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalMsg').textContent = msg;
+      const ok = document.getElementById('modalOk');
+      ok.onclick = onOk || (()=>{});
+      document.getElementById('overlay').style.display='flex';
+    }
+    function hideModal(){ document.getElementById('overlay').style.display='none'; }
+
+    /***********************
+     * LOADING FUNCTION
+     ***********************/
+    function showLoading(show) {
+      document.getElementById('globalLoading').style.display = show ? 'flex' : 'none';
+    }
+
+    /***********************
+     * Client-side protections (deterrents)
+     ***********************/
+    document.addEventListener('contextmenu', e=> e.preventDefault());
+    document.addEventListener('keydown', e=>{
+      const c = e.ctrlKey || e.metaKey;
+      if(c && ['c','x','s','p','u','a'].includes(e.key.toLowerCase())) e.preventDefault();
+      if(e.key==='PrintScreen' || e.code==='PrintScreen'){ e.preventDefault(); showModal('Blocked','Screenshots are restricted in this demo.', hideModal); }
+    });
+    // prevent selection outside inputs
+    document.addEventListener('selectstart', e=>{
+      if(['INPUT','TEXTAREA'].includes((e.target.tagName||''))) return;
+      e.preventDefault();
+    });
+
+  </script>
+
+  
+  <!-- Login Protection -->
+  <script>
+    const logged = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
+    if (!logged || !logged.email) {
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Feedback</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <style>
+    /* Reuse Admin Styles */
+    :root {
+      --primary: #063b08;
+      --secondary: #083502;
+      --accent: #4CAF50;
+      --warning: #ffc107;
+      --glass: rgba(255, 255, 255, 0.1);
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: rgba(0, 0, 0, 0.3);
+      border-right: 1px solid rgba(255,255,255,0.1);
+      padding: 20px;
+    }
+
+    .back-btn {
+      display: block;
+      background: var(--glass);
+      color: white;
+      text-decoration: none;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .main { padding: 30px; }
+
+    .header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Table Styles */
+    .data-table {
+      width: 100%;
+      background: var(--glass);
+      border-radius: 10px;
+      border-collapse: collapse;
+      overflow: hidden;
+    }
+
+    .data-table th, .data-table td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .data-table th { background: rgba(0,0,0,0.3); }
+    .data-table tr:hover { background: rgba(255,255,255,0.05); }
+
+    .badge {
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge.pending { background: var(--warning); color: black; }
+    .badge.resolved { background: var(--accent); color: white; }
+    .badge.complaint { background: #e91e63; color: white; }
+    .badge.feedback { background: #2196f3; color: white; }
+
+    .btn-resolve {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .btn-resolve:hover { background: #45a049; }
+    .btn-resolve:disabled { background: #555; cursor: not-allowed; opacity: 0.5; }
+
+    .message-cell { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="sidebar">
+    <a href="admin-dashboard.html" class="back-btn">← Back to Dashboard</a>
+    <p style="font-size:12px; opacity:0.7;">Manage user feedback and complaints here.</p>
+  </div>
+
+  <div class="main">
+    <div class="header">
+      <h2>📝 Feedback & Complaints</h2>
+      <button class="back-btn" onclick="loadFeedback()" style="width: auto; margin:0;">Refresh</button>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>User</th>
+          <th>Type</th>
+          <th>Subject</th>
+          <th>Message</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="feedbackTable">
+        <tr><td colspan="7" style="text-align:center; padding:20px;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Check Admin Session
+    const session = JSON.parse(localStorage.getItem('abupq_admin_session') || '{}');
+    if (!session.id) {
+        window.location.href = 'admin-login.html';
+        return;
+    }
+    loadFeedback();
+  });
+
+  async function loadFeedback() {
+    const tableBody = document.getElementById('feedbackTable');
+    
+    // Fetch feedback and join with users to get email
+    // Note: This assumes Supabase foreign key relationship exists
+    const { data, error } = await supabaseClient
+        .from('feedback')
+        .select(`
+            *,
+            user:users (email)
+        `)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error(error);
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ff4b5c;">Error loading data</td></tr>';
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; opacity:0.6;">No feedback records found.</td></tr>';
+        return;
+    }
+
+    tableBody.innerHTML = data.map(item => {
+        const date = new Date(item.created_at).toLocaleDateString();
+        const userEmail = item.user ? item.user.email : 'Unknown User';
+        const isResolved = item.status === 'resolved';
+        
+        return `
+            <tr>
+                <td>${date}</td>
+                <td>${escapeHtml(userEmail)}</td>
+                <td><span class="badge ${item.type}">${item.type}</span></td>
+                <td>${escapeHtml(item.subject)}</td>
+                <td class="message-cell" title="${escapeHtml(item.message)}">${escapeHtml(item.message)}</td>
+                <td><span class="badge ${item.status}">${item.status}</span></td>
+                <td>
+                    <button 
+                        class="btn-resolve" 
+                        onclick="resolveFeedback('${item.id}')"
+                        ${isResolved ? 'disabled' : ''}>
+                        ${isResolved ? 'Done' : 'Mark Resolved'}
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+  }
+
+  async function resolveFeedback(id) {
+    if(!confirm("Mark this item as resolved?")) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('feedback')
+            .update({ status: 'resolved' })
+            .eq('id', id);
+
+        if (error) throw error;
+        
+        // Refresh table to show update
+        loadFeedback();
+
+    } catch (error) {
+        console.error(error);
+        alert("Failed to update status");
+    }
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+
+</body>
+</html>
