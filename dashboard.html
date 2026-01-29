@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Scolars Prep</title>
-  <link rel="icon" type="image" href="favicon1.png">
+  <title>Dashboard - Scholars Prep</title>
+  <link rel="icon" type="image" href=".favicon1png">
   <style>
     .footer-actions {
   /* 1. Bring it to the front (Above the slideshow which is z-index 0 and 1) */
@@ -605,6 +605,22 @@
       border-color: #4CAF50;
       background: #e8f5e8;
     }
+    /* New styles for the centered logo */
+.header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.dashboard-logo {
+  width: 60px;       /* Size of the logo */
+  height: 60px;
+  border-radius: 50%; /* Makes it circular */
+  margin-bottom: 8px; /* Space between image and H1 */
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  object-fit: cover;
+}
   </style>
 </head>
 
@@ -629,8 +645,7 @@
         <div id="notificationDropdown" class="dropdown-content left">
           <a href="notifications.html" onclick="navigateWithLoading(event, 'notifications.html')">📢 View All Notifications</a>
           <hr style="margin: 5px 0;">
-          <div id="notificationPreview">
-            </div>
+          <div id="notificationPreview"></div>
         </div>
       </div>
 
@@ -642,13 +657,15 @@
         <div id="messagesDropdown" class="dropdown-content left">
           <a href="messages.html" onclick="navigateWithLoading(event, 'messages.html')">📨 View All Messages</a>
           <hr style="margin: 5px 0;">
-          <div id="messagePreview">
-            </div>
+          <div id="messagePreview"></div>
         </div>
       </div>
     </div>
 
-    <h1>Welcome to Dashboard</h1>
+    <div class="header-center">
+      <img src="img/favicon1.png" alt="Logo" class="dashboard-logo"> 
+      <h1>Welcome to Dashboard</h1>
+    </div>
 
     <div class="header-actions">
       <div class="user-email" id="userEmail"></div>
@@ -659,7 +676,6 @@
           <a href="#" onclick="openProfileSettings()">👤 Profile Settings</a>
           <a href="#" onclick="openNotificationSettings()">🔔 Notification Preferences</a>
           <a href="#" onclick="openThemeSettings()">🎨 Theme Settings</a>
-          
           <a href="#" onclick="openMessageAdminModal()">💬 Message Admin</a>
           <a href="feedback.html" onclick="openReportIssue()">🆘 Report Issue</a>
           <hr style="margin: 5px 0;">
