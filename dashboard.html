@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Scolars Prep</title>
-  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="icon" type="image" href="favicon1.png">
   <style>
     .footer-actions {
   /* 1. Bring it to the front (Above the slideshow which is z-index 0 and 1) */
@@ -605,14 +605,6 @@
       border-color: #4CAF50;
       background: #e8f5e8;
     }
-     .logo-img {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      margin-bottom: 24px;
-      border: 2px solid rgba(255,255,255,0.1);
-      object-fit: cover;
-    }
   </style>
 </head>
 
@@ -656,7 +648,7 @@
       </div>
     </div>
 
-    
+    <h1>Welcome to Dashboard</h1>
 
     <div class="header-actions">
       <div class="user-email" id="userEmail"></div>
@@ -680,8 +672,6 @@
   </header>
 
   <div class="main">
-    <img src="favicon1.png" alt="Logo" class="logo-img">
-    <h1 style="float: center;">Welcome to Dashboard</h1>
     <div class="container">
       <div class="card" onclick="navigateWithLoading(null, 'cbt.html')">
         <span class="icon">💻</span>
@@ -699,7 +689,10 @@
         <span class="icon">📝</span>
         <h2>Comprehensive Past Questions</h2>
       </div>
-     
+      <div class="card" onclick="navigateWithLoading(null, 'cbt-history.html')">
+        <span class="icon">📊</span>
+        <h2>CBT History</h2>
+      </div>
         <div class="card" onclick="navigateWithLoading(null, 'leaderboard.html')">
         <span class="icon">🏆</span>
         <h2>Leaderboard</h2>
