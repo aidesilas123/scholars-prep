@@ -6,6 +6,78 @@
   <title>Dashboard - Scolars Prep</title>
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <style>
+    .footer-actions {
+  /* 1. Bring it to the front (Above the slideshow which is z-index 0 and 1) */
+  position: relative;
+  z-index: 10; 
+  
+  /* 2. Optional: Center it nicely at the bottom */
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* Override the inline black color so it's readable */
+.footer-actions p {
+  color: #ffffff !important; 
+}
+    /* --- 1. Position the Slideshow behind everything --- */
+.slideshow {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 0; /* Sits at the bottom */
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Optional: Dark Overlay to make text readable */
+.slideshow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6); 
+  z-index: 1;
+}
+
+/* --- 2. Set up the animation logic --- */
+.slideshow li span {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  z-index: 0;
+  animation: imageAnimation 15s linear infinite; 
+}
+
+/* --- 3. Define your images here --- */
+.slideshow li:nth-child(1) span { 
+  background-image: url('img/slider6.jpg'); 
+}
+.slideshow li:nth-child(2) span { 
+  background-image: url('img/slider7.jpg'); 
+  animation-delay: 5s; 
+}
+.slideshow li:nth-child(3) span { 
+  background-image: url('img/slider9.jpg'); 
+  animation-delay: 10s; 
+}
+
+/* --- 4. The Fading Keyframes --- */
+@keyframes imageAnimation { 
+  0% { opacity: 0; animation-timing-function: ease-in; }
+  10% { opacity: 1; animation-timing-function: ease-out; }
+  33% { opacity: 1; } 
+  43% { opacity: 0; }
+  100% { opacity: 0; }
+}
     /* Loading Overlay Styles */
     .loading-overlay {
       display: none;
@@ -230,6 +302,11 @@
       gap: 25px;
       max-width: 900px;
       width: 100%;
+      /* Apply this to whatever div wraps your page content */
+
+  position: relative;
+  z-index: 10; /* Must be higher than 0 to sit on top of images */
+
     }
 
     .card {
@@ -512,6 +589,11 @@
 </head>
 
 <body>
+  <ul class="slideshow">
+  <li><span></span></li>
+  <li><span></span></li>
+  <li><span></span></li>
+</ul>
   <div id="loadingOverlay" class="loading-overlay">
     <div class="loading-spinner"></div>
     <div class="loading-text" id="loadingText">Loading...</div>

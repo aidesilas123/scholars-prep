@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ABU PQ & Answers — Login</title>
+  <link rel="icon" type="image" href="favicon1.png">
+
+  <style>
+  :root {
+  /* CHANGED 'slide5.jpg' to 'slider5.jpg' */
+  --background: url('img/slider5.jpg');
+  
+  --card-bg: #ffffff;
+  --accent: #044908;
+  --accent-dark: #02270a;
+  --muted: #8f96a3;
+  --radius: 12px;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  
+  /* Removed the red debug color */
+  background: var(--background) no-repeat center center fixed;
+  background-size: cover; 
+  
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+    /* Watermark (user email) */
+    .watermark {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none; /* allow interactions above it */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 0;
+      opacity: 0.08;
+      user-select: none;
+      transform: rotate(-25deg);
+      font-size: 38px;
+      color: #fff;
+      mix-blend-mode: overlay;
+      font-weight: 700;
+      letter-spacing: 6px;
+    }
+
+    /* Center card */
+    .container {
+      min-height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:40px 20px;
+      z-index: 10;
+      position: relative;
+    }
+    .card {
+  width: 420px;
+  
+  /* 1. Change solid white to semi-transparent white */
+  background: rgba(255, 255, 255, 0.2);
+  
+  /* 2. Apply the blur effect to the area behind the card */
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px); /* Required for Safari/iOS */
+  
+  /* 3. Add a subtle border to make the edges pop */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  
+  border-radius: 18px;
+  padding: 34px;
+  box-shadow: 0 10px 30px rgba(12, 20, 40, 0.25);
+  z-index: 20;
+  position: relative;
+}
+
+    h1{
+      text-align:center;
+      margin:0 0 8px;
+      color: #07520e;
+      font-size:32px;
+    }
+    p.lead{
+      margin:0 0 20px;
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .field {
+      margin-bottom:16px;
+    }
+    label {
+      display:block;
+      font-size:13px;
+      color:#333;
+      margin-bottom:6px;
+    }
+    input[type="email"], input[type="password"], input[type="text"] {
+      width:100%;
+      padding:14px 16px;
+      border-radius:8px;
+      border:1px solid #e6e9ef;
+      box-sizing:border-box;
+      font-size:14px;
+      outline:none;
+      transition:box-shadow .15s, border-color .15s;
+    }
+    input:focus { box-shadow: 0 6px 18px rgba(63,102,255,0.12); border-color: var(--accent); }
+
+    .btn {
+      width:100%;
+      display:inline-block;
+      padding:12px 18px;
+      border-radius:10px;
+      border: none;
+      background: linear-gradient(180deg,var(--accent),var(--accent-dark));
+      color:#fff;
+      font-weight:600;
+      font-size:16px;
+      cursor:pointer;
+      margin-top:6px;
+    }
+
+    .muted-row{
+      text-align:center;
+      margin-top:14px;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .muted-row a{ color:var(--accent-dark); text-decoration:none; font-weight:600; }
+
+    /* Signup toggle */
+    .toggle {
+      text-decoration:underline;
+      cursor:pointer;
+      color:var(--accent-dark);
+      font-weight:600;
+    }
+
+    /* Modal (custom in-app popup) */
+    .modal-overlay {
+      position: fixed;
+      inset:0;
+      background: rgba(6,12,34,0.45);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:1000;
+    }
+    .modal {
+      background:#fff;
+      border-radius:10px;
+      padding:18px 20px;
+      width:380px;
+      box-shadow: 0 10px 30px rgba(12,20,40,0.25);
+    }
+    .modal h3 { margin:0 0 8px; font-size:18px; color:#21324a; }
+    .modal p { margin:0 0 12px; color:#445; font-size:14px; }
+
+    /* small note */
+    .note { font-size:12px; color:#6b7280; text-align:center; margin-top:10px; }
+
+    /* Prevent text selection on the page except input fields */
+    .no-select {
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+    }
+    /* allow selection on inputs */
+    input, textarea { user-select: auto; }
+
+    /* Responsive */
+    @media (max-width:480px){
+      .card { width: 92%; padding:20px; }
+      .watermark { font-size:24px; opacity:0.06; }
+    }
+  </style>
+</head>
+<body class="no-select">
+  
+
+  <div id="watermark" class="watermark" aria-hidden="true"></div>
+
+  <div class="container">
+    <div class="card" role="region" aria-label="login card" id="authCard">
+      <h1 id="formTitle">Welcome Back</h1>
+      <p class="lead" id="formSubtitle">Sign in to access your study resources</p>
+
+      <form id="loginForm" autocomplete="off" onsubmit="return false;">
+        <div class="field">
+          <label for="loginEmail">Email Address</label>
+          <input id="loginEmail" type="email" placeholder="Enter your email" required />
+        </div>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input id="loginPassword" type="password" placeholder="Enter your password" required />
+          
+        </div>
+        <button class="btn" id="loginBtn" type="submit">Log In</button>
+      </form>
+
+      <form id="signupForm" style="display:none;" autocomplete="off" onsubmit="return false;">
+        <div class="field">
+          <label for="signupName">Full Name</label>
+          <input id="signupName" type="text" placeholder="Your name" required />
+        </div>
+        <div class="field">
+          <label for="signupEmail">Email Address</label>
+          <input id="signupEmail" type="email" placeholder="Enter your email" required />
+        </div>
+        <div class="field">
+          <label for="signupPassword">Password</label>
+          <input id="signupPassword" type="password" placeholder="Create a password" required /><br><br>
+          <label for="signupPassword">Confirm Password</label>
+           <input id="confirmPassword" type="password" placeholder="confirm Your password" required />
+        </div>
+        <button class="btn" id="signupBtn">Create Account</button>
+      </form>
+
+      <div class="muted-row">
+        <div id="toggleRow">
+          <span id="toggleToSignup">Don't have an account? <span class="toggle">Sign up here</span></span>
+          <span id="toggleToLogin" style="display:none;">Already have an account? <span class="toggle">Log in</span></span>
+        </div>
+        <div class="note">Powered by Supabase Secure Auth</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalRoot" style="display:none;"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script>
+    // --- Utility: modal (in-app popup) ---
+    function showModal(title, message, {autoClose=3000} = {}) {
+      const root = document.getElementById('modalRoot');
+      root.innerHTML = `
+        <div class="modal-overlay" id="modalOverlay">
+          <div class="modal" role="dialog" aria-modal="true">
+            <h3>${title}</h3>
+            <p>${message}</p>
+            <div style="text-align:right;"><button id="modalClose" style="padding:8px 12px;border-radius:8px;border:0;background:#eee;cursor:pointer;">Close</button></div>
+          </div>
+        </div>
+      `;
+      root.style.display = 'block';
+      document.getElementById('modalClose').addEventListener('click', hideModal);
+      if (autoClose) { setTimeout(hideModal, autoClose); }
+    }
+    function hideModal(){
+      const root = document.getElementById('modalRoot');
+      root.innerHTML = '';
+      root.style.display = 'none';
+    }
+
+    // Toggle forms
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    const toggleToSignup = document.getElementById('toggleToSignup');
+    const toggleToLogin = document.getElementById('toggleToLogin');
+
+    document.querySelector('#toggleToSignup .toggle')?.addEventListener('click', () => {
+      loginForm.style.display = 'none';
+      signupForm.style.display = 'block';
+      document.getElementById('formTitle').textContent = 'Create Account';
+      document.getElementById('formSubtitle').textContent = 'Sign up to access ABU PQ & Answers';
+      toggleToSignup.style.display = 'none';
+      toggleToLogin.style.display = 'block';
+    });
+    document.querySelector('#toggleToLogin .toggle')?.addEventListener('click', () => {
+      loginForm.style.display = 'block';
+      signupForm.style.display = 'none';
+      document.getElementById('formTitle').textContent = 'Welcome Back';
+      document.getElementById('formSubtitle').textContent = 'Sign in to access your study resources';
+      toggleToSignup.style.display = 'block';
+      toggleToLogin.style.display = 'none';
+    });
+
+    // --- SUPABASE LOGIC ---
+    const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+    
+    // FIX 1: Rename to supabaseClient to prevent conflict
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // SIGNUP
+    document.getElementById('signupBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+      const pw = document.getElementById('signupPassword').value;
+      const confirmPw = document.getElementById('confirmPassword').value;
+
+      if(!name || !email || !pw) { showModal('Error', 'Please fill all fields'); return; }
+      if(pw !== confirmPw) { showModal('Error', 'Passwords do not match'); return; }
+
+      const btn = document.getElementById('signupBtn');
+      btn.innerHTML = 'Creating...';
+      btn.disabled = true;
+
+      const { data, error } = await supabaseClient.auth.signUp({
+        email, 
+        password: pw, 
+        options: { data: { full_name: name } }
+      });
+
+      btn.innerHTML = 'Create Account';
+      btn.disabled = false;
+
+      if(error){ 
+        showModal('Error', error.message); 
+      } else {
+        showModal('Success', 'Account created! Please check your email.', {autoClose: 4000});
+        setTimeout(() => { document.querySelector('#toggleToLogin .toggle').click(); }, 2000);
+      }
+    });
+
+    // --- LOGIN (With Single Session Enforcement) ---
+    document.getElementById('loginBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const pw = document.getElementById('loginPassword').value;
+
+      if(!email || !pw){ showModal('Error', 'Please enter email and password'); return; }
+
+      const btn = document.getElementById('loginBtn');
+      btn.innerHTML = 'Logging in...';
+      btn.disabled = true;
+
+      // 1. Authenticate with Supabase
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pw });
+
+      if(error){ 
+        btn.innerHTML = 'Log In';
+        btn.disabled = false;
+        showModal('Incorrect', error.message); 
+        return;
+      }
+
+      // 2. CHECK: Is user already logged in elsewhere?
+      const userId = data.user.id;
+      
+      try {
+        // Fetch session from active_sessions table
+        const { data: sessionData } = await supabaseClient
+            .from('active_sessions')
+            .select('last_seen')
+            .eq('user_id', userId)
+            .single();
+
+        // If session exists, check time
+        if (sessionData) {
+            const lastSeen = new Date(sessionData.last_seen).getTime();
+            const now = new Date().getTime();
+            const TIMEOUT_MINUTES = 15; // Logged out if inactive for 15 mins
+            const diffMinutes = (now - lastSeen) / 1000 / 60;
+
+            if (diffMinutes < TIMEOUT_MINUTES) {
+                // SESSION IS ACTIVE ELSEWHERE
+                await supabaseClient.auth.signOut(); // Log them out immediately
+                btn.innerHTML = 'Log In';
+                btn.disabled = false;
+                showModal('Limit Reached', 'Simultaneous limit reached. You are already logged in on another device.');
+                return;
+            }
+        }
+
+        // 3. If we got here, allow login -> Update Active Session
+        await supabaseClient
+            .from('active_sessions')
+            .upsert({ user_id: userId, last_seen: new Date().toISOString() });
+
+        // 4. Save to Local Storage & Redirect
+        const userObj = {
+            id: userId,
+            email: data.user.email,
+            name: data.user.user_metadata?.full_name || 'User',
+            loggedAt: Date.now()
+        };
+
+        localStorage.setItem('abupq_logged_in_user', JSON.stringify(userObj));
+        
+        btn.innerHTML = 'Success';
+        showModal('Success', 'Redirecting to dashboard...', {autoClose: 1000});
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
+
+      } catch (err) {
+        console.error(err);
+        // Fallback in case table doesn't exist yet, still let them in
+        window.location.href = 'dashboard.html';
+      }
+    });
+
+    // Auto-fill watermark if logged in
+    const stored = localStorage.getItem('abupq_logged_in_user');
+    if(stored) {
+        try {
+            const u = JSON.parse(stored);
+            document.getElementById('watermark').textContent = u.email;
+        } catch(e) {}
+    }
+  </script>
+</body>
+</html>
