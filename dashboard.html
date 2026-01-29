@@ -310,14 +310,34 @@
     }
 
     .card {
-      background: rgb(85, 172, 85);
-      border-radius: 20px;
-      padding: 40px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: transform 0.2s ease, background 0.3s ease;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-    }
+  /* 1. Change solid green to Semi-Transparent Green */
+  /* The last number (0.25) is the transparency level (0 to 1) */
+  background: rgba(85, 172, 85, 0.25);
+
+  /* 2. Optional: Add 'Frosted Glass' Blur */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  /* 3. Add a thin border so the card doesn't disappear completely */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+
+  /* Your existing styles */
+  border-radius: 20px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.3s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  
+  /* Ensure text is white so it reads well on dark backgrounds */
+  color: white; 
+}
+
+/* Optional: Make it slightly less transparent when you hover over it */
+.card:hover {
+  background: rgba(85, 172, 85, 0.4);
+  transform: translateY(-5px);
+}
 
     .card:hover {
       transform: translateY(-8px);
