@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam History - Scholars Prep</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <style>
+    /* Global Styles & Variables */
+    :root {
+      --grad: linear-gradient(135deg, #051f01, #063b08);
+      --card: rgba(14, 224, 28, 0.12);
+      --panel: rgba(121, 22, 22, 0.18);
+      --text: #eef2ff;
+      --muted: #cbd5e1;
+      --accent: #3f66ff;
+      --accent-dark: #2f4ed7;
+      --success: #10b981;
+      --danger: #ef4444;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--grad); color: var(--text);
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+    
+    /* Navigation Bar */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 64px;
+      z-index: 100; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; background: rgba(6, 59, 8, 0.95);
+      backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .brand { font-weight: 800; font-size: 18px; color: #fff; text-decoration: none;}
+    .btn-back {
+      background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px;
+      color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; 
+      transition: 0.2s;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.2); }
+
+    /* Main Content */
+    .main-content {
+      margin-top: 80px; padding: 20px; max-width: 1000px; margin-left: auto; margin-right: auto;
+    }
+
+    .page-header {
+      text-align: center; margin-bottom: 30px;
+      padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .page-header h1 {
+      font-size: 2rem; margin-bottom: 8px;
+      background: linear-gradient(135deg, #4CAF50, #81c784);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    /* History Session Cards (Accordion Style) */
+    .session-card {
+      background: var(--panel); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius); margin-bottom: 20px; overflow: hidden;
+      transition: 0.3s transform;
+    }
+    
+    /* Session Header (Clickable) */
+    .session-header {
+      padding: 20px; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(255,255,255,0.03);
+    }
+    .session-header:hover { background: rgba(255,255,255,0.06); }
+    
+    .session-info h3 { margin-bottom: 6px; font-size: 1.1rem; color: #fff; }
+    .session-meta { font-size: 0.9rem; color: var(--muted); }
+    
+    .session-summary {
+      text-align: right;
+    }
+    .cgpa-badge {
+      display: inline-block; padding: 6px 12px; border-radius: 8px;
+      background: rgba(16, 185, 129, 0.2); color: var(--success);
+      font-weight: 800; font-size: 1.1rem; border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .toggle-icon { margin-left: 15px; transition: 0.3s transform; font-size: 1.2rem; }
+    .session-card.open .toggle-icon { transform: rotate(180deg); }
+
+    /* Session Details (Hidden by default) */
+    .session-details {
+      display: none; padding: 0; border-top: 1px solid rgba(255,255,255,0.1);
+      animation: slideDown 0.3s ease-out;
+    }
+    .session-card.open .session-details { display: block; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Result Table inside Details */
+    .result-table { width: 100%; border-collapse: collapse; }
+    .result-table th {
+      text-align: left; padding: 15px; color: var(--muted); font-size: 0.85rem; text-transform: uppercase;
+      background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .result-table td {
+      padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.95rem;
+    }
+    .result-table tr:last-child td { border-bottom: none; }
+    
+    .grade-badge {
+      display: inline-block; width: 30px; text-align: center; padding: 4px 0;
+      border-radius: 6px; font-weight: 700; font-size: 0.9rem;
+    }
+    .grade-A { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    .grade-B { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    .grade-C { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+    .grade-D, .grade-E { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .grade-F { background: rgba(239, 68, 68, 0.3); color: #ef4444; border: 1px solid #ef4444; }
+
+    /* Empty State */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-icon { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
+
+    /* Loading */
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+      display: flex; align-items: center; justify-content: center; z-index: 200;
+    }
+    .spinner {
+      width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 700px) {
+      .session-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+      .session-summary { text-align: left; width: 100%; display: flex; justify-content: space-between; align-items: center; }
+      
+      /* Mobile Table Cards */
+      .result-table thead { display: none; }
+      .result-table tr { display: block; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+      .result-table td {
+        display: flex; justify-content: space-between; padding: 5px 0; border: none;
+      }
+      .result-table td::before {
+        content: attr(data-label); color: var(--muted); font-weight: 600;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="loading-overlay" id="loader">
+    <div class="spinner"></div>
+  </div>
+
+  <header class="topbar">
+    <a href="dashboard.html" class="brand">📂 History</a>
+    <a href="dashboard.html" class="btn-back">Dashboard</a>
+  </header>
+
+  <div class="main-content">
+    <div class="page-header">
+      <h1>Assessment History</h1>
+      <p style="color: var(--muted)">Review your past performance and track your growth.</p>
+    </div>
+
+    <div id="historyContainer">
+      </div>
+
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <div class="empty-icon">📝</div>
+      <h3>No History Found</h3>
+      <p>You haven't completed any mock exams yet.</p>
+      <a href="mock-exam.html" class="btn-back" style="margin-top: 20px; display: inline-block;">Take a Mock Exam</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // --- CONFIGURATION ---
+    const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
+      if (!user) { window.location.href = 'index.html'; return; }
+      
+      loadHistory(user.id); // Assuming localStorage saves user ID or we fetch it
+    });
+
+    async function loadHistory(localUserId) {
+      try {
+        // 1. Get current authenticated user ID from Supabase directly for security
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const userId = user ? user.id : localUserId; // Fallback to local if session logic differs
+
+        if (!userId) throw new Error("User ID not found");
+
+        // 2. Fetch all final results for this user
+        const { data: results, error } = await supabaseClient
+          .from('user_final_results')
+          .select('*')
+          .eq('auth_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!results || results.length === 0) {
+          document.getElementById('loader').style.display = 'none';
+          document.getElementById('emptyState').style.display = 'block';
+          return;
+        }
+
+        // 3. Group results by session_id
+        const sessions = {};
+        results.forEach(record => {
+          if (!sessions[record.session_id]) {
+            sessions[record.session_id] = {
+              id: record.session_id,
+              date: new Date(record.created_at || record.calculated_at),
+              courses: [],
+              totalGPA: 0,
+              courseCount: 0
+            };
+          }
+          sessions[record.session_id].courses.push(record);
+          sessions[record.session_id].totalGPA += parseFloat(record.gpa || 0);
+          sessions[record.session_id].courseCount++;
+        });
+
+        // 4. Render Grouped Sessions
+        renderSessions(sessions);
+
+      } catch (err) {
+        console.error('History Error:', err);
+        alert('Failed to load history.');
+      } finally {
+        document.getElementById('loader').style.display = 'none';
+      }
+    }
+
+    function renderSessions(sessionsObj) {
+      const container = document.getElementById('historyContainer');
+      container.innerHTML = '';
+
+      // Convert object to array and sort by date descending
+      const sessionArray = Object.values(sessionsObj).sort((a, b) => b.date - a.date);
+
+      sessionArray.forEach(session => {
+        // Calculate Average CGPA for this session
+        const sessionCGPA = (session.totalGPA / session.courseCount).toFixed(2);
+        
+        // Format Date
+        const dateStr = session.date.toLocaleDateString('en-US', { 
+          weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' 
+        });
+        const timeStr = session.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        // Create Card HTML
+        const card = document.createElement('div');
+        card.className = 'session-card';
+        
+        // Header HTML
+        let html = `
+          <div class="session-header" onclick="this.parentElement.classList.toggle('open')">
+            <div class="session-info">
+              <h3>Mock Exam Session</h3>
+              <div class="session-meta">📅 ${dateStr} • ⏰ ${timeStr}</div>
+            </div>
+            <div class="session-summary">
+              <span class="cgpa-badge">CGPA: ${sessionCGPA}</span>
+              <span class="toggle-icon">▼</span>
+            </div>
+          </div>
+          
+          <div class="session-details">
+            <table class="result-table">
+              <thead>
+                <tr>
+                  <th>Course Code</th>
+                  <th>Test Score</th>
+                  <th>Exam Score</th>
+                  <th>Total</th>
+                  <th>Grade</th>
+                  <th>GPA</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        // Add rows for each course
+        session.courses.forEach(course => {
+          const gradeClass = `grade-${course.grade.charAt(0)}`; // e.g., grade-A
+          html += `
+            <tr>
+              <td data-label="Course"><strong>${course.course_code}</strong></td>
+              <td data-label="Test Score">${course.test_score || 0} / 40</td>
+              <td data-label="Exam Score">${course.exam_score || 0} / 60</td>
+              <td data-label="Total Score" style="font-weight:700">${course.total_score || 0}</td>
+              <td data-label="Grade"><span class="grade-badge ${gradeClass}">${course.grade}</span></td>
+              <td data-label="GPA" style="color:var(--accent)">${Number(course.gpa).toFixed(2)}</td>
+            </tr>
+          `;
+        });
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        card.innerHTML = html;
+        container.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>

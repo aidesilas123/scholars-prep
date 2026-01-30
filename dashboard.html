@@ -621,6 +621,100 @@
   border: 2px solid rgba(255, 255, 255, 0.2);
   object-fit: cover;
 }
+/* --- SIDEBAR & MOBILE RESPONSIVENESS --- */
+
+/* 1. The Sidebar (Hidden by default) */
+.sidebar {
+  height: 100%;
+  width: 0; /* Closed width */
+  position: fixed;
+  z-index: 2000; /* On top of everything */
+  top: 0;
+  right: 0;
+  background-color: rgba(19, 1, 1, 0.95); /* Dark background matching theme */
+  overflow-x: hidden;
+  transition: 0.5s; /* Slide animation */
+  padding-top: 60px;
+  box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+}
+
+/* Sidebar Links/Content */
+.sidebar a, .sidebar .user-info {
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 18px;
+  color: #f1f1f1;
+  display: block;
+  transition: 0.3s;
+  white-space: nowrap;
+}
+
+.sidebar .user-info {
+  font-size: 14px;
+  color: #aaa;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+}
+
+.sidebar a:hover {
+  color: #4CAF50;
+}
+
+.sidebar .closebtn {
+  position: absolute;
+  top: 0;
+  right: 25px;
+  font-size: 36px;
+  margin-left: 50px;
+  cursor: pointer;
+}
+
+/* 2. The Hamburger Menu Button (Visible only on mobile) */
+.menu-btn {
+  display: none; /* Hidden on desktop */
+  font-size: 24px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: white;
+  padding: 10px;
+}
+
+/* 3. Mobile Media Query */
+@media screen and (max-width: 768px) {
+  /* Adjust Header Layout */
+  header {
+    padding: 10px 15px;
+  }
+  
+  /* Hide the desktop user controls on mobile */
+  .desktop-controls {
+    display: none !important;
+  }
+  
+  /* Show the hamburger menu */
+  .menu-btn {
+    display: block;
+  }
+  
+  /* Adjust Logo size for mobile */
+  .dashboard-logo {
+    width: 40px;
+    height: 40px;
+  }
+  
+  header h1 {
+    font-size: 18px;
+  }
+  
+  /* Adjust container grid for small screens */
+  .container {
+    grid-template-columns: 1fr; /* 1 column on mobile */
+    padding: 10px;
+  }
+}
   </style>
 </head>
 
@@ -636,57 +730,72 @@
   </div>
 
   <header>
-    <div class="header-actions">
-      <div class="dropdown">
-        <button class="action-btn notification" onclick="toggleDropdown('notificationDropdown')">
-          🔔
-          <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
-        </button>
-        <div id="notificationDropdown" class="dropdown-content left">
-          <a href="notifications.html" onclick="navigateWithLoading(event, 'notifications.html')">📢 View All Notifications</a>
-          <hr style="margin: 5px 0;">
-          <div id="notificationPreview"></div>
-        </div>
-      </div>
-
-      <div class="dropdown">
-        <button class="action-btn" onclick="toggleDropdown('messagesDropdown')">
-          💬
-          <span id="messageBadge" class="notification-badge" style="display: none;">0</span>
-        </button>
-        <div id="messagesDropdown" class="dropdown-content left">
-          <a href="messages.html" onclick="navigateWithLoading(event, 'messages.html')">📨 View All Messages</a>
-          <hr style="margin: 5px 0;">
-          <div id="messagePreview"></div>
-        </div>
+  <div class="header-actions">
+    <div class="dropdown">
+      <button class="action-btn notification" onclick="toggleDropdown('notificationDropdown')">
+        🔔 <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+      </button>
+      <div id="notificationDropdown" class="dropdown-content left">
+         <a href="notifications.html" onclick="navigateWithLoading(event, 'notifications.html')">📢 View All Notifications</a>
+         <hr style="margin: 5px 0;">
+         <div id="notificationPreview"></div>
       </div>
     </div>
 
-    <div class="header-center">
-      <img src="favicon1.png" alt="Logo" class="dashboard-logo"> 
-      <h1>Welcome to Dashboard</h1>
-    </div>
-
-    <div class="header-actions">
-      <div class="user-email" id="userEmail"></div>
-      
-      <div class="dropdown">
-        <button class="action-btn settings" onclick="toggleDropdown('settingsDropdown')">⚙️</button>
-        <div id="settingsDropdown" class="dropdown-content">
-          <a href="#" onclick="openProfileSettings()">👤 Profile Settings</a>
-          <a href="#" onclick="openNotificationSettings()">🔔 Notification Preferences</a>
-          <a href="#" onclick="openThemeSettings()">🎨 Theme Settings</a>
-          <a href="#" onclick="openMessageAdminModal()">💬 Message Admin</a>
-          <a href="feedback.html" onclick="openReportIssue()">🆘 Report Issue</a>
-          <hr style="margin: 5px 0;">
-          <a href="#" onclick="logout()" style="color: #ff4b5c;">🚪 Logout</a>
-        </div>
+    <div class="dropdown">
+      <button class="action-btn" onclick="toggleDropdown('messagesDropdown')">
+        💬 <span id="messageBadge" class="notification-badge" style="display: none;">0</span>
+      </button>
+      <div id="messagesDropdown" class="dropdown-content left">
+         <a href="messages.html" onclick="navigateWithLoading(event, 'messages.html')">📨 View All Messages</a>
+         <hr style="margin: 5px 0;">
+         <div id="messagePreview"></div>
       </div>
-
-      <button onclick="logout()">Logout</button>
     </div>
-  </header>
+  </div>
 
+  <div class="header-center">
+    <img src="favicon1.png" alt="Logo" class="dashboard-logo">
+  
+   
+  </div>
+   <h1 style=" text-align: center;">Scholars Prep</h1>
+
+  <div class="header-actions desktop-controls">
+    <div class="user-email" id="userEmail"></div>
+    
+    <div class="dropdown">
+      <button class="action-btn settings" onclick="toggleDropdown('settingsDropdown')">⚙️</button>
+      <div id="settingsDropdown" class="dropdown-content">
+        <a href="#" onclick="openProfileSettings()">👤 Profile Settings</a>
+        <a href="#" onclick="openNotificationSettings()">🔔 Preferences</a>
+        <a href="#" onclick="openThemeSettings()">🎨 Theme</a>
+        <a href="#" onclick="openMessageAdminModal()">💬 Message Admin</a>
+        <a href="feedback.html" onclick="openReportIssue()">🆘 Report Issue</a>
+      </div>
+    </div>
+
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <button class="menu-btn" onclick="openSidebar()">☰</button>
+</header>
+
+<div id="mySidebar" class="sidebar">
+  <a href="dashboard.html" class="closebtn" onclick="closeSidebar(); return false;">&times;</a>
+  
+  <div class="user-info" id="mobileUserEmail">User Email</div>
+  
+  <a href="#" onclick="openProfileSettings(); closeSidebar()">👤 Profile Settings</a>
+  <a href="notifications.html" onclick="openNotificationSettings(); closeSidebar()">🔔 Notifications</a>
+  <a href="#" onclick="openThemeSettings(); closeSidebar()">🎨 Theme</a>
+  <a href="messages.html">💬 Message Admin</a>
+  <a href="feedback.html" onclick="openReportIssue(); closeSidebar()">🆘 Report Issue</a>
+  
+  <hr style="border-color: rgba(255,255,255,0.1); margin: 10px 0;">
+  
+  <a href="#" onclick="logout()" style="color: #ff4b5c;">🚪 Logout</a>
+</div>
   <div class="main">
     <div class="container">
       <div class="card" onclick="navigateWithLoading(null, 'cbt.html')">
@@ -879,7 +988,28 @@
     /******************************************************************
      * CORE FUNCTIONS
      ******************************************************************/
-    
+    // --- SIDEBAR FUNCTIONS ---
+
+function openSidebar() {
+  document.getElementById("mySidebar").style.width = "250px";
+}
+
+function closeSidebar() {
+  document.getElementById("mySidebar").style.width = "0";
+}
+
+// Close sidebar if user clicks outside of it on the main content
+document.addEventListener('click', function(event) {
+  const sidebar = document.getElementById('mySidebar');
+  const menuBtn = document.querySelector('.menu-btn');
+  
+  // If sidebar is open, and click is NOT on sidebar and NOT on the menu button
+  if (sidebar.style.width === "250px" && 
+      !sidebar.contains(event.target) && 
+      !menuBtn.contains(event.target)) {
+    closeSidebar();
+  }
+});
     // Loading System
     function showLoading(message = 'Loading...') {
       const loadingOverlay = document.getElementById('loadingOverlay');
@@ -1395,8 +1525,13 @@
       }
       
       // Display user email
-      currentUser = userData;
-      document.getElementById('userEmail').textContent = userData.email || 'User';
+     // Display user email (Desktop and Mobile Sidebar)
+currentUser = userData;
+const emailText = userData.email || 'User';
+if(document.getElementById('userEmail')) 
+    document.getElementById('userEmail').textContent = emailText;
+if(document.getElementById('mobileUserEmail')) 
+    document.getElementById('mobileUserEmail').textContent = emailText;
       
       // Initialize Supabase
       initSupabase();

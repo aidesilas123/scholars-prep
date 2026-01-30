@@ -321,7 +321,7 @@ html, body {
       if(error){ 
         showModal('Error', error.message); 
       } else {
-        showModal('Success', 'Account created! Please check your email.', {autoClose: 4000});
+        showModal('Success', 'Account created! Please Login.', {autoClose: 4500});
         setTimeout(() => { document.querySelector('#toggleToLogin .toggle').click(); }, 2000);
       }
     });

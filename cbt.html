@@ -5,9 +5,19 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>CBT — Scholars Prep</title>
   <!-- Fix for favicon error -->
-  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="icon" type="image" href="favicon1.png">
 
   <style>
+    /* --- FIX: Make Modal Buttons Visible --- */
+.modal .btn.secondary {
+  background-color: #e5e7eb !important; /* Light Gray background */
+  color: #1f2937 !important;            /* Dark Black text */
+  border: 1px solid #d1d5db;            /* Subtle border */
+}
+
+.modal .btn.secondary:hover {
+  background-color: #d1d5db !important; /* Darker gray when hovering */
+}
     :root{
       --grad: linear-gradient(135deg,#042209,#062712 60%);
       --card: rgba(14, 224, 28, 0.12);

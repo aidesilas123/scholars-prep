@@ -5,9 +5,19 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mock Exams — Scholars Prep</title>
   <!-- Fix for favicon error -->
-  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="icon" type="image" href="favicon1.png">
 
   <style>
+    /* --- FIX: Make Modal Buttons Visible --- */
+.modal .btn.secondary {
+  background-color: #e5e7eb !important; /* Light Gray background */
+  color: #1f2937 !important;            /* Dark Black text */
+  border: 1px solid #d1d5db;            /* Subtle border */
+}
+
+.modal .btn.secondary:hover {
+  background-color: #d1d5db !important; /* Darker gray when hovering */
+}
     :root{
       --grad: linear-gradient(135deg,#042209,#062712 60%);
       --card: rgba(14, 224, 28, 0.12);
@@ -455,6 +465,152 @@
       padding: 4px 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
+    /* --- SIDEBAR & RESPONSIVENESS --- */
+
+/* 1. The Sidebar (Hidden by default) */
+.sidebar {
+  height: 100%;
+  width: 0; /* 0 width - change this with JavaScript */
+  position: fixed;
+  z-index: 2000; /* Top layer */
+  top: 0;
+  right: 0;
+  background-color: #042209; /* Deep Green matching theme */
+  border-left: 1px solid rgba(255,255,255,0.1);
+  overflow-x: hidden;
+  transition: 0.4s; /* Slide effect */
+  padding-top: 60px;
+  backdrop-filter: blur(10px);
+  box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+}
+
+/* Sidebar Links */
+.sidebar a {
+  padding: 15px 25px;
+  text-decoration: none;
+  font-size: 16px;
+  color: #eef2ff;
+  display: block;
+  transition: 0.3s;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar a:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--accent);
+}
+
+/* Close Button */
+.sidebar .closebtn {
+  position: absolute;
+  top: 0;
+  right: 20px;
+  font-size: 36px;
+  margin-left: 50px;
+  border: none;
+  color: var(--muted);
+}
+
+/* User Info inside Sidebar */
+.sidebar-user {
+  padding: 20px 25px;
+  color: var(--muted);
+  font-size: 14px;
+  background: rgba(0,0,0,0.2);
+  margin-bottom: 10px;
+}
+
+/* 2. Hamburger Menu Button */
+.menu-btn {
+  display: none; /* Hidden on desktop */
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 5px 10px;
+}
+
+/* 3. Media Query for Mobile Devices */
+@media screen and (max-width: 768px) {
+  /* Hide the normal header buttons on mobile */
+  header .right {
+    display: none !important;
+  }
+  
+  /* Show the hamburger menu */
+  .menu-btn {
+    display: block !important;
+  }
+  
+  /* Adjust Title size */
+  header .title {
+    font-size: 16px;
+    max-width: 70%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+/* --- RESPONSIVE TABLE (CARD VIEW) --- */
+@media screen and (max-width: 768px) {
+  /* 1. Hide the table header row completely */
+  .results-table thead {
+    display: none;
+  }
+
+  /* 2. Turn table rows into "Cards" */
+  .results-table tbody tr {
+    display: block;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin-bottom: 15px;
+    padding: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+
+  /* 3. Turn cells into flex rows (Label on left, Value on right) */
+  .results-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: right; /* Value aligns right */
+  }
+
+  /* Remove border from the last item in the card */
+  .results-table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  /* 4. Add Labels using CSS (No JS needed!) */
+  /* This injects the "Header" text before the value */
+  
+  .results-table tbody td:nth-of-type(1)::before { content: "Course Code"; font-weight: bold; color: var(--muted); text-align: left; }
+  .results-table tbody td:nth-of-type(2)::before { content: "Test Score"; font-weight: bold; color: var(--muted); }
+  .results-table tbody td:nth-of-type(3)::before { content: "Exam Score"; font-weight: bold; color: var(--muted); }
+  .results-table tbody td:nth-of-type(4)::before { content: "Total Score"; font-weight: bold; color: var(--muted); }
+  .results-table tbody td:nth-of-type(5)::before { content: "Grade"; font-weight: bold; color: var(--muted); }
+  .results-table tbody td:nth-of-type(6)::before { content: "GPA"; font-weight: bold; color: var(--muted); }
+  .results-table tbody td:nth-of-type(7)::before { content: "Status"; font-weight: bold; color: var(--muted); }
+  .results-table tbody td:nth-of-type(8)::before { content: "Credits"; font-weight: bold; color: var(--muted); }
+
+  /* 5. Special styling for the Course Code (First item) */
+  .results-table tbody td:nth-of-type(1) {
+    justify-content: center; /* Center the title */
+    background: rgba(0,0,0,0.2);
+    margin: -10px -10px 10px -10px; /* Stretch to edges */
+    padding: 12px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  /* Hide the label for the Course Code title to make it look like a header */
+  .results-table tbody td:nth-of-type(1)::before {
+    display: none; 
+  }
+}
   </style>
 </head>
 <body class="noselect">
@@ -486,16 +642,37 @@
   </div>
 
   <header>
-    <div class="title">Mock Exams — ABU Past Questions</div>
-    <div class="right">
-      <span class="pill" id="userTag">User</span>
-      <button class="btn secondary" onclick="location.href='dashboard.html'">Back to Dashboard</button>
-      <!-- ADDED: Start New Button -->
-      <button class="start-new-btn" onclick="startNewMockExam()" id="startNewBtn" style="display: none;">
-        🆕 Start New
-      </button>
-    </div>
-  </header>
+  <div class="title">Mock Exams — ABU Past Questions</div>
+  
+  <div class="right">
+    <span class="pill" id="userTag">User</span>
+    <button class="btn secondary" onclick="location.href='dashboard.html'">Back to Dashboard</button>
+    <button class="start-new-btn" onclick="startNewMockExam()" id="startNewBtn" style="display: none;">
+      🆕 Start New
+    </button>
+  </div>
+
+  <button class="menu-btn" onclick="openSidebar()">☰</button>
+</header>
+
+<div id="mySidebar" class="sidebar">
+  <a href="#" class="closebtn" onclick="closeSidebar(); return false;">&times;</a>
+  
+  <div class="sidebar-user">
+    Logged in as:<br>
+    <strong id="mobileUserEmail">user@example.com</strong>
+  </div>
+
+  <a href="#" onclick="location.href='dashboard.html'; return false;">
+    🏠 Back to Dashboard
+  </a>
+
+  <a href="#" onclick="closeSidebar(); startNewMockExam(); return false;">
+    🆕 Start New Mock Exam
+  </a>
+
+  </a>
+</div>
 
   <main>
     <!-- STEP 0: Instructions -->
@@ -861,6 +1038,9 @@
         currentUserEmail = user.email;
         document.getElementById('wmText').textContent = currentUserEmail;
         document.getElementById('userTag').textContent = currentUserEmail;
+        if(document.getElementById('mobileUserEmail')) {
+    document.getElementById('mobileUserEmail').textContent = currentUserEmail;
+}
 
         // Get current authenticated user from Supabase
         const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser();
@@ -2116,7 +2296,45 @@ async function saveFinalResultsForCourse(courseCode, examScore, sessionId) {
     } else {
       console.log('✅ Final results saved successfully!');
     }
-    
+    // ... (Your existing code for saving to user_final_results) ...
+
+    // --- START: ADDITION FOR LEADERBOARD (final_gpa) ---
+    try {
+      console.log('📊 Checking Leaderboard status...');
+      
+      // 1. Check if user already has a high score
+      const { data: currentHigh } = await supabaseClient
+        .from('final_gpa')
+        .select('gpa')
+        .eq('auth_id', currentAuthId)
+        .single();
+
+      // 2. Only update if: (User is new) OR (New GPA is higher)
+      // This ensures the leaderboard shows their BEST score, not just their LATEST.
+      if (!currentHigh || gpa > currentHigh.gpa) {
+        
+        const { error: lbError } = await supabaseClient
+          .from('final_gpa')
+          .upsert({
+            auth_id: currentAuthId,
+            gpa: gpa,
+            total_score: totalScore,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'auth_id' });
+
+        if (lbError) console.error('⚠️ Leaderboard update warning:', lbError);
+        else console.log('🏆 Leaderboard updated with new high score!');
+        
+      } else {
+        console.log('📉 Current score not higher than best. Leaderboard unchanged.');
+      }
+    } catch (lbEx) {
+      // Catch errors silently so we don't break the main function
+      console.error('Leaderboard logic error (Non-critical):', lbEx);
+    }
+    // --- END: ADDITION FOR LEADERBOARD ---
+
+    return true; // (This is your existing return line)
     return true;
     
   } catch (error) {
@@ -3177,6 +3395,26 @@ function getLatestResultsPerCourse(results) {
   
   resultsContent.innerHTML = tableHTML;
 }
+/* --- SIDEBAR FUNCTIONS --- */
+function openSidebar() {
+  document.getElementById("mySidebar").style.width = "250px";
+}
+
+function closeSidebar() {
+  document.getElementById("mySidebar").style.width = "0";
+}
+
+// Close sidebar if clicking outside of it
+document.addEventListener('click', function(event) {
+  const sidebar = document.getElementById('mySidebar');
+  const menuBtn = document.querySelector('.menu-btn');
+  
+  if (sidebar.style.width === "250px" && 
+      !sidebar.contains(event.target) && 
+      !menuBtn.contains(event.target)) {
+    closeSidebar();
+  }
+});
   </script>
   
   <!-- Login Protection -->

@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Past Questions - Scholars Prep</title>
-  <!-- Fix for favicon error -->
-  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <link rel="icon" type="image" href="favicon1.png">
   
   <style>
     body {
@@ -15,701 +14,421 @@
       margin: 0;
       padding: 0;
       text-align: center;
+      /* Prevent text selection */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
 
-    /* NEW: Global Loading Overlay */
-    .loading-overlay {
+    /* Tiled Watermark Container */
+    .watermark-grid {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      backdrop-filter: blur(4px);
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      display: flex;
+      flex-wrap: wrap;
+      overflow: hidden;
+      opacity: 0.04; /* Faint but visible */
+      justify-content: space-around;
+      align-content: space-around;
+    }
+
+    .watermark-item {
+      transform: rotate(-30deg);
+      font-size: 20px;
+      font-weight: 900;
+      color: #ffffff;
+      padding: 40px;
+      white-space: nowrap;
+    }
+
+    /* Content Wrapper (Z-index 1 to sit above watermark) */
+    .content-wrapper {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8); display: none;
+      align-items: center; justify-content: center; z-index: 2000;
+      backdrop-filter: blur(5px);
     }
     
     .page-loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      background: rgba(14, 224, 28, 0.12);
-      padding: 40px;
-      border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      background: rgba(14, 224, 28, 0.12); padding: 40px; border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.12);
     }
     
     .loading-spinner {
-      display: inline-block;
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top-color: #4CAF50;
-      animation: spin 1s ease-in-out infinite;
+      width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%; border-top-color: #4CAF50; animation: spin 1s ease-in-out infinite;
     }
     
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    header {
-      background: rgba(0, 0, 0, 0.3);
-      padding: 15px;
-      font-size: 20px;
-      font-weight: bold;
-    }
-
+    /* Course Grid */
     .course-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      padding: 40px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px; padding: 20px; max-width: 1000px; margin: 0 auto;
     }
 
     .course-card {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 30px;
-      cursor: pointer;
+      background: rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 25px;
+      border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px);
       transition: transform 0.2s, background 0.3s;
     }
+    .course-card:active { transform: scale(0.98); }
 
-    .course-card:hover {
-      transform: scale(1.05);
-      background: rgba(255, 255, 255, 0.2);
+    .action-btn {
+      border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer;
+      font-weight: bold; margin: 5px; flex: 1; min-width: 70px;
     }
 
-    /* Year Selection Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-
-    .modal-content {
-      background: #fff;
-      color: #000;
-      padding: 30px;
-      border-radius: 15px;
-      width: 90%;
-      max-width: 500px;
-      text-align: center;
-    }
-
-    .modal-content h2 {
-      margin-top: 0;
-      color: #333;
-    }
-
-    .year-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin: 20px 0;
-    }
-
-    .year-card {
-      padding: 15px;
-      background: #f0f0f0;
-      border-radius: 8px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: all 0.2s;
-    }
-
-    .year-card:hover {
-      background: #e0e0e0;
-      border-color: #4CAF50;
-    }
-
-    .year-card.selected {
-      background: #4CAF50;
-      color: white;
-    }
-
-    .close-btn {
-      background: red;
-      color: #fff;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 15px;
-    }
-
-    /* Questions Display */
+    /* Questions UI */
     .questions-container {
-      display: none;
-      padding: 20px;
-      text-align: left;
-      max-width: 800px;
-      margin: 0 auto;
+      display: none; padding: 20px; text-align: left; max-width: 800px; margin: 0 auto;
     }
 
     .question-item {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(20, 20, 20, 0.6); border-radius: 12px;
+      padding: 20px; margin-bottom: 25px; border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
 
-    .question-text {
-      font-size: 16px;
-      margin-bottom: 15px;
-      font-weight: bold;
-    }
-
-    .options-list {
-      margin: 10px 0;
-    }
+    .question-text { font-size: 17px; margin-bottom: 15px; font-weight: 600; line-height: 1.5; }
 
     .option-item {
-      padding: 10px;
-      margin: 5px 0;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 6px;
-      border-left: 3px solid transparent;
-      display: flex;
-      align-items: center;
+      padding: 12px; margin: 8px 0; background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);
+      display: flex; align-items: center;
     }
 
     .option-item.correct {
-      border-left-color: #4CAF50;
-      background: rgba(76, 175, 80, 0.1);
+      border: 1px solid #4CAF50; background: rgba(76, 175, 80, 0.15);
     }
 
-    .answer-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-      margin-left: 10px;
-      background: #4CAF50;
-      color: white;
-    }
+    .checkmark { margin-right: 12px; font-weight: bold; color: #4CAF50; }
+    .circle-mark { margin-right: 12px; opacity: 0.5; font-size: 14px; }
 
-    .checkmark {
-      margin-right: 10px;
-      font-weight: bold;
-      color: #4CAF50;
+    /* Solution Box Styles */
+    .reveal-btn {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+      color: white; border: none; padding: 10px 20px;
+      border-radius: 8px; cursor: pointer; font-weight: bold;
+      margin-top: 15px; width: 100%; display: flex;
+      align-items: center; justify-content: center; gap: 8px;
     }
+    .reveal-btn:hover { filter: brightness(1.1); }
 
-    .back-btn {
-      background: #666;
-      color: white;
-      border: none;
-      padding: 10px 20px;
+    .solution-box {
+      display: none; /* Hidden by default */
+      margin-top: 15px; padding: 15px;
+      background: rgba(63, 102, 255, 0.15);
+      border-left: 4px solid #3f66ff;
       border-radius: 6px;
-      cursor: pointer;
-      margin-bottom: 20px;
+      font-size: 15px; line-height: 1.6; color: #e0e7ff;
+      animation: slideDown 0.3s ease-out;
     }
+    .solution-box strong { color: #3f66ff; display: block; margin-bottom: 5px; }
 
-    /* Security Styles */
-    .no-select {
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-    }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-    .no-copy {
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
+    /* Modal */
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.9); justify-content: center; align-items: center; z-index: 3000;
     }
+    .modal-content {
+      background: #1e1e1e; color: #fff; padding: 30px; border-radius: 16px;
+      width: 90%; max-width: 400px; text-align: center; border: 1px solid #333;
+    }
+    .year-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+    .year-card {
+      padding: 12px; background: #333; border-radius: 8px; cursor: pointer;
+      border: 1px solid #444; transition: 0.2s;
+    }
+    .year-card:active { background: #4CAF50; border-color: #4CAF50; }
+    .back-btn { background: #333; color: white; border: 1px solid #555; padding: 8px 16px; border-radius: 20px; cursor: pointer; margin-bottom: 15px; }
+
+    /* Screenshot Protection Blur */
+    .blur-content { filter: blur(15px); }
   </style>
 </head>
-<body class="no-select no-copy">
-  <!-- NEW: Global Loading Overlay -->
+<body>
+
+  <div class="watermark-grid" id="watermarkGrid"></div>
+
   <div class="loading-overlay" id="globalLoading">
     <div class="page-loading">
       <div class="loading-spinner"></div>
-      <div style="font-size: 18px; font-weight: 600;">Loading...</div>
-      <div style="color: #cbd5e1; font-size: 14px;">Please wait</div>
+      <div>Loading...</div>
     </div>
   </div>
 
-<!-- === ABU PQ: Drop-in NAV + SEARCH + WATERMARK (paste at very top of <body>) === -->
-<style>
-  :root{
-    --nav-grad: linear-gradient(135deg,#063b08,#083502 60%);
-    --nav-dark: #1b2357;
-    --pill: #ffffff;
-    --text: #0f172a;
-    --muted: #8f96a3;
-    --radius: 14px;
-  }
-  /* Keep page content below sticky bar */
-  body{ margin:0; }
-  body.has-topbar{ padding-top: 76px; }
+  <div class="content-wrapper" id="mainWrapper">
 
-  /* Sticky top bar */
-  .topbar{
-    position: fixed; inset: 0 0 auto 0; height: 64px; z-index: 9999;
-    display:flex; align-items:center; gap:16px;
-    padding: 10px 16px;
-    background: var(--nav-grad);
-    box-shadow: 0 6px 22px rgba(22,34,85,.25);
-  }
-  .topbar .brand{
-    display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px;
-    background: rgba(255,255,255,.18); color:#fff; padding:8px 12px; border-radius: 999px;
-    cursor:pointer; user-select:none;
-  }
-  .topbar nav{
-    display:flex; gap:8px; align-items:center; flex: 1 1 auto; overflow:auto;
-  }
-  .topbar nav a{
-    display:inline-flex; align-items:center; height:38px;
-    padding: 0 14px; border-radius: 999px; text-decoration:none;
-    background: rgba(255,255,255,.16); color:#fff; font-weight:600;
-    border:1px solid rgba(255,255,255,.22);
-    white-space:nowrap; transition: transform .12s ease, background .2s ease, box-shadow .2s ease;
-  }
-  .topbar nav a:hover{ transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.18); }
-  .topbar nav a.active{ background:#fff; color:#2b3aa6; }
+    <style>
+      :root{ --nav-grad: linear-gradient(135deg,#063b08,#083502 60%); }
+      .topbar{ position: fixed; inset: 0 0 auto 0; height: 64px; z-index: 1000; display:flex; align-items:center; padding: 0 16px; background: var(--nav-grad); border-bottom: 1px solid rgba(255,255,255,0.1); }
+      .brand{ font-weight:800; color:#fff; flex:1; }
+      .nav-links a{ color:#fff; text-decoration:none; margin-left:15px; font-weight:600; font-size:14px; opacity:0.8; }
+      .nav-links a.active{ opacity:1; text-decoration:underline; }
+      body { padding-top: 70px; }
+    </style>
+    <header class="topbar">
+      <div class="brand" onclick="location.href='dashboard.html'">Scholars Prep</div>
+      <nav class="nav-links">
+        <a href="dashboard.html">Home</a>
+        <a href="pastquestions.html" class="active">Past Qs</a>
+        <a href="cbt.html">CBT</a>
+      </nav>
+    </header>
 
-  .topbar .actions{
-    display:flex; align-items:center; gap:10px;
-  }
-  .topbar .search{
-    position:relative; display:flex; align-items:center;
-    background:#fff; border-radius: 999px; padding: 0 12px; height:38px;
-    border:1px solid rgba(0,0,0,.06);
-    box-shadow: 0 4px 14px rgba(0,0,0,.08);
-  }
-  .topbar .search input{
-    border:0; outline:0; height:32px; width: 220px; font-size:14px; color: var(--text);
-  }
-  .topbar .btn{
-    height:38px; padding: 0 14px; border-radius: 999px; border:0; cursor:pointer;
-    font-weight:700;
-  }
-  .topbar .btn.logout{ background: #0f172a; color:#fff; }
-  .topbar .btn.logout:hover{ filter: brightness(1.08); }
+    <div style="text-align: center; margin: 20px 0;">
+      <h2>📘 Past Questions Archive</h2>
+      <p style="color:#aaa; font-size:14px;">(2019 - 2025)</p>
+    </div>
 
-  /* Mobile menu */
-  .topbar .menu{
-    display:none; width:38px; height:38px; border-radius:10px; border:1px solid rgba(255,255,255,.35);
-    background: transparent; color:#fff; font-size:20px; cursor:pointer;
-  }
-  @media (max-width: 800px){
-    .topbar nav{ display:none; }
-    .topbar .menu{ display:inline-flex; align-items:center; justify-content:center; }
-    .topbar.open nav{
-      position:absolute; left:0; right:0; top:64px; display:flex; padding:10px;
-      background: var(--nav-grad);
-    }
-    .topbar .search input{ width: 150px; }
-  }
+    <div class="course-list" id="courseList"></div>
 
-  /* Watermark (user email) */
-  .page-watermark{
-    position: fixed; inset:0; pointer-events:none; z-index: 0;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:900; letter-spacing:6px; color:#110000; opacity:.08;
-    transform: rotate(-25deg);
-    font-size: 44px; user-select:none; mix-blend-mode: overlay;
-    animation: wm-move 16s ease-in-out infinite alternate;
-  }
-  @keyframes wm-move{
-    0%{ transform: rotate(-25deg) translate(-40px,-40px); }
-    100%{ transform: rotate(-25deg) translate(40px,40px); }
-  }
-</style>
+    <div class="questions-container" id="questionsContainer">
+      <button class="back-btn" onclick="goBackToCourses()">← Select Another Course</button>
+      <h3 id="questionsTitle" style="border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px;"></h3>
+      <div id="questionsList"></div>
+    </div>
 
-<header class="topbar" id="topbar">
-  <div class="brand" onclick="location.href='dashboard.html'"></div>
-
-  <nav>
-    <a href="dashboard.html">Dashboard</a>
-    <a href="materials.html">Materials</a>
-    <a href="pastquestions.html" class="active">Past Questions</a>
-    <a href="cbt.html">CBT</a>
-  </nav>
-
-  <div class="actions">
-    <label class="search" aria-label="Search">
-      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#6b7280" d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      <input id="globalSearch" type="search" placeholder="Search" />
-    </label>
-    <button class="menu" id="menuBtn" aria-label="Toggle menu">☰</button>
-  </div>
-</header>
-
-<!-- Watermark (auto-fills with user email) -->
-<div id="pageWatermark" class="page-watermark" aria-hidden="true"></div>
-
-<script>
-  // Make room for sticky bar
-  document.body.classList.add('has-topbar');
-
-  // Highlight current page link
-  (function highlightActive(){
-    const here = location.pathname.split('/').pop();
-    document.querySelectorAll('.topbar nav a').forEach(a=>{
-      const href = a.getAttribute('href');
-      if(href && here && href === here){ a.classList.add('active'); }
-    });
-  })();
-
-  // Mobile menu toggle
-  document.getElementById('menuBtn')?.addEventListener('click', ()=>{
-    document.getElementById('topbar').classList.toggle('open');
-  });
-
-  // Watermark: read email from login storage
-  (function hydrateWatermark(){
-    try{
-      const raw = localStorage.getItem('abupq_logged_in_user');
-      const wm = document.getElementById('pageWatermark');
-      if(raw && wm){
-        const u = JSON.parse(raw);
-        wm.textContent = (u && u.email) ? u.email : '';
-      }
-    }catch(e){}
-  })();
-
-  // Global Search:
-  // Filters any element that matches ONE of these selectors:
-  //   [data-search-item], .course-card, .course-item, .material-card
-  const searchInput = document.getElementById('globalSearch');
-  function runFilter(q){
-    const items = document.querySelectorAll('[data-search-item], .course-card, .course-item, .material-card');
-    const needle = q.trim().toLowerCase();
-    items.forEach(el=>{
-      const key = (el.getAttribute('data-search-item') || el.textContent || '').toLowerCase();
-      el.style.display = (needle === '' || key.includes(needle)) ? '' : 'none';
-    });
-  }
-  searchInput?.addEventListener('input', (e)=> runFilter(e.target.value));
-</script>
-<!-- === /ABU PQ: Drop-in NAV + SEARCH + WATERMARK === -->
-
-  <header style="margin-top: 80px;">
-    📘 Past Questions
-  </header>
-  <header>
-    (2019-2025)
-  </header>
-
-  <!-- Course Selection -->
-  <div class="course-list" id="courseList">
-    <!-- Courses will be loaded from Supabase -->
   </div>
 
-  <!-- Questions Display -->
-  <div class="questions-container" id="questionsContainer">
-    <button class="back-btn" onclick="goBackToCourses()">← Back to Courses</button>
-    <h2 id="questionsTitle">Past Questions</h2>
-    <div id="questionsList"></div>
-  </div>
-
-  <!-- Year Selection Modal -->
   <div class="modal" id="yearModal">
     <div class="modal-content">
-      <h2 id="modalCourseTitle">Select Year</h2>
-      <p>Choose the year for past questions:</p>
-      <div class="year-grid" id="yearGrid">
-        <!-- Years will be populated here -->
-      </div>
-      <button class="close-btn" onclick="closeYearModal()">Close</button>
+      <h3 id="modalCourseTitle">Select Year</h3>
+      <div class="year-grid" id="yearGrid"></div>
+      <button class="back-btn" onclick="closeYearModal()" style="background:#d32f2f; border:none;">Cancel</button>
     </div>
   </div>
 
-  <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /***********************
-     * SUPABASE CONFIGURATION - FIXED
-     ***********************/
-    let supabaseClient;
-    
-    // Initialize Supabase safely
-    (function initSupabase() {
-      const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
-      
-      // Always create a fresh client for this page
-      supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-      console.log('Supabase initialized:', !!supabaseClient);
-    })();
+    const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    /***********************
-     * STATE
-     ***********************/
-    let selectedCourse = null;
-    let selectedCourseName = '';
+    let selectedCourseId = null;
     let selectedCourseCode = '';
-    let selectedExamType = '';
+    let selectedType = '';
 
-    /***********************
-     * INIT
-     ***********************/
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM loaded, supabaseClient:', supabaseClient);
-      loadCoursesFromSupabase();
-      setupSecurity();
+    // --- 1. Security & Watermark Logic ---
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
+      if (!user) { window.location.href = 'index.html'; return; }
+
+      // Generate Tiled Watermark
+      const grid = document.getElementById('watermarkGrid');
+      const email = user.email || 'User';
+      // Create 30 copies of the email to fill screen
+      for(let i=0; i<30; i++) {
+        const div = document.createElement('div');
+        div.className = 'watermark-item';
+        div.textContent = email;
+        grid.appendChild(div);
+      }
+
+      // Load Courses
+      loadCourses();
+
+      // Screenshot Deterrent (Blur on tab switch)
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          document.body.classList.add("blur-content");
+        } else {
+          document.body.classList.remove("blur-content");
+        }
+      });
     });
 
-    /***********************
-     * COURSE LOADING FROM SUPABASE
-     ***********************/
-    async function loadCoursesFromSupabase() {
+    // --- 2. Load Courses ---
+    async function loadCourses() {
       showLoading(true);
-      
-      const courseList = document.getElementById('courseList');
-      courseList.innerHTML = '<div>Loading courses from database...</div>';
-
       try {
-        console.log('Loading courses, supabaseClient type:', typeof supabaseClient);
-        
         const { data: courses, error } = await supabaseClient
           .from('courses')
           .select('*')
           .order('code');
 
-        if (error) throw error;
+        if(error) throw error;
 
-        courseList.innerHTML = '';
-        
-        // Group courses by code
-        const courseGroups = {};
-        courses.forEach(course => {
-          if (!courseGroups[course.code]) {
-            courseGroups[course.code] = [];
-          }
-          courseGroups[course.code].push(course);
+        const list = document.getElementById('courseList');
+        list.innerHTML = '';
+
+        // Group courses
+        const groups = {};
+        courses.forEach(c => {
+          if(!groups[c.code]) groups[c.code] = [];
+          groups[c.code].push(c);
         });
 
-        // Create course cards
-        Object.keys(courseGroups).forEach(courseCode => {
-          const courseGroup = courseGroups[courseCode];
-          const examCourse = courseGroup.find(c => c.type === 'exam');
-          const testCourse = courseGroup.find(c => c.type === 'test');
+        Object.keys(groups).forEach(code => {
+          const variants = groups[code];
+          const div = document.createElement('div');
+          div.className = 'course-card';
           
-          const courseCard = document.createElement('div');
-          courseCard.className = 'course-card';
-          courseCard.setAttribute('data-search-item', courseCode);
-          courseCard.innerHTML = `
-            <div style="font-weight:800; font-size:18px; margin-bottom:15px;">${courseCode}</div>
-            <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-              ${examCourse ? `<button class="btn" style="background:#4CAF50; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer;" onclick="selectCourse('${examCourse.id}', '${examCourse.name}', '${courseCode}', 'exam')">Exam</button>` : ''}
-              ${testCourse ? `<button class="btn" style="background:#2196F3; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer;" onclick="selectCourse('${testCourse.id}', '${testCourse.name}', '${courseCode}', 'test')">Test</button>` : ''}
-            </div>
+          let btns = '';
+          variants.forEach(v => {
+            const color = v.type === 'exam' ? '#4CAF50' : '#2196F3';
+            btns += `<button class="action-btn" style="background:${color}; color:white;" onclick="openYearSelect('${v.id}', '${v.code}', '${v.type}')">${v.type.toUpperCase()}</button>`;
+          });
+
+          div.innerHTML = `
+            <div style="font-size:20px; font-weight:800; margin-bottom:10px;">${code}</div>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center;">${btns}</div>
           `;
-          courseList.appendChild(courseCard);
+          list.appendChild(div);
         });
-        
-      } catch (error) {
-        console.error('Error loading courses:', error);
-        courseList.innerHTML = '<div>Error loading courses. Please check console for details.</div>';
+
+      } catch(e) {
+        console.error(e);
+        alert('Error loading courses');
       } finally {
         showLoading(false);
       }
     }
 
-    // Make selectCourse available globally
-    window.selectCourse = function(courseId, courseName, courseCode, examType) {
+    // --- 3. Year Selection ---
+    async function openYearSelect(id, code, type) {
+      selectedCourseId = id;
+      selectedCourseCode = code;
+      selectedType = type;
       showLoading(true);
-      setTimeout(() => {
-        selectedCourse = courseId;
-        selectedCourseName = courseName;
-        selectedCourseCode = courseCode;
-        selectedExamType = examType;
-        showYearSelection();
-        showLoading(false);
-      }, 500);
-    };
 
-    /***********************
-     * YEAR SELECTION
-     ***********************/
-    async function showYearSelection() {
       try {
-        showLoading(true);
-        
-        const { data: yearsData, error } = await supabaseClient
+        const { data: years } = await supabaseClient
           .from('questions')
           .select('year')
-          .eq('course_id', selectedCourse)
-          .order('year', { ascending: false });
+          .eq('course_id', id);
 
-        if (error) throw error;
+        const uniqueYears = [...new Set(years.map(y => y.year))].sort((a,b) => b-a);
+        
+        const grid = document.getElementById('yearGrid');
+        grid.innerHTML = '';
+        document.getElementById('modalCourseTitle').textContent = `${code} (${type}) Years`;
 
-        const uniqueYears = [...new Set(yearsData.map(item => item.year))].sort((a, b) => b - a);
-        
-        const yearGrid = document.getElementById('yearGrid');
-        yearGrid.innerHTML = '';
-        
-        document.getElementById('modalCourseTitle').textContent = `${selectedCourseCode} ${selectedExamType.toUpperCase()} - Select Year`;
-        
         uniqueYears.forEach(year => {
-          const yearCard = document.createElement('div');
-          yearCard.className = 'year-card';
-          yearCard.innerHTML = year;
-          yearCard.onclick = () => loadPastQuestions(year);
-          yearGrid.appendChild(yearCard);
+          const d = document.createElement('div');
+          d.className = 'year-card';
+          d.textContent = year;
+          d.onclick = () => loadQuestions(year);
+          grid.appendChild(d);
         });
 
         document.getElementById('yearModal').style.display = 'flex';
-        
-      } catch (error) {
-        console.error('Error loading years:', error);
-        alert('Failed to load available years. Please try again.');
+      } catch(e) {
+        console.error(e);
       } finally {
         showLoading(false);
       }
     }
 
-    window.closeYearModal = function() {
+    function closeYearModal() {
       document.getElementById('yearModal').style.display = 'none';
-    };
+    }
 
-    /***********************
-     * LOAD PAST QUESTIONS
-     ***********************/
-    async function loadPastQuestions(year) {
-      showLoading(true);
+    // --- 4. Load Questions & Solutions ---
+    async function loadQuestions(year) {
       closeYearModal();
-      
-      const questionsList = document.getElementById('questionsList');
-      questionsList.innerHTML = '<div>Loading questions...</div>';
+      showLoading(true);
 
       try {
-        const { data: questionsData, error } = await supabaseClient
+        // Fetch questions INCLUDING the 'Details' column
+        const { data: qs, error } = await supabaseClient
           .from('questions')
-          .select('*')
-          .eq('course_id', selectedCourse)
+          .select('*') // This fetches Details automatically if column exists
+          .eq('course_id', selectedCourseId)
           .eq('year', year)
           .order('id');
 
-        if (error) throw error;
+        if(error) throw error;
 
-        if (!questionsData || questionsData.length === 0) {
-          questionsList.innerHTML = '<div>No questions found for the selected year.</div>';
-          return;
-        }
+        const container = document.getElementById('questionsList');
+        container.innerHTML = '';
+        document.getElementById('questionsTitle').textContent = `${selectedCourseCode} ${selectedType.toUpperCase()} - ${year}`;
 
-        // Update title
-        document.getElementById('questionsTitle').textContent = 
-          `${selectedCourseCode} ${selectedExamType.toUpperCase()} - ${year} Past Questions`;
+        qs.forEach((q, idx) => {
+          const ansIdx = parseInt(q.answer);
+          const opts = q.options || [];
+          // Handle case where Details column might be lowercase or capitalized in DB
+          const solutionText = q.Details || q.details || "No explanation provided for this question.";
 
-        // Display questions with correct answers ticked
-        questionsList.innerHTML = questionsData.map((question, index) => {
-          const options = question.options || [];
-          const correctAnswer = parseInt(question.answer);
-          
-          return `
-            <div class="question-item">
-              <div class="question-text">Q${index + 1}: ${question.question_text}</div>
-              <div class="options-list">
-                ${options.map((option, optIndex) => {
-                  const isCorrect = optIndex === correctAnswer;
-                  return `
-                    <div class="option-item ${isCorrect ? 'correct' : ''}">
-                      ${isCorrect ? '<span class="checkmark">✓</span>' : '<span style="margin-right: 10px; opacity: 0.5;">○</span>'}
-                      ${String.fromCharCode(65 + optIndex)}. ${option}
-                      ${isCorrect ? '<span class="answer-badge">Correct Answer</span>' : ''}
-                    </div>
-                  `;
-                }).join('')}
+          let optHtml = '';
+          opts.forEach((opt, i) => {
+            const isCorrect = i === ansIdx;
+            optHtml += `
+              <div class="option-item ${isCorrect ? 'correct' : ''}">
+                ${isCorrect ? '<span class="checkmark">✔</span>' : '<span class="circle-mark">○</span>'}
+                ${String.fromCharCode(65+i)}. ${opt}
               </div>
+            `;
+          });
+
+          const div = document.createElement('div');
+          div.className = 'question-item';
+          div.innerHTML = `
+            <div class="question-text">Q${idx+1}. ${q.question_text}</div>
+            <div>${optHtml}</div>
+            
+            <button class="reveal-btn" onclick="toggleSolution('sol-${idx}')">
+              💡 Reveal Solution
+            </button>
+            
+            <div id="sol-${idx}" class="solution-box">
+              <strong>Solving / Explanation:</strong>
+              ${solutionText}
             </div>
           `;
-        }).join('');
+          container.appendChild(div);
+        });
 
-        // Show questions section
-        setTimeout(() => {
-          document.getElementById('courseList').style.display = 'none';
-          document.getElementById('questionsContainer').style.display = 'block';
-          showLoading(false);
-        }, 500);
-        
-      } catch (error) {
-        console.error('Error loading questions:', error);
-        questionsList.innerHTML = '<div>Error loading questions. Please try again.</div>';
+        document.getElementById('courseList').style.display = 'none';
+        document.getElementById('questionsContainer').style.display = 'block';
+
+      } catch(e) {
+        console.error(e);
+        alert('Error loading questions');
+      } finally {
         showLoading(false);
       }
     }
 
-    window.goBackToCourses = function() {
-      showLoading(true);
-      setTimeout(() => {
-        document.getElementById('questionsContainer').style.display = 'none';
-        document.getElementById('courseList').style.display = 'grid';
-        showLoading(false);
-      }, 500);
+    // --- 5. Toggle Solution Visibility ---
+    window.toggleSolution = function(id) {
+      const box = document.getElementById(id);
+      if(box.style.display === 'block') {
+        box.style.display = 'none';
+      } else {
+        box.style.display = 'block';
+      }
     };
 
-    /***********************
-     * SECURITY PROTECTIONS
-     ***********************/
-    function setupSecurity() {
-      // Prevent right-click
-      document.addEventListener('contextmenu', e => {
+    function goBackToCourses() {
+      document.getElementById('questionsContainer').style.display = 'none';
+      document.getElementById('courseList').style.display = 'grid';
+    }
+
+    function showLoading(b) {
+      document.getElementById('globalLoading').style.display = b ? 'flex' : 'none';
+    }
+
+    // --- Security Prevention ---
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('keydown', function(e) {
+      if((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 's')) {
         e.preventDefault();
-        return false;
-      });
-
-      // Prevent keyboard shortcuts
-      document.addEventListener('keydown', e => {
-        const ctrl = e.ctrlKey || e.metaKey;
-        if (ctrl && ['c', 'x', 's', 'p', 'u', 'a', 'printscreen'].includes(e.key.toLowerCase())) {
-          e.preventDefault();
-          return false;
-        }
-        if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
-          e.preventDefault();
-          return false;
-        }
-        if (e.key === 'F12') {
-          e.preventDefault();
-          return false;
-        }
-      });
-
-      // Prevent text selection
-      document.addEventListener('selectstart', e => {
-        if (!['INPUT', 'TEXTAREA'].includes((e.target.tagName || ''))) {
-          e.preventDefault();
-        }
-      });
-
-      // Prevent drag and drop
-      document.addEventListener('dragstart', e => e.preventDefault());
-      document.addEventListener('drop', e => e.preventDefault());
-    }
-
-    /***********************
-     * LOADING FUNCTION
-     ***********************/
-    function showLoading(show) {
-      document.getElementById('globalLoading').style.display = show ? 'flex' : 'none';
-    }
-
-    
-    
-  </script>
-  <!-- Login Protection -->
-  <script>
-    const logged = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
-    if (!logged || !logged.email) {
-      window.location.href = "index.html";
-    }
+      }
+    });
   </script>
 </body>
 </html>
