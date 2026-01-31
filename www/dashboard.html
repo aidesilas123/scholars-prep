@@ -715,6 +715,65 @@
     padding: 10px;
   }
 }
+/* The Modal Background */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; 
+  z-index: 1000; 
+  left: 0;
+  top: 0;
+  width: 100%; 
+  height: 100%; 
+  background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal Box */
+.modal-content {
+  background-color: #fefefe;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  width: 90%;
+  max-width: 350px;
+  text-align: center;
+  animation: fadeIn 0.3s;
+}
+
+/* Buttons Container */
+.modal-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+}
+
+/* Button Styles */
+.btn-cancel {
+  background-color: #f1f1f1;
+  color: #333;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-confirm {
+  background-color: #ff4444; /* Red for logout warning */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(-10px);}
+  to {opacity: 1; transform: translateY(0);}
+}
   </style>
 </head>
 
@@ -775,7 +834,7 @@
       </div>
     </div>
 
-    <button onclick="logout()">Logout</button>
+    <button onclick="openLogoutModal()">Logout</button>
   </div>
 
   <button class="menu-btn" onclick="openSidebar()">☰</button>
@@ -793,8 +852,8 @@
   <a href="feedback.html" onclick="openReportIssue(); closeSidebar()">🆘 Report Issue</a>
   
   <hr style="border-color: rgba(255,255,255,0.1); margin: 10px 0;">
+  <button onclick="openLogoutModal()">🚪Logout</button>
   
-  <a href="#" onclick="logout()" style="color: #ff4b5c;">🚪 Logout</a>
 </div>
   <div class="main">
     <div class="container">
@@ -969,17 +1028,16 @@
     </div>
   </div>
 
-  
   <div id="logoutModal" class="modal">
-    <div class="modal-content">
-      <h3>🚪 Logout Confirmation</h3>
-      <p>Are you sure you want to logout?</p>
-      <div class="modal-buttons">
-        <button class="modal-btn secondary" onclick="closeModal('logoutModal')">Cancel</button>
-        <button class="modal-btn primary" onclick="performLogout()">Yes, Logout</button>
-      </div>
+  <div class="modal-content">
+    <h3>Are you sure you want to logout?</h3>
+    <p>You will need to sign in again to access your account.</p>
+    <div class="modal-buttons">
+      <button onclick="closeLogoutModal()" class="btn-cancel">Cancel</button>
+      <button onclick="confirmLogout()" class="btn-confirm">Yes, Logout</button>
     </div>
   </div>
+</div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
@@ -1080,6 +1138,36 @@ document.addEventListener('click', function(event) {
     function closeModal(modalId) {
       document.getElementById(modalId).style.display = 'none';
     }
+    // Open the modal
+function openLogoutModal() {
+    const modal = document.getElementById('logoutModal');
+    modal.style.display = "flex"; // Shows the modal
+}
+
+// Close the modal
+function closeLogoutModal() {
+    const modal = document.getElementById('logoutModal');
+    modal.style.display = "none"; // Hides the modal
+}
+
+// Actual Logout Trigger
+function confirmLogout() {
+    closeLogoutModal(); // Hide modal
+    performLogout();    // Call your existing loading/logout function
+}
+
+// --- Your Existing Logic (No changes needed inside here) ---
+async function logout() {
+    // ... your existing logout code ...
+    // ... localStorage.removeItem('abupq_logged_in_user'); ...
+}
+
+function performLogout() {
+    if(typeof showLoading === 'function') {
+        showLoading('Logging out...');
+    }
+    logout();
+}
 
     /******************************************************************
      * SUPABASE INTEGRATION

@@ -162,6 +162,7 @@
     .btn-primary {
       background-color: var(--accent);
       color: #13421d; 
+      
     }
     .btn-primary:hover { background-color: var(--accent-hover); }
 
@@ -180,7 +181,25 @@
   </style>
 </head>
 <body>
+ <header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    
+    <div class="logo" style="font-size: 24px; font-weight: bold;">
+        Scholars Prep
+    </div>
 
+    <div style="display: flex; align-items: center; gap: 15px;">
+        
+        <a href="https://github.com/aidesilas123/scholars-prep/releases/download/v1.0/app-debug.apk" 
+           style="background-color: #053006; color: white; padding: 8px 16px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+           <span>🤖</span> Download Android App
+        </a>
+
+        <a href="login.html" style="text-decoration: none; color: #333; font-weight: bold;">Login</a>
+        <a href="login.html" style="background-color: #072e08; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none;">Sign Up</a>
+        
+    </div>
+
+</header>
   <ul class="slideshow">
     <li><span></span></li>
     <li><span></span></li>
