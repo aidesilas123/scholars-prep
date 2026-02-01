@@ -1,1 +1,6 @@
-{"rewrites": [{"source": "/(.*)", "destination": "/www/$1"}]} 
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/www/$1" }
+  ],
+  "cleanUrls": true
+}
