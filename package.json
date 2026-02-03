@@ -1,0 +1,29 @@
+{
+  "name": "scholars-prep",
+  "version": "1.0.0",
+  "description": "",
+  "main": "cbt-app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aidesilas123/scholars-prep.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/aidesilas123/scholars-prep/issues"
+  },
+  "homepage": "https://github.com/aidesilas123/scholars-prep#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.0.2",
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/core": "^8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}
