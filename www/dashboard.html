@@ -774,6 +774,63 @@
   from {opacity: 0; transform: translateY(-10px);}
   to {opacity: 1; transform: translateY(0);}
 }
+/* GLASS BUTTONS FOR PAYMENT */
+.glass-btn {
+    width: 80%;               /* 80% Wide */
+    margin: 15px auto;        /* Center it */
+    background: rgba(255, 255, 255, 0.25); /* Transparent White */
+    backdrop-filter: blur(10px); /* The Blur Effect */
+    -webkit-backdrop-filter: blur(10px); /* For Safari/Old Android */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 15px;
+    padding: 20px;
+    color: #333; /* Dark text for readability */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    cursor: pointer;
+    text-align: center;
+}
+
+/* CUSTOM MODAL (Replaces Alert) */
+#access-modal {
+    display: none; /* Hidden by default */
+    position: fixed; 
+    z-index: 9999; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    background-color: rgba(0,0,0,0.6); /* Black overlay */
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 15% auto;
+    padding: 25px;
+    border-radius: 12px;
+    width: 80%;
+    max-width: 300px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: popIn 0.3s ease;
+}
+
+.modal-btn {
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    padding: 10px 20px; 
+    border-radius: 5px; 
+    margin-top: 15px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+@keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
   </style>
 </head>
 
@@ -855,34 +912,67 @@
   <button onclick="openLogoutModal()">🚪Logout</button>
   
 </div>
+<div id="update-btn" class="card" style="display: none;" onclick="forceUpdateApp()">
+    <span class="icon">🔄</span>
+    <h2>Update App</h2>
+    <p>Tap to get latest features</p>
+</div>
   <div class="main">
     <div class="container">
-      <div class="card" onclick="navigateWithLoading(null, 'cbt.html')">
+      
+      <div class="card" onclick="checkPremiumAccess('cbt.html')">
         <span class="icon">💻</span>
         <h2>Practice CBT</h2>
       </div>
-      <div class="card" onclick="navigateWithLoading(null, 'mock-exam.html')">
+
+      <div class="card" onclick="checkPremiumAccess('mock-exam.html')">
         <span class="icon">💻</span>
         <h2>Mock Exam</h2>
       </div>
+
       <div class="card" onclick="navigateWithLoading(null, 'https://drive.google.com/drive/folders/1KGOo-qL0GwoFQMvZro5A2VnoOhdNbmeo?usp=drive_link')">
         <span class="icon">📚</span>
         <h2>Materials</h2>
       </div>
-      <div class="card" onclick="navigateWithLoading(null, 'pastquestions.html')">
+
+      <div class="card" onclick="checkPremiumAccess('pastquestions.html')">
         <span class="icon">📝</span>
         <h2>Comprehensive Past Questions</h2>
       </div>
+
       <div class="card" onclick="navigateWithLoading(null, 'cbt-history.html')">
         <span class="icon">📊</span>
         <h2>CBT History</h2>
       </div>
-        <div class="card" onclick="navigateWithLoading(null, 'leaderboard.html')">
+
+      <div class="card" onclick="navigateWithLoading(null, 'leaderboard.html')">
         <span class="icon">🏆</span>
         <h2>Leaderboard</h2>
       </div>
+
     </div>
-  </div>
+</div>
+
+
+<div id="payment-plans-container" style="display: none; margin-top: 30px; padding-bottom: 50px;">
+    
+    <h3 style="text-align: center; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+        Premium Plans
+    </h3>
+
+    <div class="card glass-btn" onclick="triggerPaystack('semester', 3150)">
+        <span class="icon" style="font-size: 2em;">📅</span>
+        <h2>Semester Plan</h2>
+        <p>₦3,100 <small>(Ends June 1st)</small></p>
+    </div>
+
+    <div class="card glass-btn" onclick="triggerPaystack('session', 6150)">
+        <span class="icon" style="font-size: 2em;">📆</span>
+        <h2>Session Plan</h2>
+        <p>₦6,100 <small>(Ends Dec 31st)</small></p>
+    </div>
+
+</div>
 
   <div class="footer-actions">
   <p style="color: #130101; font-size: 20px;">Report a Question? have complaints/feedback?</p>
@@ -962,11 +1052,7 @@
         <input type="password" id="confirmPassword" placeholder="Confirm new password">
       </div>
 
-      <div class="subscription-info">
-        <h4>📅 Subscription Status</h4>
-        <div id="subscriptionStatus" class="subscription-status">Active</div>
-        <div id="subscriptionExpiry">Expires: 2024-12-31</div>
-      </div>
+      
 
       <div class="modal-buttons">
         <button class="modal-btn secondary" onclick="closeModal('profileModal')">Cancel</button>
@@ -1037,6 +1123,14 @@
       <button onclick="confirmLogout()" class="btn-confirm">Yes, Logout</button>
     </div>
   </div>
+</div>
+<div id="access-modal">
+    <div class="modal-content">
+        <h2 style="color: #d9534f; margin-bottom: 10px;">🔒 Access Denied</h2>
+        <p>This premium feature requires a subscription.</p>
+        <p style="font-size: 0.9em; color: #666;">Please choose a plan below to continue.</p>
+        <button class="modal-btn" onclick="closeModalAndScroll()">Okay, Show Plans</button>
+    </div>
 </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1180,7 +1274,7 @@ function performLogout() {
     function initSupabase() {
       if (window.supabase && window.supabase.createClient) {
         const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4NjE2MjAsImV4cCI6MjA3MTQzNzYyMH0.SKUKEPBGmKKeBlTvmJkcL2CNREfbyyLe61v-XhOIPtI';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5ODI5MTUsImV4cCI6MjA4NTM0MjkxNX0.2ZdfheXA3EtLLoCZenNVmoHq8XDe4geFdUVHAanwNYQ';
         
         supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         console.log('Supabase initialized');
@@ -1816,5 +1910,133 @@ if(document.getElementById('mobileUserEmail'))
     window.closeModal = closeModal;
 
   </script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+    // 🔴 1. KEYS & CONFIG
+    const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5ODI5MTUsImV4cCI6MjA4NTM0MjkxNX0.2ZdfheXA3EtLLoCZenNVmoHq8XDe4geFdUVHAanwNYQ'; // <--- ⚠️ PASTE KEY HERE
+    const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
+    
+    // Create separate client to avoid conflicts
+    const paymentClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    // State
+    let isPaymentActive = false;
+    let subscriptionEndDate = null;
+    let currentUserEmail = '';
+    let currentUserId = '';
+
+    // --- 2. LOAD STATUS ---
+    async function loadUserStatus() {
+        // Get User
+        const { data: { user } } = await paymentClient.auth.getUser();
+        if (!user) return;
+
+        currentUserEmail = user.email;
+        currentUserId = user.id;
+
+        // Get Global Switch
+        const { data: settings } = await paymentClient.from('app_settings').select('payment_active').single();
+        if (settings) {
+            isPaymentActive = settings.payment_active;
+            const container = document.getElementById('payment-plans-container');
+            if (container) container.style.display = isPaymentActive ? 'block' : 'none';
+        }
+
+        // Get Profile Expiry
+        const { data: profile } = await paymentClient.from('profiles').select('subscription_end').eq('id', user.id).maybeSingle();
+        if (profile && profile.subscription_end) {
+            subscriptionEndDate = new Date(profile.subscription_end);
+        }
+    }
+    loadUserStatus();
+
+    // --- 3. MODAL LOGIC ---
+    window.showAccessModal = function() {
+        document.getElementById('access-modal').style.display = 'flex';
+    }
+
+    window.closeModalAndScroll = function() {
+        document.getElementById('access-modal').style.display = 'none';
+        document.getElementById('payment-plans-container').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // --- 4. CHECK ACCESS ---
+    window.checkPremiumAccess = function(targetPage) {
+        // If Free Mode OR Valid Subscription -> Go
+        const today = new Date();
+        if (!isPaymentActive || (subscriptionEndDate && subscriptionEndDate > today)) {
+            window.location.href = targetPage;
+            return;
+        }
+        // Else -> Show Modal
+        showAccessModal();
+    }
+
+    // --- 5. PAYMENT TRIGGER (FIXED) ---
+    window.triggerPaystack = function(planType, price) {
+        
+        // Define Success Handler Separately to satisfy "valid function" check
+        function onPaymentSuccess(response) {
+            console.log("Ref:", response.reference);
+            
+            // Logic to save to DB
+            let newDate = (planType === 'semester') ? '2026-06-01' : '2026-12-31';
+
+            paymentClient.from('profiles').upsert({ 
+                id: currentUserId,
+                email: currentUserEmail,
+                plan_type: planType,
+                subscription_end: newDate
+            }).then(({ error }) => {
+                if (!error) {
+                    alert("Subscription Active!"); 
+                    window.location.reload();
+                } else {
+                    alert("Error saving subscription. Contact Admin.");
+                }
+            });
+        }
+
+        // Initialize Paystack
+        const handler = PaystackPop.setup({
+            key: PAYSTACK_KEY,
+            email: currentUserEmail,
+            amount: price * 100, // Kobo
+            currency: 'NGN', 
+            ref: '' + Math.floor((Math.random() * 1000000000) + 1),
+            callback: onPaymentSuccess, // <--- PASSING THE FUNCTION NAME ONLY
+            onClose: function() {
+                alert('Payment window closed.');
+            }
+        });
+
+        handler.openIframe();
+    }
+</script>
+<script>
+    // --- APP UPDATE LOGIC ---
+    window.addEventListener('load', function() {
+        // Detect if running in the App
+        const isApp = navigator.userAgent.toLowerCase().includes('wv');
+        const updateBtn = document.getElementById('update-btn');
+
+        if (isApp && updateBtn) {
+            // User is in the app, so SHOW the update button
+            // We use 'flex' or 'block' depending on your layout. 'flex' centers content better.
+            updateBtn.style.display = 'flex'; 
+        }
+    });
+
+    // Function to force a reload from the server (Updates the code)
+    function forceUpdateApp() {
+        if (confirm("Update the app now? This will refresh the page.")) {
+            // Reloads the page ignoring the cache
+            window.location.reload(true);
+        }
+    }
+</script>
 </body>
 </html>

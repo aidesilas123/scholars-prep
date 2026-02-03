@@ -187,7 +187,7 @@
         Scholars Prep
     </div>
 
-    <div style="display: flex; align-items: center; gap: 15px;">
+    <div style="display: flex; align-items: center; gap: 15px;" id="install-prompt">
         
         <a href="https://github.com/aidesilas123/scholars-prep/releases/download/v1.0/app-debug.apk" 
            style="background-color: #053006; color: white; padding: 8px 16px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
@@ -223,6 +223,18 @@
       <a href="login.html" class="btn btn-secondary">Sign Up</a>
     </div>
   </div>
+  <script>
+    window.addEventListener('load', function() {
+        // Detect if running in the App (Android WebView)
+        const isApp = navigator.userAgent.toLowerCase().includes('wv');
+        const downloadBtn = document.getElementById('install-prompt');
+
+        if (isApp && downloadBtn) {
+            // User is already in the app, so hide the download button
+            downloadBtn.style.display = 'none';
+        }
+    });
+</script>
 
 </body>
 </html>
