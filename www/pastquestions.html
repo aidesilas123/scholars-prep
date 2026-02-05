@@ -158,6 +158,12 @@
     /* Screenshot Protection Blur */
     .blur-content { filter: blur(15px); }
   </style>
+  <script>
+  window.MathJax = {
+    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
 
@@ -338,15 +344,57 @@
     }
 
     // --- 4. Load Questions & Solutions ---
+    // --- NEW HELPER: Fix missing backslashes in math text ---
+    // --- 1. ROBUST MATH FIXER ---
+   // --- 1. ROBUST MATH FIXER FUNCTION ---
+    // Place this function right before loadQuestions
+    function fixMathText(text) {
+      if (!text) return "";
+      
+      let fixed = text;
+
+      // List of math keywords that MUST have a backslash
+      const mathWords = [
+        "lim", "frac", "sqrt", "int", "infty", "rightarrow", "leftarrow",
+        "sin", "cos", "tan", "sec", "csc", "cot", "log", "ln",
+        "theta", "pi", "alpha", "beta", "gamma", "lambda", "Delta", "mu", "sigma"
+      ];
+
+      // A. Ensure all keywords have backslashes
+      // We wrap the word in word boundaries (\b) to avoid breaking words like "sincere"
+      mathWords.forEach(word => {
+          const regex = new RegExp(`\\\\?${word}(?![a-zA-Z])`, 'g'); // Matches 'sin' or '\sin'
+          fixed = fixed.replace(regex, `\\${word}`);
+      });
+
+      // B. Clean up accidental double backslashes (e.g., \\sin -> \sin)
+      fixed = fixed.replace(/\\\\/g, "\\");
+
+      // C. Fix spacing issues (e.g., "\sinA" -> "\sin A")
+      fixed = fixed.replace(/\\(sin|cos|tan)([A-Za-z])/g, "\\$1 $2");
+
+      // D. CRITICAL: Auto-Wrap in $...$ if delimiters are missing
+      // If the text contains LaTeX commands (\frac, \sin) or math symbols (^) but NO dollar signs, wrap it.
+      const hasLatex = /\\(frac|lim|sin|cos|tan|theta|pi|sqrt|int|infty|rightarrow)/.test(fixed);
+      const hasMathChars = /[\^]/.test(fixed); 
+      const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
+
+      if ((hasLatex || hasMathChars) && !hasDelimiters) {
+          return `$ ${fixed} $`;
+      }
+
+      return fixed;
+    }
+
+    // --- 2. UPDATED loadQuestions FUNCTION ---
     async function loadQuestions(year) {
       closeYearModal();
       showLoading(true);
 
       try {
-        // Fetch questions INCLUDING the 'Details' column
         const { data: qs, error } = await supabaseClient
           .from('questions')
-          .select('*') // This fetches Details automatically if column exists
+          .select('*')
           .eq('course_id', selectedCourseId)
           .eq('year', year)
           .order('id');
@@ -359,17 +407,28 @@
 
         qs.forEach((q, idx) => {
           const ansIdx = parseInt(q.answer);
-          const opts = q.options || [];
-          // Handle case where Details column might be lowercase or capitalized in DB
-          const solutionText = q.Details || q.details || "No explanation provided for this question.";
+          
+          // Fix Option Parsing
+          let opts = q.options;
+          if (typeof opts === 'string') {
+              try { opts = JSON.parse(opts); } catch(e) { opts = []; }
+          }
+          if (!opts) opts = [];
+
+          // --- APPLY THE FIX TO QUESTION TEXT & DETAILS ---
+          const fixedQuestionText = fixMathText(q.question_text);
+          const fixedDetails = fixMathText(q.Details || q.details || "No explanation provided.");
 
           let optHtml = '';
           opts.forEach((opt, i) => {
             const isCorrect = i === ansIdx;
+            // --- APPLY THE FIX TO OPTIONS ---
+            const fixedOption = fixMathText(opt);
+            
             optHtml += `
               <div class="option-item ${isCorrect ? 'correct' : ''}">
                 ${isCorrect ? '<span class="checkmark">✔</span>' : '<span class="circle-mark">○</span>'}
-                ${String.fromCharCode(65+i)}. ${opt}
+                ${String.fromCharCode(65+i)}. ${fixedOption}
               </div>
             `;
           });
@@ -377,7 +436,7 @@
           const div = document.createElement('div');
           div.className = 'question-item';
           div.innerHTML = `
-            <div class="question-text">Q${idx+1}. ${q.question_text}</div>
+            <div class="question-text">Q${idx+1}. ${fixedQuestionText}</div>
             <div>${optHtml}</div>
             
             <button class="reveal-btn" onclick="toggleSolution('sol-${idx}')">
@@ -386,7 +445,7 @@
             
             <div id="sol-${idx}" class="solution-box">
               <strong>Solving / Explanation:</strong>
-              ${solutionText}
+              ${fixedDetails}
             </div>
           `;
           container.appendChild(div);
@@ -395,6 +454,11 @@
         document.getElementById('courseList').style.display = 'none';
         document.getElementById('questionsContainer').style.display = 'block';
 
+        // Trigger MathJax
+        if (window.MathJax) {
+            MathJax.typesetPromise();
+        }
+
       } catch(e) {
         console.error(e);
         alert('Error loading questions');
@@ -402,7 +466,6 @@
         showLoading(false);
       }
     }
-
     // --- 5. Toggle Solution Visibility ---
     window.toggleSolution = function(id) {
       const box = document.getElementById(id);

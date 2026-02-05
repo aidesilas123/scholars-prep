@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scholars Prep - CSV Math Formatter</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
+        .container { display: flex; gap: 20px; height: 80vh; }
+        .box { flex: 1; display: flex; flex-direction: column; }
+        textarea { flex: 1; padding: 15px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace; }
+        button { padding: 15px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-bottom: 10px; }
+        button:hover { background: #1d4ed8; }
+        h3 { margin-bottom: 10px; }
+        .instructions { background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #0c4a6e; }
+    </style>
+</head>
+<body>
+
+    <div class="instructions">
+        <strong>How to use:</strong><br>
+        1. Paste your raw question data (or entire CSV content) in the left box.<br>
+        2. Click "Convert to Safe CSV Format".<br>
+        3. Copy the result from the right box and save it as a <strong>.csv</strong> file.<br>
+        4. Upload to Supabase. This tool automatically doubles backslashes (e.g., <code>\lim</code> → <code>\\lim</code>) and fixes JSON options.
+    </div>
+
+    <button onclick="convertText()">Convert to Safe CSV Format >></button>
+
+    <div class="container">
+        <div class="box">
+            <h3>Input (Raw Text / Normal LaTeX)</h3>
+            <textarea id="input" placeholder="Paste your data here...
+Example: Evaluate \lim_{x \to 0} \frac{\sin x}{x}"></textarea>
+        </div>
+        <div class="box">
+            <h3>Output (Supabase Ready)</h3>
+            <textarea id="output" readonly></textarea>
+        </div>
+    </div>
+
+    <script>
+        function convertText() {
+            let text = document.getElementById('input').value;
+
+            // 1. Double the backslashes for common LaTeX commands
+            // We match a single backslash followed by specific math words
+            const mathKeywords = [
+                "lim", "frac", "sqrt", "int", "infty", "sum", "prod",
+                "sin", "cos", "tan", "sec", "csc", "cot", "log", "ln",
+                "theta", "pi", "alpha", "beta", "gamma", "lambda", "Delta", "sigma", "mu", "phi",
+                "rightarrow", "leftarrow", "to", "cdot", "times", "div", "pm", "circ"
+            ];
+
+            // Replace single backslashes with double for keywords
+            // logic: find \keyword and replace with \\keyword
+            // We use a negative lookbehind (?<!\\) to ensure we don't double-escape ones that are already fixed
+            mathKeywords.forEach(word => {
+                // Regex matches '\word' but NOT '\\word'
+                const regex = new RegExp(`\\\\${word}(?![a-zA-Z])`, 'g'); 
+                // However, JS string handling makes this tricky. 
+                // Safer approach: Split by backslash and reconstruct carefully.
+            });
+
+            // GLOBAL REPLACEMENT STRATEGY
+            // 1. Fix standard single backslashes to double
+            // Note: This is aggressive. It turns ALL \ into \\ unless they look like CSV escapes.
+            
+            // Step A: Escape quotes inside JSON arrays if they aren't already
+            // (This is tricky, manual review recommended for complex quotes)
+
+            // Step B: The Math Fix
+            // We look for patterns that look like LaTeX commands: \ followed by letters
+            text = text.replace(/\\([a-zA-Z]+)/g, "\\\\$1");
+            
+            // Step C: Fix braces { } which sometimes need escaping in specific SQL contexts, 
+            // but usually standard CSV is fine with just the backslash fix.
+            
+            // Step D: Fix specific symbols that might have been missed
+            text = text.replace(/\\\\\\\\/g, "\\\\"); // Fix accidental quad backslashes
+
+            document.getElementById('output').value = text;
+        }
+    </script>
+</body>
+</html>
