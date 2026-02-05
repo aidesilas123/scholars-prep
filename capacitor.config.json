@@ -1,5 +1,14 @@
 {
   "appId": "com.scholarsprep.app",
   "appName": "Scholars Prep",
-  "webDir": "www"
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": true,
+      "resetWhenUpdate": false
+    }
+  }
 }

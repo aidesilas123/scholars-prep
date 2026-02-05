@@ -224,6 +224,12 @@
     </div>
   </div>
   <script>
+// Notify Capgo that the app is ready and the update was successful
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.CapacitorUpdater) {
+    Capacitor.Plugins.CapacitorUpdater.notifyAppReady();
+  }
+});
     window.addEventListener('load', function() {
         // Detect if running in the App (Android WebView)
         const isApp = navigator.userAgent.toLowerCase().includes('wv');
