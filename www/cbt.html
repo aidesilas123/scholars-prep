@@ -501,7 +501,7 @@
       // Fill year dropdown (e.g., 2015 → current)
       const yearSel = document.getElementById('year');
       const nowY = new Date().getFullYear();
-      for(let y=nowY; y>=2015; y--){
+      for(let y=nowY; y>=2020; y--){
         const opt=document.createElement('option'); opt.value=String(y); opt.textContent=String(y);
         yearSel.appendChild(opt);
       }
