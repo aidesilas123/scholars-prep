@@ -1,8 +1,0 @@
-# Node modules (big libraries folder, auto-generated)
-node_modules/
-
-# Environment files (contains secrets)
-backend/.env
-
-# Logs
-*.log
