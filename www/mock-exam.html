@@ -1929,26 +1929,57 @@ window.retakeInNewSession = function(courseId, courseName, courseCode, courseTyp
   }
 };
 // --- ROBUST MATH FIXER ---
+// --- ROBUST MATH FIXER ---
+    // --- FINAL ROBUST MATH FIXER ---
 function fixMathText(text) {
   if (!text) return "";
   let fixed = text;
 
-  // 1. Ensure keywords have backslashes
-  const mathWords = ["lim", "frac", "sqrt", "int", "infty", "rightarrow", "sin", "cos", "tan", "theta", "pi", "alpha", "beta"];
+  // 1. Safe list of keywords (Removed "in" to prevent Chemistry text bugs)
+  const mathWords = [
+    // Calculus & Algebra
+    "frac", "sqrt", "int", "lim", "sum", "prod", "infty", "times", "div", "pm", "cdot", "partial",
+    // Trig & Log
+    "sin", "cos", "tan", "csc", "sec", "cot", "log", "ln", "exp", "det",
+    // Set Theory & Logic (Removed 'in' because it breaks English sentences)
+    "cup", "cap", "notin", "subset", "subseteq", "forall", "exists", "empty", "union",
+    // Arrows
+    "rightarrow", "leftarrow", "Rightarrow", "Leftarrow", "leftrightarrow", "implies",
+    // Greek Letters
+    "theta", "pi", "alpha", "beta", "gamma", "delta", "lambda", "mu", "sigma", "omega", "Delta", "Sigma", "Omega", "phi", "psi", "rho", "epsilon"
+  ];
+
+  // 2. Apply the fix with WORD BOUNDARIES (\b)
+  // This prevents 'sin' from becoming 's\in'
   mathWords.forEach(word => {
-      const regex = new RegExp(`\\\\?${word}(?![a-zA-Z])`, 'g');
+      // Regex explanation:
+      // (?<!\\) -> Lookbehind: Ensure it doesn't already have a backslash
+      // \b      -> Word boundary (start of word)
+      // word    -> The keyword
+      // \b      -> Word boundary (end of word)
+      const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'g');
       fixed = fixed.replace(regex, `\\${word}`);
   });
 
-  // 2. Clean up double backslashes
+  // 3. Clean up accidental double backslashes
   fixed = fixed.replace(/\\\\/g, "\\");
 
-  // 3. Auto-Wrap in $...$ if strictly math but missing delimiters
-  const hasLatex = /\\(frac|lim|sin|cos|tan|theta|sqrt)/.test(fixed);
+  // 4. Auto-Wrap in math mode ONLY if it looks like math
+  // Checks for:
+  //  - Backslash commands
+  //  - Math operators (=, ^, _, <, >)
+  //  - BUT we skip wrapping if it looks like a long English sentence (contains many spaces)
+  const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
   const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
-  if (hasLatex && !hasDelimiters) {
-      return `$ ${fixed} $`;
+  
+  // Safety check: If it's very long and has few math symbols, don't wrap it blindly
+  // (This helps prevent other text-squashing issues)
+  const isLongText = fixed.length > 50 && !fixed.includes("="); 
+
+  if (isMathSymbol && !hasDelimiters && !isLongText) {
+      return `\\( ${fixed} \\)`;
   }
+  
   return fixed;
 }
     /***********************
