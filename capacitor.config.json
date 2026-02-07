@@ -3,13 +3,10 @@
   "appName": "Scholars Prep",
   "webDir": "www",
   "server": {
-    "url": "https://scholars-prep.vercel.app",  // <--- THIS LINE CHANGES THE POINTER
+    "url": "https://scholars-prep.vercel.app",
     "androidScheme": "https",
-    "cleartext": true
-  },
-  "plugins": {
-    "CapacitorUpdater": {
-      "autoUpdate": false
-    }
+    "allowNavigation": [
+      "scholars-prep.vercel.app"
+    ]
   }
 }
