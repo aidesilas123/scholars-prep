@@ -1187,6 +1187,9 @@
     /***********************
      * STEP 1: YEAR SELECTION
      ***********************/
+    /***********************
+     * STEP 1: YEAR SELECTION (FIXED)
+     ***********************/
     async function initStep1() {
       const yearGrid = document.getElementById('yearGrid');
       const loadingEl = document.getElementById('loadingYears');
@@ -1199,30 +1202,37 @@
       try {
         if (!navigator.onLine) throw new Error('No internet connection');
 
-        const { data: yearsData, error } = await supabaseClient
-          .from('questions')
-          .select('year')
-          .order('year', { ascending: false });
+        // --- OLD BUGGY CODE ---
+        // const { data: yearsData, error } = await supabaseClient
+        //   .from('questions')
+        //   .select('year')
+        //   .order('year', { ascending: false });
+
+        // --- NEW FIXED CODE (RPC) ---
+        // Calls the database function we created to get distinct years directly
+        const { data: uniqueYears, error } = await supabaseClient
+          .rpc('get_unique_years');
 
         if (error) throw error;
 
         loadingEl.style.display = 'none';
-        const uniqueYears = [...new Set(yearsData.map(item => item.year))];
-        yearGrid.innerHTML = '';
         
-        if (uniqueYears.length === 0) {
+        // Ensure years are unique (though RPC handles this) and flatten structure if needed
+        const yearsList = (uniqueYears || []).map(item => item.year || item); 
+
+        if (yearsList.length === 0) {
           yearGrid.innerHTML = '<div>No years available.</div>';
           return;
         }
         
-        uniqueYears.forEach(year => {
+        yearsList.forEach(year => {
           const card = document.createElement('div');
           card.className = 'course';
           card.setAttribute('data-year', year);
           card.innerHTML = `
             <div style="font-weight:800; font-size:18px">${year}</div>
             <div style="font-size:14px; margin-top:8px; color:var(--muted)">
-              ${year === new Date().getFullYear() ? 'Current Year' : 'Past Year'}
+              ${year == new Date().getFullYear() ? 'Current Year' : 'Past Year'}
             </div>
           `;
           
