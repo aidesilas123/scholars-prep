@@ -545,58 +545,65 @@ function fixMathText(text) {
      * COURSE LOADING FROM SUPABASE
      ***********************/
     async function loadCourses() {
-      const courseGrid = document.getElementById('courseGrid');
-      courseGrid.innerHTML = '<div>Loading courses...</div>';
+  const courseGrid = document.getElementById('courseGrid');
+  courseGrid.innerHTML = '<div style="padding:20px; text-align:center;">Connecting to database...</div>';
 
-      try {
-        console.log('Loading courses, supabaseClient type:', typeof supabaseClient);
-        
-        const { data: courses, error } = await supabaseClient
-          .from('courses')
-          .select('*')
-          .order('code');
-
-        if (error) throw error;
-
-        courseGrid.innerHTML = '';
-        
-        // Group courses by code to show one card per course
-        const courseGroups = {};
-        courses.forEach(course => {
-          if (!courseGroups[course.code]) {
-            courseGroups[course.code] = [];
-          }
-          courseGroups[course.code].push(course);
-        });
-
-        // Create one card per course with both Exam and Test buttons
-        Object.keys(courseGroups).forEach(courseCode => {
-          const courseGroup = courseGroups[courseCode];
-          const examCourse = courseGroup.find(c => c.type === 'exam');
-          const testCourse = courseGroup.find(c => c.type === 'test');
-          
-          const d = document.createElement('div');
-          d.className = 'course';
-          d.innerHTML = `
-            <div style="font-weight:800; font-size:18px">${courseCode}</div>
-            <div style="font-size:14px; margin:4px 0; color:var(--muted)">Select Exam Type:</div>
-            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap">
-              ${examCourse ? `<button class="btn" onclick="chooseCourse('${examCourse.id}', '${examCourse.name}', 'exam')">Exam</button>` : ''}
-              ${testCourse ? `<button class="btn secondary" onclick="chooseCourse('${testCourse.id}', '${testCourse.name}', 'test')">Test</button>` : ''}
-            </div>
-            <div style="font-size:12px; color:var(--muted); margin-top:8px">
-              ${(examCourse ? 'Exam' : '') + (examCourse && testCourse ? ' & ' : '') + (testCourse ? 'Test' : '')} Available
-            </div>
-          `;
-          courseGrid.appendChild(d);
-        });
-        
-      } catch (error) {
-        console.error('Error loading courses:', error);
-        courseGrid.innerHTML = '<div>Error loading courses. Please try again.</div>';
-      }
+  try {
+    // Check if Supabase is actually ready
+    if (!supabaseClient) {
+      console.error('Supabase not initialized');
+      // Attempt emergency re-init if it's missing
+      const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // your key
+      supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
     }
 
+    const { data: courses, error } = await supabaseClient
+      .from('courses')
+      .select('*')
+      .order('code');
+
+    if (error) throw error;
+
+    if (!courses || courses.length === 0) {
+      courseGrid.innerHTML = '<div class="network-error">No courses found in database.</div>';
+      return;
+    }
+
+    courseGrid.innerHTML = '';
+    const courseGroups = {};
+    courses.forEach(course => {
+      if (!courseGroups[course.code]) courseGroups[course.code] = [];
+      courseGroups[course.code].push(course);
+    });
+
+    Object.keys(courseGroups).forEach(courseCode => {
+      const courseGroup = courseGroups[courseCode];
+      const examCourse = courseGroup.find(c => c.type === 'exam');
+      const testCourse = courseGroup.find(c => c.type === 'test');
+      
+      const d = document.createElement('div');
+      d.className = 'course';
+      d.innerHTML = `
+        <div style="font-weight:800; font-size:18px">${courseCode}</div>
+        <div style="font-size:14px; margin:4px 0; color:var(--muted)">Select Exam Type:</div>
+        <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap">
+          ${examCourse ? `<button class="btn" onclick="chooseCourse('${examCourse.id}', '${examCourse.name}', 'exam')">Exam</button>` : ''}
+          ${testCourse ? `<button class="btn secondary" onclick="chooseCourse('${testCourse.id}', '${testCourse.name}', 'test')">Test</button>` : ''}
+        </div>
+      `;
+      courseGrid.appendChild(d);
+    });
+    
+  } catch (error) {
+    console.error('App Error:', error);
+    courseGrid.innerHTML = `
+      <div class="network-error">
+        <p>Unable to load courses.</p>
+        <button class="btn" onclick="loadCourses()">Retry Connection</button>
+      </div>`;
+  }
+}
     // Make chooseCourse globally available
     // Make chooseCourse globally available
     window.chooseCourse = async function(courseId, courseName, examType) { // Made Async
