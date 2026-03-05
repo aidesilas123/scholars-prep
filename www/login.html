@@ -187,8 +187,6 @@ html, body {
   </style>
 </head>
 <body class="no-select">
-  
-
   <div id="watermark" class="watermark" aria-hidden="true"></div>
 
   <div class="container">
@@ -204,7 +202,9 @@ html, body {
         <div class="field">
           <label for="loginPassword">Password</label>
           <input id="loginPassword" type="password" placeholder="Enter your password" required />
-          
+          <div style="text-align: right; margin-top: 8px;">
+            <span class="toggle" id="forgotPwdLink" style="font-size: 12px;">Forgot password?</span>
+          </div>
         </div>
         <button class="btn" id="loginBtn" type="submit">Log In</button>
       </form>
@@ -227,6 +227,14 @@ html, body {
         <button class="btn" id="signupBtn">Create Account</button>
       </form>
 
+      <form id="resetForm" style="display:none;" autocomplete="off" onsubmit="return false;">
+        <div class="field">
+          <label for="resetEmail">Email Address</label>
+          <input id="resetEmail" type="email" placeholder="Enter your registered email" required />
+        </div>
+        <button class="btn" id="resetBtn">Send Reset Link</button>
+      </form>
+
       <div class="muted-row">
         <div id="toggleRow">
           <span id="toggleToSignup">Don't have an account? <span class="toggle">Sign up here</span></span>
@@ -236,7 +244,6 @@ html, body {
       </div>
     </div>
   </div>
-
   <div id="modalRoot" style="display:none;"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -245,17 +252,44 @@ html, body {
     // Put this at the very top of your index.html script
 // It checks if 'abupq_logged_in_user' exists. If yes, go straight to dashboard.
 
-(function checkLogin() {
+(async function checkLogin() {
     const savedUser = localStorage.getItem('abupq_logged_in_user');
+    
     if (savedUser) {
-        const user = JSON.parse(savedUser);
-        if (user && user.id) {
-            // User is already logged in, redirect immediately
-            window.location.href = 'dashboard.html';
+        try {
+            const user = JSON.parse(savedUser);
+            
+            // 1. Call Supabase to check the active_sessions table
+            const { data: sessionData, error } = await supabaseClient
+                .from('active_sessions')
+                .select('last_seen')
+                .eq('user_id', user.id)
+                .single();
+
+            if (sessionData) {
+                const lastSeen = new Date(sessionData.last_seen).getTime();
+                const now = new Date().getTime();
+                const TIMEOUT_MINUTES = 15; 
+                const diffMinutes = (now - lastSeen) / 1000 / 60;
+
+                // 2. If the session is still fresh (less than 15 mins), 
+                // we allow the redirect to the dashboard.
+                if (diffMinutes < TIMEOUT_MINUTES) {
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+            }
+            
+            // 3. If no session found or it's expired, clear local storage
+            // so they stay on the login page.
+            localStorage.removeItem('abupq_logged_in_user');
+            
+        } catch (err) {
+            console.error("Session check failed:", err);
+            localStorage.removeItem('abupq_logged_in_user');
         }
     }
-})();
-    // --- Utility: modal (in-app popup) ---
+})();    // --- Utility: modal (in-app popup) ---
     function showModal(title, message, {autoClose=3000} = {}) {
       const root = document.getElementById('modalRoot');
       root.innerHTML = `
@@ -338,6 +372,44 @@ html, body {
         setTimeout(() => { document.querySelector('#toggleToLogin .toggle').click(); }, 2000);
       }
     });
+
+    // Toggle to Reset Password Form
+document.getElementById('forgotPwdLink').addEventListener('click', () => {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'none';
+    document.getElementById('resetForm').style.display = 'block';
+    
+    document.getElementById('formTitle').textContent = 'Reset Password';
+    document.getElementById('formSubtitle').textContent = 'Enter your email to receive a reset link';
+    
+    toggleToSignup.style.display = 'none';
+    toggleToLogin.style.display = 'block';
+});
+
+// Handle sending the Reset Email
+document.getElementById('resetBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('resetEmail').value.trim().toLowerCase();
+    if (!email) { showModal('Error', 'Please enter your email'); return; }
+
+    const btn = document.getElementById('resetBtn');
+    btn.innerHTML = 'Sending...';
+    btn.disabled = true;
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/update-password.html',
+    });
+
+    btn.innerHTML = 'Send Reset Link';
+    btn.disabled = false;
+
+    if (error) {
+        showModal('Error', error.message);
+    } else {
+        showModal('Success', 'Check your email for the reset link!');
+        setTimeout(() => { document.querySelector('#toggleToLogin .toggle').click(); }, 3000);
+    }
+});
 
     // --- LOGIN (With Single Session Enforcement) ---
     document.getElementById('loginBtn').addEventListener('click', async (e) => {
