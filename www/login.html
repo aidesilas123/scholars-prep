@@ -448,7 +448,7 @@ document.getElementById('resetBtn').addEventListener('click', async (e) => {
         if (sessionData) {
             const lastSeen = new Date(sessionData.last_seen).getTime();
             const now = new Date().getTime();
-            const TIMEOUT_MINUTES = 15; // Logged out if inactive for 15 mins
+            const TIMEOUT_MINUTES = 5; // Logged out if inactive for 5 mins
             const diffMinutes = (now - lastSeen) / 1000 / 60;
 
             if (diffMinutes < TIMEOUT_MINUTES) {
