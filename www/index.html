@@ -4,7 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to Scholars Prep</title>
-    <link rel="icon" type="image" href="favicon1.png">
+  <link rel="icon" type="image" href="favicon1.png">
+
+  <style id="os-blocker">
+    .is-desktop .auth-hide {
+      display: none !important;
+    }
+  </style>
 
   <style>
     /* --- VARIABLES --- */
@@ -13,8 +19,6 @@
       --accent-hover: #5c925e;
       --text-main: #184607;
       --text-muted: #bcdfdd;
-      
-    
     }
 
     /* --- RESET --- */
@@ -22,7 +26,6 @@
       height: 100%;
       margin: 0;
       font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      /* removed background-color from here to prevent covering */
       background: #02040a; 
       overflow: hidden;
       color: var(--text-main);
@@ -36,20 +39,18 @@
       height: 100%;
       top: 0;
       left: 0;
-      /* CRITICAL CHANGE: Changed from -1 to 0 */
       z-index: 0; 
       list-style: none;
       margin: 0;
       padding: 0;
     }
     
-    /* Overlay to make text readable */
     .slideshow::after {
       content: '';
       position: absolute;
       inset: 0;
       background: rgba(0, 0, 0, 0.6); 
-      z-index: 1; /* Sits on top of images, below text */
+      z-index: 1;
     }
 
     .slideshow li span {
@@ -62,30 +63,14 @@
       background-position: center center;
       background-repeat: no-repeat;
       opacity: 0;
-      z-index: 0; /* Base level */
+      z-index: 0;
       animation: imageAnimation 15s linear infinite; 
     }
 
-    /* --- IMAGES (Pointing to img folder) --- */
-    /* Using slider9 for all 3 slots temporarily to guarantee visibility */
-    .slideshow li:nth-child(1) span { 
-        background-image: url('img/slider9.jpg'); 
-        
-    }
-    
-    .slideshow li:nth-child(2) span { 
-        background-image: url('img/slider6.jpg'); 
-        animation-delay: 5s; 
-    }
-    .slideshow li:nth-child(3) span { 
-        background-image: url('img/slider7.jpg'); 
-        animation-delay: 10s; 
-    }
-    .slideshow li:nth-child(4) span { 
-        background-image: url('img/slider5.jpg'); 
-        animation-delay: 10s; 
-    }
-
+    .slideshow li:nth-child(1) span { background-image: url('img/slider9.jpg'); }
+    .slideshow li:nth-child(2) span { background-image: url('img/slider6.jpg'); animation-delay: 5s; }
+    .slideshow li:nth-child(3) span { background-image: url('img/slider7.jpg'); animation-delay: 10s; }
+    .slideshow li:nth-child(4) span { background-image: url('img/slider5.jpg'); animation-delay: 10s; }
 
     @keyframes imageAnimation { 
       0% { opacity: 0; animation-timing-function: ease-in; }
@@ -105,7 +90,6 @@
       text-align: center;
       padding: 0 20px;
       position: relative;
-      /* CRITICAL CHANGE: Ensure content is ABOVE slideshow (0) */
       z-index: 10; 
     }
 
@@ -124,7 +108,7 @@
       letter-spacing: -0.02em;
       line-height: 1.1;
       margin: 0 0 20px;
-      
+      color: #fff;
     }
 
     .highlight {
@@ -159,11 +143,7 @@
       cursor: pointer;
     }
 
-    .btn-primary {
-      background-color: var(--accent);
-      color: #13421d; 
-      
-    }
+    .btn-primary { background-color: var(--accent); color: #13421d; }
     .btn-primary:hover { background-color: var(--accent-hover); }
 
     .btn-secondary {
@@ -181,66 +161,86 @@
   </style>
 </head>
 <body>
- <header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+<header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); min-height: 60px;">
     
-    <div class="logo" style="font-size: 24px; font-weight: bold;">
+    <div class="logo" style="font-size: 20px; font-weight: bold; color: #063b08; flex-shrink: 0;">
         Scholars Prep
     </div>
 
-    <div style="display: flex; align-items: center; gap: 15px;" id="install-prompt">
-        
-        <a href="https://github.com/aidesilas123/scholars-prep/releases/download/v6.0/app-debug.apk" 
-           style="background-color: #053006; color: white; padding: 8px 16px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
-           <span>🤖</span> Download/Update Android App
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;" id="install-prompt">
+        <a id="header-download-btn" href="https://github.com/aidesilas123/scholars-prep/releases/download/v6.0/app-debug.apk" 
+           style="background-color: #053006; color: white; padding: 6px 12px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 11px; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+           <span>🤖</span> Download App
         </a>
 
-        <a href="login.html" style="text-decoration: none; color: #333; font-weight: bold;">Login</a>
-        <a href="login.html" style="background-color: #072e08; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none;">Sign Up</a>
-        
+        <a href="login.html" class="auth-hide" style="text-decoration: none; color: #333; font-weight: bold; font-size: 13px;">Login</a>
+        <a href="login.html" class="auth-hide" style="background-color: #072e08; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; white-space: nowrap;">Sign Up</a>
     </div>
-
 </header>
+
   <ul class="slideshow">
-    <li><span></span></li>
-    <li><span></span></li>
-    <li><span></span></li>
-    <li><span></span></li>
-    <li><span></span></li>
+    <li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li>
   </ul>
 
   <div class="container">
     <img src="favicon1.png" alt="Logo" class="logo-img">
-    <h1>
-      Build your future
-      <span class="highlight">Scholars Prep</span>
-    </h1>
-    <p class="lead">
-      Ignite your potential with world-class learning resources. 
-      join a community dedicated to academic excellence today.
-    </p>
+    <h1>Build your future <span class="highlight">Scholars Prep</span></h1>
+    <p class="lead">Ignite your potential with world-class learning resources. join a community dedicated to academic excellence today.</p>
     <div class="btn-group">
-      <a href="login.html" class="btn btn-primary">Login</a>
-      <a href="login.html" class="btn btn-secondary">Sign Up</a>
+      <a href="login.html" class="btn btn-primary auth-hide">Login</a>
+      <a href="login.html" class="btn btn-secondary auth-hide">Sign Up</a>
     </div>
   </div>
-  <script>
-// Notify Capgo that the app is ready and the update was successful
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.CapacitorUpdater) {
-    Capacitor.Plugins.CapacitorUpdater.notifyAppReady();
-  }
-});
-    window.addEventListener('load', function() {
-        // Detect if running in the App (Android WebView)
-        const isApp = navigator.userAgent.toLowerCase().includes('wv');
-        const downloadBtn = document.getElementById('install-prompt');
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script>
+    const supabaseClient = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
+
+    async function syncMobileMode() {
+      // 🛡️ HARDWARE DETECTION: This is the key to stopping "Responsive Mode" bypasses
+      const ua = navigator.userAgent.toLowerCase();
+      const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
+      
+      // Check if device actually has a Touchscreen (Hard to spoof in Responsive Mode)
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      
+      // Determine if this is a Desktop trying to pretend to be a phone
+      const isLikelyDesktop = !isMobileOS || !hasTouch;
+
+      if (isLikelyDesktop) {
+        document.documentElement.classList.add('is-desktop');
+      }
+
+      // 🛡️ DATABASE SYNC
+      const { data } = await supabaseClient.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
+
+      if (data && data.mobile_only_mode) {
+        if (isLikelyDesktop) {
+          // Permanently vanish buttons on Desktop
+          document.querySelectorAll('.auth-hide').forEach(el => el.style.display = 'none');
+        }
+      } else {
+        // Switch is OFF: Remove the block
+        document.documentElement.classList.remove('is-desktop');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      syncMobileMode();
+      
+      if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.CapacitorUpdater) {
+        Capacitor.Plugins.CapacitorUpdater.notifyAppReady();
+      }
+    });
+
+    window.addEventListener('load', function() {
+        const isApp = navigator.userAgent.toLowerCase().includes('wv');
+        const downloadBtn = document.getElementById('header-download-btn');
         if (isApp && downloadBtn) {
-            // User is already in the app, so hide the download button
             downloadBtn.style.display = 'none';
         }
     });
-</script>
-
+  </script>
 </body>
 </html>
