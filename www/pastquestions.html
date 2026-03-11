@@ -5,6 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Past Questions - Scholars Prep</title>
   <link rel="icon" type="image" href="favicon1.png">
+  <style id="desktop-guard-css">
+    @media screen and (min-width: 1025px) {
+        body { display: none !important; }
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    (async function() {
+        // Initialize your client
+        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
+
+        // 🛡️ HARDWARE & OS DETECTION
+        const ua = navigator.userAgent.toLowerCase();
+        const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
+        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        // If it lacks a mobile OS OR lacks a touchscreen, it's a Desktop
+        const isLikelyDesktop = !isMobileOS || !hasTouch;
+
+        // 🛡️ DATABASE CHECK
+        const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
+
+        if (data && data.mobile_only_mode) {
+            if (isLikelyDesktop) {
+                // REDIRECT: Boot them back to the landing page
+                window.location.href = 'index.html';
+            }
+        } else {
+            // Mode is OFF: Reveal the page content
+            const styleBlock = document.getElementById('desktop-guard-css');
+            if (styleBlock) styleBlock.remove();
+        }
+    })();
+</script>
   
   <style>
     body {
@@ -221,7 +256,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5ODI5MTUsImV4cCI6MjA4NTM0MjkxNX0.2ZdfheXA3EtLLoCZenNVmoHq8XDe4geFdUVHAanwNYQ';
+    const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let selectedCourseId = null;
