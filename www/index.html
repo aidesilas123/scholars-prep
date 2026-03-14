@@ -17,7 +17,7 @@
   </style>
 
   <style>
-    /* --- YOUR ORIGINAL DESIGN VARIABLES --- */
+    /* --- VARIABLES --- */
     :root {
       --accent: #dde7da;
       --accent-hover: #5c925e;
@@ -32,6 +32,52 @@
       background: #02040a; overflow: hidden;
       color: var(--text-main); -webkit-font-smoothing: antialiased;
     }
+
+    /* --- 🟢 NEW: STARTUP LOADER STYLES --- */
+    #startup-loader {
+      position: fixed;
+      inset: 0; /* Covers the whole screen */
+      background: #02040a; /* Matches your body background */
+      z-index: 99999; /* Always on top */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.4s ease-out;
+    }
+    
+    .loader-logo-img {
+      width: 80px; height: 80px; 
+      border-radius: 50%; 
+      margin-bottom: 20px; 
+      border: 2px solid rgba(255,255,255,0.2);
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    .progress-container {
+      width: 250px; height: 6px; 
+      background: rgba(255,255,255,0.1); 
+      border-radius: 10px; 
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%; height: 100%; 
+      background: #dde7da; 
+      transition: width 0.1s linear; /* Smooth visual jumps */
+    }
+
+    .progress-text {
+      margin-top: 10px; color: #bcdfdd; 
+      font-size: 14px; font-weight: bold; 
+      font-family: monospace;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(221, 231, 218, 0.4); }
+      100% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(221, 231, 218, 0); }
+    }
+    /* --- END LOADER STYLES --- */
 
     .slideshow {
       position: fixed; width: 100%; height: 100%;
@@ -82,6 +128,15 @@
   </style>
 </head>
 <body>
+
+  <div id="startup-loader">
+    <img src="favicon1.png" alt="Loading Logo" class="loader-logo-img">
+    <div class="progress-container">
+      <div id="progress-bar" class="progress-bar"></div>
+    </div>
+    <div id="progress-text" class="progress-text">0%</div>
+  </div>
+
 <header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); min-height: 60px;">
     <div class="logo" style="font-size: 20px; font-weight: bold; color: #063b08; flex-shrink: 0;">Scholars Prep</div>
 
@@ -119,49 +174,80 @@
     (function() {
         const supabaseClient = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
 
+        // --- PROGRESS BAR LOGIC ---
+        let progress = 0;
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        
+        // Start randomly ticking up to 90% while we wait for the database
+        const loadingInterval = setInterval(() => {
+            if (progress < 90) {
+                progress += Math.floor(Math.random() * 15) + 5; // Jumps 5% to 20%
+                if (progress > 90) progress = 90;
+                progressBar.style.width = progress + '%';
+                progressText.innerText = progress + '%';
+            }
+        }, 100); // Ticks every 100ms
+
+        function finishLoading() {
+            clearInterval(loadingInterval);
+            progress = 100;
+            progressBar.style.width = '100%';
+            progressText.innerText = '100%';
+            
+            // Wait 300ms so the user actually sees "100%", then fade out
+            setTimeout(() => {
+                const loader = document.getElementById('startup-loader');
+                if(loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 400); // Delete it entirely after fade
+                }
+            }, 300);
+        }
+
         async function ironCladIndexCheck() {
             const ua = navigator.userAgent.toLowerCase();
             const platform = navigator.platform.toLowerCase();
             
-            // Detection flags
             const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
             const isApp = ua.includes('wv') || (window.Capacitor && window.Capacitor.Plugins);
             const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-            const isPC = /win|mac|linux/.test(platform);
+            const isPC = /win|mac|linux/.test(platform) && !isMobileOS;
 
-            const { data } = await supabaseClient.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
+            try {
+                // Fetch site settings
+                const { data } = await supabaseClient.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
 
-            // If Mobile mode is ACTIVE
-            if (data && data.mobile_only_mode) {
-                // If it passes the Mobile Test, reveal buttons
-                if (isMobileOS || isApp || (hasTouch && !isPC)) {
-                    unlockIndex();
+                if (data && data.mobile_only_mode) {
+                    if (isMobileOS || isApp || (hasTouch && !isPC)) {
+                        unlockIndex();
+                    } else {
+                        console.log("Desktop locked.");
+                    }
                 } else {
-                    // It's a PC: Keep buttons hidden, keep marquee visible
-                    console.log("Desktop locked.");
+                    unlockIndex();
                 }
-            } else {
-                // Maintenance OFF: Unlock for everyone
-                unlockIndex();
+            } catch (e) {
+                console.error("Shield Error:", e);
+                unlockIndex(); // Failsafe
+            } finally {
+                // 🟢 No matter what happens, finish the loading bar
+                finishLoading();
             }
         }
 
         function unlockIndex() {
-            // Remove the restrictive CSS
             const blocker = document.getElementById('os-blocker');
             if (blocker) blocker.remove();
             
-            // Hide the marquee
             const marquee = document.getElementById('desktop-marquee');
             if (marquee) marquee.style.display = 'none';
 
-            // Ensure buttons are visible
             document.querySelectorAll('.auth-hide').forEach(el => {
                 el.style.setProperty('display', 'inline-flex', 'important');
             });
         }
 
-        // Run as soon as DOM is ready to prevent flickering
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", ironCladIndexCheck);
         } else {
