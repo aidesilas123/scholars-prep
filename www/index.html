@@ -7,8 +7,19 @@
   <link rel="icon" type="image" href="favicon1.png">
 
   <style id="os-blocker">
+    /* Hide auth buttons only, NOT the whole body */
     .is-desktop .auth-hide {
       display: none !important;
+    }
+    /* Show the marquee only on desktop to explain why buttons are gone */
+    .desktop-notice {
+      display: none;
+      color: #ff4b5c;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .is-desktop .desktop-notice {
+      display: block;
     }
   </style>
 
@@ -32,7 +43,7 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* --- SLIDESHOW FIX --- */
+    /* --- SLIDESHOW --- */
     .slideshow {
       position: fixed;
       width: 100%;
@@ -73,8 +84,8 @@
     .slideshow li:nth-child(4) span { background-image: url('img/slider5.jpg'); animation-delay: 10s; }
 
     @keyframes imageAnimation { 
-      0% { opacity: 0; animation-timing-function: ease-in; }
-      10% { opacity: 1; animation-timing-function: ease-out; }
+      0% { opacity: 0; }
+      10% { opacity: 1; }
       33% { opacity: 1; } 
       43% { opacity: 0; }
       100% { opacity: 0; }
@@ -120,7 +131,7 @@
       font-size: 18px;
       color: var(--text-muted);
       max-width: 600px;
-      margin: 0 0 40px;
+      margin: 0 0 20px;
       line-height: 1.6;
     }
 
@@ -162,7 +173,6 @@
 </head>
 <body>
 <header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); min-height: 60px;">
-    
     <div class="logo" style="font-size: 20px; font-weight: bold; color: #063b08; flex-shrink: 0;">
         Scholars Prep
     </div>
@@ -172,22 +182,23 @@
            style="background-color: #053006; color: white; padding: 6px 12px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 11px; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
            <span>🤖</span> Download App
         </a>
-
         <a href="login.html" class="auth-hide" style="text-decoration: none; color: #333; font-weight: bold; font-size: 13px;">Login</a>
         <a href="login.html" class="auth-hide" style="background-color: #072e08; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; white-space: nowrap;">Sign Up</a>
     </div>
 </header>
 
   <ul class="slideshow">
-    <li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li>
+    <li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li>
   </ul>
 
   <div class="container">
     <img src="favicon1.png" alt="Logo" class="logo-img">
     <h1>Build your future <span class="highlight">Scholars Prep</span></h1>
-    <p class="lead">Ignite your potential with world-class learning resources. join a community dedicated to academic excellence today.</p>
-     <marquee style="color: red;" behavior="scroll" direction="left">This platform is no longer available for Desktop users. Please download the app to continue accessing our resources and community.
-     </marquee>
+    <p class="lead">Ignite your potential with world-class learning resources. Join our community today.</p>
+    
+    <div class="desktop-notice">
+      <marquee behavior="scroll" direction="left">⚠️ Desktop access is limited. Please download our Android App for the full experience.</marquee>
+    </div>
 
     <div class="btn-group">
       <a href="login.html" class="btn btn-primary auth-hide">Login</a>
@@ -196,20 +207,24 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
   <script>
     const supabaseClient = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
 
     async function syncMobileMode() {
-      // 🛡️ HARDWARE DETECTION: This is the key to stopping "Responsive Mode" bypasses
+      // 🛡️ LAYER 1: Hardware/OS Check
       const ua = navigator.userAgent.toLowerCase();
       const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
+      const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
       
-      // Check if device actually has a Touchscreen (Hard to spoof in Responsive Mode)
-      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      // 🛡️ LAYER 2: Pixel Density Check (Prevents Edge/Chrome spoofing)
+      const isLowDensity = window.devicePixelRatio < 2.0;
       
-      // Determine if this is a Desktop trying to pretend to be a phone
-      const isLikelyDesktop = !isMobileOS || !hasTouch;
+      // 🛡️ LAYER 3: Platform Check
+      const platform = navigator.platform.toLowerCase();
+      const isDesktopOS = /win|mac|linux/.test(platform);
+
+      // Decision: Is this a desktop trying to act like a phone?
+      const isLikelyDesktop = isDesktopOS || !hasTouch || (isLowDensity && !isMobileOS);
 
       if (isLikelyDesktop) {
         document.documentElement.classList.add('is-desktop');
@@ -220,29 +235,17 @@
 
       if (data && data.mobile_only_mode) {
         if (isLikelyDesktop) {
-          // Permanently vanish buttons on Desktop
+          // Vanish buttons on Desktop
           document.querySelectorAll('.auth-hide').forEach(el => el.style.display = 'none');
         }
       } else {
-        // Switch is OFF: Remove the block
+        // Switch is OFF: Reveal everything
         document.documentElement.classList.remove('is-desktop');
       }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       syncMobileMode();
-      
-      if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.CapacitorUpdater) {
-        Capacitor.Plugins.CapacitorUpdater.notifyAppReady();
-      }
-    });
-
-    window.addEventListener('load', function() {
-        const isApp = navigator.userAgent.toLowerCase().includes('wv');
-        const downloadBtn = document.getElementById('header-download-btn');
-        if (isApp && downloadBtn) {
-            downloadBtn.style.display = 'none';
-        }
     });
   </script>
 </body>

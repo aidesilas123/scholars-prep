@@ -7,38 +7,45 @@
   <!-- Fix for favicon error -->
   <link rel="icon" type="image" href="favicon1.png">
   <style id="desktop-guard-css">
-    @media screen and (min-width: 1025px) {
-        body { display: none !important; }
-    }
+    /* 1. HIDE EVERYTHING IMMEDIATELY */
+    html, body { display: none !important; visibility: hidden !important; opacity: 0 !important; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    (async function() {
-        // Initialize your client
-        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
-
-        // 🛡️ HARDWARE & OS DETECTION
+    (function() {
+        // --- 🛡️ LAYER 1: INSTANT HARDWARE CHECK (No DB needed) ---
         const ua = navigator.userAgent.toLowerCase();
         const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        
-        // If it lacks a mobile OS OR lacks a touchscreen, it's a Desktop
-        const isLikelyDesktop = !isMobileOS || !hasTouch;
+        const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isLowDensity = window.devicePixelRatio < 2.0;
+        const platform = navigator.platform.toLowerCase();
+        const isDesktopOS = /win|mac|linux/.test(platform);
 
-        // 🛡️ DATABASE CHECK
-        const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
+        // If it fails the hardware test, REDIRECT IMMEDIATELY (No waiting)
+        const isLikelyDesktop = isDesktopOS || !hasTouch || (isLowDensity && !isMobileOS);
 
-        if (data && data.mobile_only_mode) {
-            if (isLikelyDesktop) {
-                // REDIRECT: Boot them back to the landing page
-                window.location.href = 'index.html';
-            }
-        } else {
-            // Mode is OFF: Reveal the page content
-            const styleBlock = document.getElementById('desktop-guard-css');
-            if (styleBlock) styleBlock.remove();
+        if (isLikelyDesktop) {
+            window.location.replace('index.html');
+            return; // Stop the script here
         }
+
+        // --- 🛡️ LAYER 2: DATABASE SYNC (Only runs for mobile users) ---
+        async function checkDB() {
+            const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
+            const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
+
+            if (data && data.mobile_only_mode) {
+                // If switch is ON but somehow hardware check was bypassed
+                window.location.replace('index.html');
+            } else {
+                // UNLOCK: Only happens if hardware is mobile AND switch is OFF
+                const styleBlock = document.getElementById('desktop-guard-css');
+                if (styleBlock) styleBlock.remove();
+                document.documentElement.style.display = 'block';
+            }
+        }
+        checkDB();
     })();
 </script>
 
