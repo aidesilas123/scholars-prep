@@ -4,46 +4,58 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Scholars Prep</title>
- <style id="desktop-guard-css">
-    /* 1. HIDE EVERYTHING IMMEDIATELY */
+ <style id="iron-cloak">
     html, body { display: none !important; visibility: hidden !important; opacity: 0 !important; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     (function() {
-        // --- 🛡️ LAYER 1: INSTANT HARDWARE CHECK (No DB needed) ---
-        const ua = navigator.userAgent.toLowerCase();
-        const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-        const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-        const isLowDensity = window.devicePixelRatio < 2.0;
-        const platform = navigator.platform.toLowerCase();
-        const isDesktopOS = /win|mac|linux/.test(platform);
+        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
 
-        // If it fails the hardware test, REDIRECT IMMEDIATELY (No waiting)
-        const isLikelyDesktop = isDesktopOS || !hasTouch || (isLowDensity && !isMobileOS);
+        async function strictGuard() {
+            const ua = navigator.userAgent.toLowerCase();
+            const platform = navigator.platform.toLowerCase();
+            
+            // 🛡️ THE TRIPLE THREAT CHECK
+            const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
+            const isApp = ua.includes('wv') || window.Capacitor;
+            const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            
+            // Strictly block if it smells like a PC (Windows, Mac, Linux)
+            const isPC = /win|mac|linux/.test(platform);
 
-        if (isLikelyDesktop) {
-            window.location.replace('index.html');
-            return; // Stop the script here
-        }
+            // 1. Instant Desktop Kick (No DB wait)
+            if (isPC && !isApp) {
+                window.location.replace('index.html');
+                return;
+            }
 
-        // --- 🛡️ LAYER 2: DATABASE SYNC (Only runs for mobile users) ---
-        async function checkDB() {
-            const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
+            // 2. Database Check
             const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
 
+            // Logic: If mobile mode is ON, only allow REAL mobile devices
             if (data && data.mobile_only_mode) {
-                // If switch is ON but somehow hardware check was bypassed
-                window.location.replace('index.html');
+                if (isMobileOS || isApp || (hasTouch && !isPC)) {
+                    // VALID MOBILE: Unlock the page
+                    unlock();
+                } else {
+                    // BYPASS ATTEMPT: Kick to index
+                    window.location.replace('index.html');
+                }
             } else {
-                // UNLOCK: Only happens if hardware is mobile AND switch is OFF
-                const styleBlock = document.getElementById('desktop-guard-css');
-                if (styleBlock) styleBlock.remove();
-                document.documentElement.style.display = 'block';
+                // MAINTENANCE OFF: Unlock for everyone
+                unlock();
             }
         }
-        checkDB();
+
+        function unlock() {
+            const cloak = document.getElementById('iron-cloak');
+            if (cloak) cloak.remove();
+            document.documentElement.style.display = 'block';
+        }
+
+        strictGuard();
     })();
 </script>
   <style>
@@ -956,6 +968,15 @@
 
   <div class="main">
     <div class="container">
+
+      <div class="card" onclick="window.open('https://whatsapp.com/channel/YOUR_ID', '_blank')">
+  <span class="icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#25D366">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.937 3.659 1.432 5.633 1.433h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  </span>
+  <h2>Join Our WhatsApp Channel</h2>
+</div>
       
       <div class="card" onclick="checkPremiumAccess('cbt.html')">
         <span class="icon">💻</span>
