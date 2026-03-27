@@ -5,16 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Past Questions - Scholars Prep</title>
   <link rel="icon" type="image" href="favicon1.png">
-  <style id="iron-cloak">
-    html, body { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-</style>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    (function() {
-        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
-
-          <style>
+  <style>
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #073601, #023004);
@@ -38,7 +30,7 @@
       display: flex;
       flex-wrap: wrap;
       overflow: hidden;
-      opacity: 0.04; /* Faint but visible */
+      opacity: 0.04; 
       justify-content: space-around;
       align-content: space-around;
     }
@@ -52,7 +44,6 @@
       white-space: nowrap;
     }
 
-    /* Content Wrapper (Z-index 1 to sit above watermark) */
     .content-wrapper {
       position: relative;
       z-index: 1;
@@ -90,6 +81,7 @@
       border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px);
       transition: transform 0.2s, background 0.3s;
     }
+    .course-card:hover { background: rgba(255, 255, 255, 0.12); }
     .course-card:active { transform: scale(0.98); }
 
     .action-btn {
@@ -123,7 +115,6 @@
     .checkmark { margin-right: 12px; font-weight: bold; color: #4CAF50; }
     .circle-mark { margin-right: 12px; opacity: 0.5; font-size: 14px; }
 
-    /* Solution Box Styles */
     .reveal-btn {
       background: linear-gradient(135deg, #ff9800, #f57c00);
       color: white; border: none; padding: 10px 20px;
@@ -131,10 +122,9 @@
       margin-top: 15px; width: 100%; display: flex;
       align-items: center; justify-content: center; gap: 8px;
     }
-    .reveal-btn:hover { filter: brightness(1.1); }
 
     .solution-box {
-      display: none; /* Hidden by default */
+      display: none;
       margin-top: 15px; padding: 15px;
       background: rgba(63, 102, 255, 0.15);
       border-left: 4px solid #3f66ff;
@@ -142,7 +132,6 @@
       font-size: 15px; line-height: 1.6; color: #e0e7ff;
       animation: slideDown 0.3s ease-out;
     }
-    .solution-box strong { color: #3f66ff; display: block; margin-bottom: 5px; }
 
     @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -160,18 +149,18 @@
       padding: 12px; background: #333; border-radius: 8px; cursor: pointer;
       border: 1px solid #444; transition: 0.2s;
     }
-    .year-card:active { background: #4CAF50; border-color: #4CAF50; }
+    .year-card:hover { background: #4CAF50; }
     .back-btn { background: #333; color: white; border: 1px solid #555; padding: 8px 16px; border-radius: 20px; cursor: pointer; margin-bottom: 15px; }
 
-    /* Screenshot Protection Blur */
     .blur-content { filter: blur(15px); }
   </style>
+
   <script>
-  window.MathJax = {
-    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
-  };
-</script>
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
 
@@ -185,11 +174,10 @@
   </div>
 
   <div class="content-wrapper" id="mainWrapper">
-
     <style>
       :root{ --nav-grad: linear-gradient(135deg,#063b08,#083502 60%); }
       .topbar{ position: fixed; inset: 0 0 auto 0; height: 64px; z-index: 1000; display:flex; align-items:center; padding: 0 16px; background: var(--nav-grad); border-bottom: 1px solid rgba(255,255,255,0.1); }
-      .brand{ font-weight:800; color:#fff; flex:1; }
+      .brand{ font-weight:800; color:#fff; flex:1; cursor: pointer; }
       .nav-links a{ color:#fff; text-decoration:none; margin-left:15px; font-weight:600; font-size:14px; opacity:0.8; }
       .nav-links a.active{ opacity:1; text-decoration:underline; }
       body { padding-top: 70px; }
@@ -204,7 +192,7 @@
     </header>
 
     <div style="text-align: center; margin: 20px 0;">
-      <h2>📘 Past Questions Archive</h2>
+      <h2>Past Questions Archive</h2>
       <p style="color:#aaa; font-size:14px;">(2019 - 2025)</p>
     </div>
 
@@ -215,7 +203,6 @@
       <h3 id="questionsTitle" style="border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:10px;"></h3>
       <div id="questionsList"></div>
     </div>
-
   </div>
 
   <div class="modal" id="yearModal">
@@ -236,15 +223,12 @@
     let selectedCourseCode = '';
     let selectedType = '';
 
-    // --- 1. Security & Watermark Logic ---
     document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
       if (!user) { window.location.href = 'index.html'; return; }
 
-      // Generate Tiled Watermark
       const grid = document.getElementById('watermarkGrid');
       const email = user.email || 'User';
-      // Create 30 copies of the email to fill screen
       for(let i=0; i<30; i++) {
         const div = document.createElement('div');
         div.className = 'watermark-item';
@@ -252,10 +236,8 @@
         grid.appendChild(div);
       }
 
-      // Load Courses
       loadCourses();
 
-      // Screenshot Deterrent (Blur on tab switch)
       document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
           document.body.classList.add("blur-content");
@@ -265,7 +247,6 @@
       });
     });
 
-    // --- 2. Load Courses ---
     async function loadCourses() {
       showLoading(true);
       try {
@@ -279,7 +260,6 @@
         const list = document.getElementById('courseList');
         list.innerHTML = '';
 
-        // Group courses
         const groups = {};
         courses.forEach(c => {
           if(!groups[c.code]) groups[c.code] = [];
@@ -312,7 +292,6 @@
       }
     }
 
-    // --- 3. Year Selection ---
     async function openYearSelect(id, code, type) {
       selectedCourseId = id;
       selectedCourseCode = code;
@@ -351,65 +330,27 @@
       document.getElementById('yearModal').style.display = 'none';
     }
 
-    // --- 4. Load Questions & Solutions ---
-    // --- NEW HELPER: Fix missing backslashes in math text ---
-    // --- 1. ROBUST MATH FIXER ---
-   // --- 1. ROBUST MATH FIXER FUNCTION ---
-    // Place this function right before loadQuestions
-    // --- 1. ROBUST MATH FIXER FUNCTION ---
-// --- FINAL ROBUST MATH FIXER ---
-function fixMathText(text) {
-  if (!text) return "";
-  let fixed = text;
+    function fixMathText(text) {
+      if (!text) return "";
+      let fixed = text;
+      const mathWords = ["frac", "sqrt", "int", "lim", "sum", "prod", "infty", "times", "div", "pm", "cdot", "partial", "sin", "cos", "tan", "csc", "sec", "cot", "log", "ln", "exp", "det", "cup", "cap", "notin", "subset", "subseteq", "forall", "exists", "empty", "union", "rightarrow", "leftarrow", "Rightarrow", "Leftarrow", "leftrightarrow", "implies", "theta", "pi", "alpha", "beta", "gamma", "delta", "lambda", "mu", "sigma", "omega", "Delta", "Sigma", "Omega", "phi", "psi", "rho", "epsilon"];
 
-  // 1. Safe list of keywords (Removed "in" to prevent Chemistry text bugs)
-  const mathWords = [
-    // Calculus & Algebra
-    "frac", "sqrt", "int", "lim", "sum", "prod", "infty", "times", "div", "pm", "cdot", "partial",
-    // Trig & Log
-    "sin", "cos", "tan", "csc", "sec", "cot", "log", "ln", "exp", "det",
-    // Set Theory & Logic (Removed 'in' because it breaks English sentences)
-    "cup", "cap", "notin", "subset", "subseteq", "forall", "exists", "empty", "union",
-    // Arrows
-    "rightarrow", "leftarrow", "Rightarrow", "Leftarrow", "leftrightarrow", "implies",
-    // Greek Letters
-    "theta", "pi", "alpha", "beta", "gamma", "delta", "lambda", "mu", "sigma", "omega", "Delta", "Sigma", "Omega", "phi", "psi", "rho", "epsilon"
-  ];
+      mathWords.forEach(word => {
+          const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'g');
+          fixed = fixed.replace(regex, `\\${word}`);
+      });
 
-  // 2. Apply the fix with WORD BOUNDARIES (\b)
-  // This prevents 'sin' from becoming 's\in'
-  mathWords.forEach(word => {
-      // Regex explanation:
-      // (?<!\\) -> Lookbehind: Ensure it doesn't already have a backslash
-      // \b      -> Word boundary (start of word)
-      // word    -> The keyword
-      // \b      -> Word boundary (end of word)
-      const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'g');
-      fixed = fixed.replace(regex, `\\${word}`);
-  });
+      fixed = fixed.replace(/\\\\/g, "\\");
+      const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
+      const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
+      const isLongText = fixed.length > 50 && !fixed.includes("="); 
 
-  // 3. Clean up accidental double backslashes
-  fixed = fixed.replace(/\\\\/g, "\\");
+      if (isMathSymbol && !hasDelimiters && !isLongText) {
+          return `\\( ${fixed} \\)`;
+      }
+      return fixed;
+    }
 
-  // 4. Auto-Wrap in math mode ONLY if it looks like math
-  // Checks for:
-  //  - Backslash commands
-  //  - Math operators (=, ^, _, <, >)
-  //  - BUT we skip wrapping if it looks like a long English sentence (contains many spaces)
-  const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
-  const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
-  
-  // Safety check: If it's very long and has few math symbols, don't wrap it blindly
-  // (This helps prevent other text-squashing issues)
-  const isLongText = fixed.length > 50 && !fixed.includes("="); 
-
-  if (isMathSymbol && !hasDelimiters && !isLongText) {
-      return `\\( ${fixed} \\)`;
-  }
-  
-  return fixed;
-}
-    // --- 2. UPDATED loadQuestions FUNCTION ---
     async function loadQuestions(year) {
       closeYearModal();
       showLoading(true);
@@ -430,24 +371,19 @@ function fixMathText(text) {
 
         qs.forEach((q, idx) => {
           const ansIdx = parseInt(q.answer);
-          
-          // Fix Option Parsing
           let opts = q.options;
           if (typeof opts === 'string') {
               try { opts = JSON.parse(opts); } catch(e) { opts = []; }
           }
           if (!opts) opts = [];
 
-          // --- APPLY THE FIX TO QUESTION TEXT & DETAILS ---
           const fixedQuestionText = fixMathText(q.question_text);
           const fixedDetails = fixMathText(q.Details || q.details || "No explanation provided.");
 
           let optHtml = '';
           opts.forEach((opt, i) => {
             const isCorrect = i === ansIdx;
-            // --- APPLY THE FIX TO OPTIONS ---
             const fixedOption = fixMathText(opt);
-            
             optHtml += `
               <div class="option-item ${isCorrect ? 'correct' : ''}">
                 ${isCorrect ? '<span class="checkmark">✔</span>' : '<span class="circle-mark">○</span>'}
@@ -461,11 +397,7 @@ function fixMathText(text) {
           div.innerHTML = `
             <div class="question-text">Q${idx+1}. ${fixedQuestionText}</div>
             <div>${optHtml}</div>
-            
-            <button class="reveal-btn" onclick="toggleSolution('sol-${idx}')">
-              💡 Reveal Solution
-            </button>
-            
+            <button class="reveal-btn" onclick="toggleSolution('sol-${idx}')">💡 Reveal Solution</button>
             <div id="sol-${idx}" class="solution-box">
               <strong>Solving / Explanation:</strong>
               ${fixedDetails}
@@ -477,7 +409,6 @@ function fixMathText(text) {
         document.getElementById('courseList').style.display = 'none';
         document.getElementById('questionsContainer').style.display = 'block';
 
-        // Trigger MathJax
         if (window.MathJax) {
             MathJax.typesetPromise();
         }
@@ -489,14 +420,10 @@ function fixMathText(text) {
         showLoading(false);
       }
     }
-    // --- 5. Toggle Solution Visibility ---
+
     window.toggleSolution = function(id) {
       const box = document.getElementById(id);
-      if(box.style.display === 'block') {
-        box.style.display = 'none';
-      } else {
-        box.style.display = 'block';
-      }
+      box.style.display = box.style.display === 'block' ? 'none' : 'block';
     };
 
     function goBackToCourses() {
@@ -508,7 +435,6 @@ function fixMathText(text) {
       document.getElementById('globalLoading').style.display = b ? 'flex' : 'none';
     }
 
-    // --- Security Prevention ---
     document.addEventListener('contextmenu', event => event.preventDefault());
     document.addEventListener('keydown', function(e) {
       if((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 's')) {
