@@ -14,53 +14,7 @@
     (function() {
         const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
 
-        async function strictGuard() {
-            const ua = navigator.userAgent.toLowerCase();
-            const platform = navigator.platform.toLowerCase();
-            
-            // 🛡️ THE TRIPLE THREAT CHECK
-            const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-            const isApp = ua.includes('wv') || window.Capacitor;
-            const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-            
-            // Strictly block if it smells like a PC (Windows, Mac, Linux)
-            const isPC = /win|mac|linux/.test(platform);
-
-            // 1. Instant Desktop Kick (No DB wait)
-            if (isPC && !isApp) {
-                window.location.replace('index.html');
-                return;
-            }
-
-            // 2. Database Check
-            const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
-
-            // Logic: If mobile mode is ON, only allow REAL mobile devices
-            if (data && data.mobile_only_mode) {
-                if (isMobileOS || isApp || (hasTouch && !isPC)) {
-                    // VALID MOBILE: Unlock the page
-                    unlock();
-                } else {
-                    // BYPASS ATTEMPT: Kick to index
-                    window.location.replace('index.html');
-                }
-            } else {
-                // MAINTENANCE OFF: Unlock for everyone
-                unlock();
-            }
-        }
-
-        function unlock() {
-            const cloak = document.getElementById('iron-cloak');
-            if (cloak) cloak.remove();
-            document.documentElement.style.display = 'block';
-        }
-
-        strictGuard();
-    })();
-</script>
-  
-  <style>
+          <style>
     body {
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #073601, #023004);
