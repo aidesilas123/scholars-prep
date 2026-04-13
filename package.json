@@ -24,6 +24,7 @@
     "@capacitor/core": "^8.0.2"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5"
+    "@capacitor/assets": "^3.0.5",
+    "javascript-obfuscator": "^5.4.1"
   }
 }
