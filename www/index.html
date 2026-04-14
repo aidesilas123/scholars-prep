@@ -114,35 +114,6 @@
     <div class="btn-group">
       <a href="login.html" class="btn btn-primary auth-hide">Login</a>
       <a href="login.html" class="btn btn-secondary auth-hide">Sign Up</a>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  (function() {
-    // 1. Instant Device Check
-    const ua = navigator.userAgent.toLowerCase();
-    const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-    const isDesktop = /win|mac|linux/.test(navigator.platform.toLowerCase()) && !isMobileOS;
-    const isApp = ua.includes('wv') || (window.Capacitor !== undefined);
-    
-    // Valid Mobile: Mobile OS, or the App, or has Touch and isn't a known Desktop
-    const isValidMobile = isMobileOS || isApp || (('ontouchstart' in window || navigator.maxTouchPoints > 0) && !isDesktop);
-
-    // 2. Logic: Only check database if user is on Desktop
-    if (!isValidMobile) {
-      const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
-      
-      _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single()
-        .then(({data}) => {
-          if (data && data.mobile_only_mode) {
-            // Lock it down: Hide buttons, show marquee
-            document.documentElement.classList.add('desktop-locked');
-          }
-        })
-        .catch(err => console.error("DB Check Failed:", err));
-    }
-  })();
-</script>
+    </div>  </div>  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </body>
 </html>
