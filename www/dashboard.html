@@ -982,7 +982,7 @@
         <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
       </button>
       <div id="notificationDropdown" class="dropdown-content left">
-         <a href="notifications.html" onclick="navigateWithLoading(event, 'notifications.html')">
+         <a href="notifications.html" onclick="window.location.href='notifications.html'">
            <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">campaign</span> View All Notifications
          </a>
          <hr style="margin: 5px 0;">
@@ -996,7 +996,7 @@
         <span id="messageBadge" class="notification-badge" style="display: none;">0</span>
       </button>
       <div id="messagesDropdown" class="dropdown-content left">
-         <a href="messages.html" onclick="navigateWithLoading(event, 'messages.html')">
+         <a href="messages.html" onclick="window.location.href='messages.html'">
            <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">mail</span> View All Messages
          </a>
          <hr style="margin: 5px 0;">
@@ -1018,9 +1018,6 @@
         <span class="material-symbols-rounded">settings</span>
       </button>
       <div id="settingsDropdown" class="dropdown-content">
-        <a href="#" onclick="openProfileSettings()">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">person</span> Profile Settings
-        </a>
         <a href="#" onclick="openNotificationSettings()">
           <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">notifications</span> Preferences
         </a>
@@ -1142,58 +1139,7 @@
   <a href="feedback.html" class="feedback-btn">click here</a>
 </div>
 
-  <div class="modal-content feedback-modal">
-      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">rate_review</span> Send Feedback / Complaint</h3>
-      
-      <div class="feedback-type-buttons">
-        <div class="feedback-type-btn" onclick="selectFeedbackType('complaint')">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">warning</span> Complaint
-        </div>
-        <div class="feedback-type-btn" onclick="selectFeedbackType('suggestion')">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">lightbulb</span> Suggestion
-        </div>
-        <div class="feedback-type-btn" onclick="selectFeedbackType('bug')">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">bug_report</span> Bug Report
-        </div>
-        <div class="feedback-type-btn" onclick="selectFeedbackType('other')">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">edit_note</span> Other
-        </div>
-      </div>
-      
-      <input type="hidden" id="feedbackType" value="suggestion">
-      
-      <div class="form-group">
-        <label>Subject</label>
-        <input type="text" id="feedbackSubject" placeholder="Brief description of your feedback...">
-      </div>
-      
-      <div class="form-group">
-        <label>Detailed Message</label>
-        <textarea id="feedbackMessage" placeholder="Please provide detailed information..."></textarea>
-      </div>
-
-      <div class="modal-buttons">
-        <button class="modal-btn secondary" onclick="closeModal('feedbackModal')">Cancel</button>
-        <button class="modal-btn primary" onclick="submitFeedback()">Submit Feedback</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="messageAdminModal" class="modal">
-    <div class="modal-content">
-      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">chat</span> Message Admin</h3>
-      
-      <div class="form-group">
-        <label>Your Message</label>
-        <textarea id="adminMessage" placeholder="Type your message to admin..."></textarea>
-      </div>
-
-      <div class="modal-buttons">
-        <button class="modal-btn secondary" onclick="closeModal('messageAdminModal')">Cancel</button>
-        <button class="modal-btn primary" onclick="sendMessageToAdmin()">Send Message</button>
-      </div>
-    </div>
-  </div>
+  
 
   <div id="profileModal" class="modal">
     <div class="modal-content">
