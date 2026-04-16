@@ -976,33 +976,19 @@
 
   <header>
   <div class="header-actions">
-    <div class="dropdown">
-      <button class="action-btn notification" onclick="toggleDropdown('notificationDropdown')">
-        <span class="material-symbols-rounded">notifications</span>
-        <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
-      </button>
-      <div id="notificationDropdown" class="dropdown-content left">
-         <a href="notifications.html" onclick="window.location.href='notifications.html'">
-           <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">campaign</span> View All Notifications
-         </a>
-         <hr style="margin: 5px 0;">
-         <div id="notificationPreview"></div>
-      </div>
-    </div>
+    <div class="header-actions">
+    
+    <button class="action-btn notification" onclick="window.location.href='notifications.html'">
+      <span class="material-symbols-rounded">notifications</span>
+      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+    </button>
 
-    <div class="dropdown">
-      <button class="action-btn" onclick="toggleDropdown('messagesDropdown')">
-        <span class="material-symbols-rounded">chat_bubble</span>
-        <span id="messageBadge" class="notification-badge" style="display: none;">0</span>
-      </button>
-      <div id="messagesDropdown" class="dropdown-content left">
-         <a href="messages.html" onclick="window.location.href='messages.html'">
-           <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">mail</span> View All Messages
-         </a>
-         <hr style="margin: 5px 0;">
-         <div id="messagePreview"></div>
-      </div>
-    </div>
+    <button class="action-btn" onclick="window.location.href='messages.html'">
+      <span class="material-symbols-rounded">chat_bubble</span>
+      <span id="messageBadge" class="notification-badge" style="display: none;">0</span>
+    </button>
+
+  </div>
   </div>
 
   <div class="header-center">
