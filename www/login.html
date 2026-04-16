@@ -28,10 +28,10 @@
 
       // DECISION TREE
       if (isValidMobile) {
-        // 🟢 IF MOBILE: Uncloak instantly. Zero delay. No DB wait required.
+        // IF MOBILE: Uncloak instantly. Zero delay. No DB wait required.
         uncloakPage();
       } else {
-        // 🔴 IF DESKTOP: Wait for Supabase check
+        //  IF DESKTOP: Wait for Supabase check
         const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
         
         _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single()
@@ -128,10 +128,36 @@
       .card { width: 92%; padding:20px; }
       .watermark { font-size:24px; opacity:0.06; }
     }
+    /* --- PREMIUM LOADING OVERLAY --- */
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7); display: none;
+      align-items: center; justify-content: center;
+      z-index: 9999; backdrop-filter: blur(4px);
+    }
+    .page-loading {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+    }
+    .loading-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%; border-top-color: #044908; /* Matches your accent color */
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="no-select">
   <div id="watermark" class="watermark" aria-hidden="true"></div>
+  <div class="loading-overlay" id="globalLoading">
+    <div class="page-loading">
+      <div class="loading-spinner"></div>
+      <div style="font-size: 18px; font-weight: 600; color: white;">Authenticating...</div>
+      <div style="color: #cbd5e1; font-size: 14px;">Please wait</div>
+    </div>
+  </div>
 
   <div class="container">
     <div class="card" role="region" aria-label="login card" id="authCard">

@@ -1,4 +1,14 @@
+// --- PREMIUM LOADING UI FUNCTIONS ---
+function showLoading() {
+  const loader = document.getElementById('globalLoading');
+  if (loader) loader.style.display = 'flex';
+}
 
+function hideLoading() {
+  const loader = document.getElementById('globalLoading');
+  if (loader) loader.style.display = 'none';
+}
+    
     // It checks if 'abupq_logged_in_user' exists. If yes, go straight to dashboard.
     (async function checkLogin() {
         const savedUser = localStorage.getItem('abupq_logged_in_user');
@@ -82,6 +92,7 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // SIGNUP
+    // SIGNUP
     document.getElementById('signupBtn').addEventListener('click', async (e) => {
       e.preventDefault();
       const name = document.getElementById('signupName').value.trim();
@@ -92,16 +103,15 @@
       if(!name || !email || !pw) { showModal('Error', 'Please fill all fields'); return; }
       if(pw !== confirmPw) { showModal('Error', 'Passwords do not match'); return; }
 
-      const btn = document.getElementById('signupBtn');
-      btn.innerHTML = 'Creating...';
-      btn.disabled = true;
+      // 1. FIRE LOADING UI
+      showLoading();
 
       const { data, error } = await supabaseClient.auth.signUp({
         email, password: pw, options: { data: { full_name: name } }
       });
 
-      btn.innerHTML = 'Create Account';
-      btn.disabled = false;
+      // 2. HIDE LOADING UI WHEN DONE
+      hideLoading();
 
       if(error){ 
         showModal('Error', error.message); 
@@ -123,21 +133,21 @@
     });
 
     // Reset Email
+    // Reset Email
     document.getElementById('resetBtn').addEventListener('click', async (e) => {
         e.preventDefault();
         const email = document.getElementById('resetEmail').value.trim().toLowerCase();
         if (!email) { showModal('Error', 'Please enter your email'); return; }
 
-        const btn = document.getElementById('resetBtn');
-        btn.innerHTML = 'Sending...';
-        btn.disabled = true;
+        // 1. FIRE LOADING UI
+        showLoading();
 
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
             redirectTo: window.location.origin + '/update-password.html',
         });
 
-        btn.innerHTML = 'Send Reset Link';
-        btn.disabled = false;
+        // 2. HIDE LOADING UI WHEN DONE
+        hideLoading();
 
         if (error) {
             showModal('Error', error.message);
@@ -148,6 +158,7 @@
     });
 
     // --- LOGIN ---
+   // --- LOGIN ---
     document.getElementById('loginBtn').addEventListener('click', async (e) => {
       e.preventDefault();
       const email = document.getElementById('loginEmail').value.trim().toLowerCase();
@@ -155,15 +166,14 @@
 
       if(!email || !pw){ showModal('Error', 'Please enter email and password'); return; }
 
-      const btn = document.getElementById('loginBtn');
-      btn.innerHTML = 'Logging in...';
-      btn.disabled = true;
+      // 1. FIRE LOADING UI
+      showLoading();
 
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pw });
 
       if(error){ 
-        btn.innerHTML = 'Log In';
-        btn.disabled = false;
+        // 2. HIDE LOADING ON ERROR
+        hideLoading();
         showModal('Incorrect', error.message); 
         return;
       }
@@ -185,8 +195,8 @@
 
             if (diffMinutes < TIMEOUT_MINUTES) {
                 await supabaseClient.auth.signOut(); 
-                btn.innerHTML = 'Log In';
-                btn.disabled = false;
+                // 3. HIDE LOADING ON SESSION LIMIT
+                hideLoading();
                 showModal('Limit Reached', 'Simultaneous limit reached. You are already logged in on another device.');
                 return;
             }
@@ -206,7 +216,7 @@
         localStorage.setItem('abupq_logged_in_user', JSON.stringify(userObj));
         localStorage.setItem('isLoggedIn', 'true');
         
-        btn.innerHTML = 'Success';
+        // 4. KEEP SPINNER RUNNING UNTIL REDIRECT
         showModal('Success', 'Redirecting to dashboard...', {autoClose: 1000});
         setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
 

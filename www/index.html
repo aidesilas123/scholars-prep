@@ -82,6 +82,62 @@
       h1 { font-size: 42px; }
       .btn-group { flex-direction: column; width: 100%; max-width: 300px; }
     }
+    /* --- INITIAL BLUR EFFECT --- */
+    .locked-blur {
+      filter: blur(8px);
+      opacity: 0.4;
+      pointer-events: none;
+      transition: filter 0.5s ease, opacity 0.5s ease;
+    }
+
+    /* --- PAGE LOAD PROGRESS BAR --- */
+    .progress-container {
+      width: 100%;
+      max-width: 300px;
+      margin: 20px auto 0;
+      text-align: center;
+      transition: opacity 0.5s ease;
+    }
+    .progress-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.2s ease;
+    }
+    .progress-text {
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    /* --- PREMIUM GLOBAL LOADING OVERLAY --- */
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7); display: none;
+      align-items: center; justify-content: center;
+      z-index: 9999; backdrop-filter: blur(4px);
+    }
+    .page-loading {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+    }
+    .loading-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%; border-top-color: var(--accent);
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -93,8 +149,6 @@
            style="background-color: #053006; color: white; padding: 6px 12px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 11px; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
            <span>🤖</span> Download App
         </a>
-        <a href="login.html" class="auth-hide" style="text-decoration: none; color: #333; font-weight: bold; font-size: 13px;">Login</a>
-        <a href="login.html" class="auth-hide" style="background-color: #072e08; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px; white-space: nowrap;">Sign Up</a>
     </div>
 </header>
 
@@ -111,9 +165,97 @@
       <marquee behavior="scroll" direction="left">⚠️ Desktop access is limited. Please download our Android App for the full experience.</marquee>
     </div>
 
-    <div class="btn-group">
-      <a href="login.html" class="btn btn-primary auth-hide">Login</a>
-      <a href="login.html" class="btn btn-secondary auth-hide">Sign Up</a>
-    </div>  </div>  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <div class="btn-group locked-blur" id="mainAuthGroup">
+      <a href="login.html" class="btn btn-primary auth-hide loading-trigger">Login</a>
+      <a href="login.html" class="btn btn-secondary auth-hide loading-trigger">Sign Up</a>
+    </div> 
+
+    <div class="progress-container" id="loadProgress">
+      <div class="progress-text">LOADING... <span id="loadPercent">0</span>%</div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="loadFill"></div>
+      </div>
+    </div>
+    <div class="loading-overlay" id="globalLoading">
+    <div class="page-loading">
+      <div class="loading-spinner"></div>
+      <div style="font-size: 18px; font-weight: 600; color: white;">Connecting...</div>
+      <div style="color: #bcdfdd; font-size: 14px;">Please wait</div>
+    </div>
+  </div>
+  <script>
+  // 1. DESKTOP RESTRICTION LOGIC
+  function checkDevice() {
+    const ua = navigator.userAgent.toLowerCase();
+    const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
+    const isDesktop = /win|mac|linux/.test(navigator.platform.toLowerCase()) && !isMobileOS;
+    const isApp = ua.includes('wv') || (window.Capacitor !== undefined);
+    
+    // If it's a PC and not the Android App wrapper, lock it down.
+    if (isDesktop && !isApp) {
+      document.body.classList.add('desktop-locked');
+    }
+  }
+
+  // 2. PAGE LOAD PROGRESS BAR
+  function simulateLoading() {
+    let percent = 0;
+    const fill = document.getElementById('loadFill');
+    const text = document.getElementById('loadPercent');
+    const progressContainer = document.getElementById('loadProgress');
+    const blurredElements = document.querySelectorAll('.locked-blur');
+
+    // Fake progress up to 90% while actual resources load
+    const interval = setInterval(() => {
+      if (percent < 90) {
+        percent += Math.floor(Math.random() * 10) + 1;
+        if (percent > 90) percent = 90;
+        fill.style.width = percent + '%';
+        text.innerText = percent;
+      }
+    }, 150);
+
+    // When the browser says everything (images, css) is 100% loaded
+    window.addEventListener('load', () => {
+      clearInterval(interval);
+      fill.style.width = '100%';
+      text.innerText = '100';
+      
+      setTimeout(() => {
+        // Fade out progress bar
+        progressContainer.style.opacity = '0';
+        
+        // Remove blur from buttons so user can click them
+        blurredElements.forEach(el => el.classList.remove('locked-blur'));
+        
+        setTimeout(() => progressContainer.style.display = 'none', 500);
+      }, 400); // Slight delay so they see 100%
+    });
+  }
+
+  // 3. PREMIUM LOADING UI (On Click)
+  function setupClickLoading() {
+    const triggers = document.querySelectorAll('.loading-trigger, #headLogin, #headSignup');
+    const loader = document.getElementById('globalLoading');
+
+    triggers.forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault(); // Stop instant navigation
+        loader.style.display = 'flex'; // Show glass UI
+        const target = this.getAttribute('href');
+        
+        // Navigate after 400ms to allow UI to render smoothly
+        setTimeout(() => {
+          window.location.href = target;
+        }, 400);
+      });
+    });
+  }
+
+  // INITIATE ALL SYSTEMS
+  checkDevice();
+  simulateLoading();
+  setupClickLoading();
+</script>
 </body>
 </html>

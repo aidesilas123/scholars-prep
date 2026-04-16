@@ -4,60 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Scholars Prep</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
  <style id="iron-cloak">
     html, body { display: none !important; visibility: hidden !important; opacity: 0 !important; }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    (function() {
-        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
 
-        async function strictGuard() {
-            const ua = navigator.userAgent.toLowerCase();
-            const platform = navigator.platform.toLowerCase();
-            
-            // 🛡️ THE TRIPLE THREAT CHECK
-            const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-            const isApp = ua.includes('wv') || window.Capacitor;
-            const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-            
-            // Strictly block if it smells like a PC (Windows, Mac, Linux)
-            const isPC = /win|mac|linux/.test(platform);
-
-            // 1. Instant Desktop Kick (No DB wait)
-            if (isPC && !isApp) {
-                window.location.replace('index.html');
-                return;
-            }
-
-            // 2. Database Check
-            const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
-
-            // Logic: If mobile mode is ON, only allow REAL mobile devices
-            if (data && data.mobile_only_mode) {
-                if (isMobileOS || isApp || (hasTouch && !isPC)) {
-                    // VALID MOBILE: Unlock the page
-                    unlock();
-                } else {
-                    // BYPASS ATTEMPT: Kick to index
-                    window.location.replace('index.html');
-                }
-            } else {
-                // MAINTENANCE OFF: Unlock for everyone
-                unlock();
-            }
-        }
-
-        function unlock() {
-            const cloak = document.getElementById('iron-cloak');
-            if (cloak) cloak.remove();
-            document.documentElement.style.display = 'block';
-        }
-
-        strictGuard();
-    })();
-</script>
   <style>
     .footer-actions {
   /* 1. Bring it to the front (Above the slideshow which is z-index 0 and 1) */
@@ -928,10 +881,13 @@
   <div class="header-actions">
     <div class="dropdown">
       <button class="action-btn notification" onclick="toggleDropdown('notificationDropdown')">
-        🔔 <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+        <span class="material-symbols-rounded">notifications</span>
+        <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
       </button>
       <div id="notificationDropdown" class="dropdown-content left">
-         <a href="notifications.html" onclick="navigateWithLoading(event, 'notifications.html')">📢 View All Notifications</a>
+         <a href="notifications.html" onclick="navigateWithLoading(event, 'notifications.html')">
+           <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">campaign</span> View All Notifications
+         </a>
          <hr style="margin: 5px 0;">
          <div id="notificationPreview"></div>
       </div>
@@ -939,10 +895,13 @@
 
     <div class="dropdown">
       <button class="action-btn" onclick="toggleDropdown('messagesDropdown')">
-        💬 <span id="messageBadge" class="notification-badge" style="display: none;">0</span>
+        <span class="material-symbols-rounded">chat_bubble</span>
+        <span id="messageBadge" class="notification-badge" style="display: none;">0</span>
       </button>
       <div id="messagesDropdown" class="dropdown-content left">
-         <a href="messages.html" onclick="navigateWithLoading(event, 'messages.html')">📨 View All Messages</a>
+         <a href="messages.html" onclick="navigateWithLoading(event, 'messages.html')">
+           <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">mail</span> View All Messages
+         </a>
          <hr style="margin: 5px 0;">
          <div id="messagePreview"></div>
       </div>
@@ -951,8 +910,6 @@
 
   <div class="header-center">
     <img src="favicon1.png" alt="Logo" class="dashboard-logo">
-  
-   
   </div>
    <h1 style=" text-align: center;">Scholars Prep</h1>
 
@@ -960,20 +917,34 @@
     <div class="user-email" id="userEmail"></div>
     
     <div class="dropdown">
-      <button class="action-btn settings" onclick="toggleDropdown('settingsDropdown')">⚙️</button>
+      <button class="action-btn settings" onclick="toggleDropdown('settingsDropdown')">
+        <span class="material-symbols-rounded">settings</span>
+      </button>
       <div id="settingsDropdown" class="dropdown-content">
-        <a href="#" onclick="openProfileSettings()">👤 Profile Settings</a>
-        <a href="#" onclick="openNotificationSettings()">🔔 Preferences</a>
-        <a href="#" onclick="openThemeSettings()">🎨 Theme</a>
-        <a href="#" onclick="openMessageAdminModal()">💬 Message Admin</a>
-        <a href="feedback.html" onclick="openReportIssue()">🆘 Report Issue</a>
+        <a href="#" onclick="openProfileSettings()">
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">person</span> Profile Settings
+        </a>
+        <a href="#" onclick="openNotificationSettings()">
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">notifications</span> Preferences
+        </a>
+        <a href="#" onclick="openThemeSettings()">
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">palette</span> Theme
+        </a>
+        <a href="#" onclick="openMessageAdminModal()">
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">chat</span> Message Admin
+        </a>
+        <a href="feedback.html" onclick="openReportIssue()">
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">bug_report</span> Report Issue
+        </a>
       </div>
     </div>
 
     <button onclick="openLogoutModal()">Logout</button>
   </div>
 
-  <button class="menu-btn" onclick="openSidebar()">☰</button>
+  <button class="menu-btn" onclick="openSidebar()">
+    <span class="material-symbols-rounded">menu</span>
+  </button>
 </header>
 
 <div id="mySidebar" class="sidebar">
@@ -981,17 +952,28 @@
   
   <div class="user-info" id="mobileUserEmail">User Email</div>
   
-  <a href="#" onclick="openProfileSettings(); closeSidebar()">👤 Profile Settings</a>
-  <a href="notifications.html" onclick="openNotificationSettings(); closeSidebar()">🔔 Notifications</a>
-  <a href="#" onclick="openThemeSettings(); closeSidebar()">🎨 Theme</a>
-  <a href="messages.html">💬 Message Admin</a>
-  <a href="feedback.html" onclick="openReportIssue(); closeSidebar()">🆘 Report Issue</a>
+  <a href="#" onclick="openProfileSettings(); closeSidebar()">
+    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">person</span> Profile Settings
+  </a>
+  <a href="notifications.html" onclick="openNotificationSettings(); closeSidebar()">
+    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">notifications</span> Notifications
+  </a>
+  <a href="#" onclick="openThemeSettings(); closeSidebar()">
+    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">palette</span> Theme
+  </a>
+  <a href="messages.html">
+    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">chat</span> Message Admin
+  </a>
+  <a href="feedback.html" onclick="openReportIssue(); closeSidebar()">
+    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">bug_report</span> Report Issue
+  </a>
   
   <hr style="border-color: rgba(255,255,255,0.1); margin: 10px 0;">
-  <button onclick="openLogoutModal()">🚪Logout</button>
+  <button onclick="openLogoutModal()">
+    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">logout</span> Logout
+  </button>
   
 </div>
-
   <div class="main">
     <div class="container">
 
@@ -1005,32 +987,32 @@
 </div>
       
       <div class="card" onclick="checkPremiumAccess('cbt.html')">
-        <span class="icon">💻</span>
+        <span class="icon material-symbols-rounded">computer</span>
         <h2>Practice CBT</h2>
       </div>
 
       <div class="card" onclick="checkPremiumAccess('mock-exam.html')">
-        <span class="icon">💻</span>
+        <span class="icon material-symbols-rounded">timer</span>
         <h2>Mock Exam</h2>
       </div>
 
       <div class="card" onclick="navigateWithLoading(null, 'https://drive.google.com/drive/folders/1KGOo-qL0GwoFQMvZro5A2VnoOhdNbmeo?usp=drive_link')">
-        <span class="icon">📚</span>
+        <span class="icon material-symbols-rounded">library_books</span>
         <h2>Materials</h2>
       </div>
 
       <div class="card" onclick="checkPremiumAccess('pastquestions.html')">
-        <span class="icon">📝</span>
+        <span class="icon material-symbols-rounded">history_edu</span>
         <h2>Comprehensive Past Questions</h2>
       </div>
 
       <div class="card" onclick="navigateWithLoading(null, 'cbt-history.html')">
-        <span class="icon">📊</span>
+        <span class="icon material-symbols-rounded">analytics</span>
         <h2>CBT History</h2>
       </div>
 
       <div class="card" onclick="navigateWithLoading(null, 'leaderboard.html')">
-        <span class="icon">🏆</span>
+        <span class="icon material-symbols-rounded">emoji_events</span>
         <h2>Leaderboard</h2>
       </div>
 
@@ -1045,13 +1027,13 @@
     </h3>
 
     <div class="card glass-btn" onclick="triggerPaystack('semester',2300)">
-        <span class="icon" style="font-size: 2em;">📅</span>
+        <span class="icon material-symbols-rounded" style="font-size: 2em;">event_available</span>
         <h2>Semester Plan</h2>
         <p>₦2,300 <small>(Ends June 1st)</small></p>
     </div>
 
     <div class="card glass-btn" onclick="triggerPaystack('session', 4500)">
-        <span class="icon" style="font-size: 2em;">📆</span>
+        <span class="icon material-symbols-rounded" style="font-size: 2em;">calendar_month</span>
         <h2>Session Plan</h2>
         <p>₦4,500 <small>(Ends Dec 31st)</small></p>
     </div>
@@ -1063,22 +1045,21 @@
   <a href="feedback.html" class="feedback-btn">click here</a>
 </div>
 
-  <div id="feedbackModal" class="modal">
-    <div class="modal-content feedback-modal">
-      <h3>📝 Send Feedback / Complaint</h3>
+  <div class="modal-content feedback-modal">
+      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">rate_review</span> Send Feedback / Complaint</h3>
       
       <div class="feedback-type-buttons">
         <div class="feedback-type-btn" onclick="selectFeedbackType('complaint')">
-          🚨 Complaint
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">warning</span> Complaint
         </div>
         <div class="feedback-type-btn" onclick="selectFeedbackType('suggestion')">
-          💡 Suggestion
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">lightbulb</span> Suggestion
         </div>
         <div class="feedback-type-btn" onclick="selectFeedbackType('bug')">
-          🐛 Bug Report
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">bug_report</span> Bug Report
         </div>
         <div class="feedback-type-btn" onclick="selectFeedbackType('other')">
-          📝 Other
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">edit_note</span> Other
         </div>
       </div>
       
@@ -1103,7 +1084,7 @@
 
   <div id="messageAdminModal" class="modal">
     <div class="modal-content">
-      <h3>💬 Message Admin</h3>
+      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">chat</span> Message Admin</h3>
       
       <div class="form-group">
         <label>Your Message</label>
@@ -1119,7 +1100,7 @@
 
   <div id="profileModal" class="modal">
     <div class="modal-content">
-      <h3>👤 Profile Settings</h3>
+      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">person</span> Profile Settings</h3>
       
       <div class="form-group">
         <label>Email Address</label>
@@ -1147,8 +1128,7 @@
 
   <div id="notificationModal" class="modal">
     <div class="modal-content">
-      <h3>🔔 Notification Preferences</h3>
-      
+      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">notifications</span> Notification Preferences</h3>
       <div class="form-group" style="text-align: left;">
         <label><input type="checkbox" id="notifyCBT" checked> New CBT Questions</label>
       </div>
@@ -1172,22 +1152,22 @@
     </div>
   </div>
 
-  <div id="themeModal" class="modal">
+ <div id="themeModal" class="modal">
     <div class="modal-content">
-      <h3>🎨 Theme Settings</h3>
+      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">palette</span> Theme Settings</h3>
       
       <div class="theme-options">
         <div class="theme-option selected" onclick="selectTheme('default')">
-          🌿 Default Green
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">eco</span> Default Green
         </div>
         <div class="theme-option" onclick="selectTheme('blue')">
-          🔵 Blue Ocean
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">water_drop</span> Blue Ocean
         </div>
         <div class="theme-option" onclick="selectTheme('dark')">
-          🌙 Dark Mode
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">dark_mode</span> Dark Mode
         </div>
         <div class="theme-option" onclick="selectTheme('purple')">
-          🟣 Purple Dream
+          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">auto_awesome</span> Purple Dream
         </div>
       </div>
 
@@ -1210,7 +1190,7 @@
 </div>
 <div id="access-modal">
     <div class="modal-content">
-        <h2 style="color: #d9534f; margin-bottom: 10px;">🔒 Access Denied</h2>
+       <h2 style="color: #d9534f; margin-bottom: 10px;"><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">lock</span> Access Denied</h2>
         <p>This premium feature requires a subscription.</p>
         <p style="font-size: 0.9em; color: #666;">Please choose a plan below to continue.</p>
         <button class="modal-btn" onclick="closeModalAndScroll()">Okay, Show Plans</button>
