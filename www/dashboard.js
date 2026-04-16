@@ -148,16 +148,20 @@ document.addEventListener('click', function(event) {
   }
 });
     // Loading System
-    function showLoading(message = 'Loading...') {
-      const loadingOverlay = document.getElementById('loadingOverlay');
-      const loadingText = document.getElementById('loadingText');
-      loadingText.textContent = message;
-      loadingOverlay.style.display = 'flex';
-    }
+    // --- UPDATED LOADING UI FUNCTIONS ---
+function showLoading(message = 'Loading...') {
+  const loadingOverlay = document.getElementById('globalLoading');
+  if (loadingOverlay) {
+    loadingOverlay.style.display = 'flex';
+  }
+}
 
-    function hideLoading() {
-      document.getElementById('loadingOverlay').style.display = 'none';
-    }
+function hideLoading() {
+  const loadingOverlay = document.getElementById('globalLoading');
+  if (loadingOverlay) {
+    loadingOverlay.style.display = 'none';
+  }
+}
 
     // Navigation with loading
     function navigateWithLoading(event, url) {
@@ -801,22 +805,40 @@ if(document.getElementById('mobileUserEmail'))
     }
 
     // Handle browser back/forward navigation
-    window.addEventListener('popstate', function(event) {
-      showLoading('Loading...');
-      
-      // Get the current URL path
-      const currentPath = window.location.pathname;
-      
-      // Hide loading after a short delay to ensure page loads
-      setTimeout(() => {
-        // Check if we're on the dashboard page
-        if (currentPath.includes('dashboard') || window.location.href.includes('dashboard')) {
-          // Refresh dashboard content if needed
-          loadDashboardContent();
-        }
-        hideLoading();
-      }, 500);
-    });
+   // --- MOBILE BACK BUTTON TRAP (EXIT MODAL) ---
+
+// 1. Push an initial state into the browser history when the dashboard loads
+window.addEventListener('DOMContentLoaded', () => {
+    history.pushState({ page: 'dashboard' }, document.title, window.location.href);
+});
+
+// 2. Intercept the back button
+window.addEventListener('popstate', function(event) {
+    // Push the state back immediately so the app doesn't actually close
+    history.pushState({ page: 'dashboard' }, document.title, window.location.href);
+    
+    // Close any open sidebars or dropdowns first
+    closeSidebar();
+    closeAllDropdowns();
+    
+    // Show the exit confirmation modal
+    document.getElementById('exitConfirmModal').style.display = 'flex';
+});
+
+// 3. Modal Actions
+window.cancelExit = function() {
+    document.getElementById('exitConfirmModal').style.display = 'none';
+};
+
+window.confirmExit = function() {
+    // If running inside Capacitor (Android/iOS App)
+    if (window.Capacitor && window.Capacitor.Plugins.App) {
+        window.Capacitor.Plugins.App.exitApp();
+    } else {
+        // If on the web, kick them to login
+        window.location.href = 'index.html';
+    }
+};
 
     // Function to load dashboard content (if you need dynamic loading)
     function loadDashboardContent() {
@@ -893,5 +915,19 @@ if(document.getElementById('mobileUserEmail'))
     window.updateProfile = updateProfile;
     window.submitIssueReport = submitIssueReport;
     window.closeModal = closeModal;
+    // --- TRIGGER LOADING ON DASHBOARD CARDS & BUTTONS ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Grab all the clickable cards on the dashboard
+    const actionCards = document.querySelectorAll('.card');
+    
+    actionCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Don't show loading for the Premium plans container or WhatsApp
+            if (!this.classList.contains('glass-btn') && !this.innerHTML.includes('WhatsApp')) {
+                showLoading();
+            }
+        });
+    });
+});
 
     
