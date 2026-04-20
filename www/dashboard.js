@@ -48,6 +48,7 @@
     }
 
     // --- 4. CHECK ACCESS ---
+   // --- 4. CHECK ACCESS ---
     window.checkPremiumAccess = function(targetPage) {
         // If Free Mode OR Valid Subscription -> Go
         const today = new Date();
@@ -55,7 +56,14 @@
             window.location.href = targetPage;
             return;
         }
-        // Else -> Show Modal
+        
+        // Else -> ACCESS DENIED
+        // KILL THE LOADING SPINNER FIRST
+        if (typeof hideLoading === 'function') {
+            hideLoading();
+        }
+        
+        // THEN Show the Modal
         showAccessModal();
     }
 
