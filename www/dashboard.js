@@ -48,22 +48,18 @@
     }
 
     // --- 4. CHECK ACCESS ---
-   // --- 4. CHECK ACCESS ---
-    window.checkPremiumAccess = function(targetPage) {
+   window.checkPremiumAccess = function(targetPage) {
         // If Free Mode OR Valid Subscription -> Go
         const today = new Date();
         if (!isPaymentActive || (subscriptionEndDate && subscriptionEndDate > today)) {
             window.location.href = targetPage;
             return;
         }
+
+        // Add this ONE line to kill the global spinner
+        if (typeof hideLoading === 'function') hideLoading();
         
-        // Else -> ACCESS DENIED
-        // KILL THE LOADING SPINNER FIRST
-        if (typeof hideLoading === 'function') {
-            hideLoading();
-        }
-        
-        // THEN Show the Modal
+        // Else -> Show Modal
         showAccessModal();
     }
 
