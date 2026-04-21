@@ -48,19 +48,23 @@
     }
 
     // --- 4. CHECK ACCESS ---
-   window.checkPremiumAccess = function(targetPage) {
+  window.checkPremiumAccess = function(targetPage) {
         // If Free Mode OR Valid Subscription -> Go
         const today = new Date();
         if (!isPaymentActive || (subscriptionEndDate && subscriptionEndDate > today)) {
             window.location.href = targetPage;
             return;
         }
-
-        // Add this ONE line to kill the global spinner
-        if (typeof hideLoading === 'function') hideLoading();
         
         // Else -> Show Modal
-        showAccessModal();
+        // The setTimeout forces this to happen AFTER the global spinner tries to turn on
+        setTimeout(() => {
+            // Aggressively target the element to kill it
+            const loader = document.getElementById('globalLoading');
+            if (loader) loader.style.display = 'none';
+            
+            showAccessModal();
+        }, 50); // 50 milliseconds is invisible to the user, but beats the event bubble
     }
 
     // --- 5. PAYMENT TRIGGER (FIXED) ---
