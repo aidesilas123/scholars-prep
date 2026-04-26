@@ -7,32 +7,43 @@
     const paymentClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     // State
-    let isPaymentActive = false;
+    let isPaymentActive = true; // Default to true to lock doors on bad network
     let subscriptionEndDate = null;
     let currentUserEmail = '';
     let currentUserId = '';
+    let isStatusLoaded = false; // Tracks if Supabase has finished loading
 
-    // --- 2. LOAD STATUS ---
+    // --- 2. LOAD STATUS (OPTIMIZED) ---
     async function loadUserStatus() {
-        // Get User
-        const { data: { user } } = await paymentClient.auth.getUser();
-        if (!user) return;
+        try {
+            const { data: { user } } = await paymentClient.auth.getUser();
+            if (!user) {
+                isStatusLoaded = true;
+                return;
+            }
 
-        currentUserEmail = user.email;
-        currentUserId = user.id;
+            currentUserEmail = user.email;
+            currentUserId = user.id;
 
-        // Get Global Switch
-        const { data: settings } = await paymentClient.from('app_settings').select('payment_active').single();
-        if (settings) {
-            isPaymentActive = settings.payment_active;
-            const container = document.getElementById('payment-plans-container');
-            if (container) container.style.display = isPaymentActive ? 'block' : 'none';
-        }
+            // Fetch Settings and Profile at the same time
+            const [settingsRes, profileRes] = await Promise.all([
+                paymentClient.from('app_settings').select('payment_active').single(),
+                paymentClient.from('profiles').select('subscription_end').eq('id', user.id).maybeSingle()
+            ]);
 
-        // Get Profile Expiry
-        const { data: profile } = await paymentClient.from('profiles').select('subscription_end').eq('id', user.id).maybeSingle();
-        if (profile && profile.subscription_end) {
-            subscriptionEndDate = new Date(profile.subscription_end);
+            if (settingsRes.data) {
+                isPaymentActive = settingsRes.data.payment_active;
+                const container = document.getElementById('payment-plans-container');
+                if (container) container.style.display = isPaymentActive ? 'block' : 'none';
+            }
+
+            if (profileRes.data && profileRes.data.subscription_end) {
+                subscriptionEndDate = new Date(profileRes.data.subscription_end);
+            }
+        } catch (error) {
+            console.error("Network error loading status", error);
+        } finally {
+            isStatusLoaded = true; 
         }
     }
     loadUserStatus();
@@ -47,35 +58,48 @@
         document.getElementById('payment-plans-container').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // --- 4. CHECK ACCESS ---
-  window.checkPremiumAccess = function(targetPage) {
-        // If Free Mode OR Valid Subscription -> Go
+    // --- 4. CHECK ACCESS (SECURE & SMART) ---
+    window.checkPremiumAccess = function(targetPage) {
+        // If user clicks before Supabase finishes, wait for it
+        if (!isStatusLoaded) {
+            showLoading('Verifying access...');
+            const checkInterval = setInterval(() => {
+                if (isStatusLoaded) {
+                    clearInterval(checkInterval);
+                    hideLoading();
+                    window.checkPremiumAccess(targetPage); 
+                }
+            }, 500);
+            return; 
+        }
+
         const today = new Date();
+        
+        // If Free Mode OR Valid Subscription -> Go
         if (!isPaymentActive || (subscriptionEndDate && subscriptionEndDate > today)) {
             window.location.href = targetPage;
             return;
         }
         
         // Else -> Show Modal
-        // The setTimeout forces this to happen AFTER the global spinner tries to turn on
         setTimeout(() => {
-            // Aggressively target the element to kill it
             const loader = document.getElementById('globalLoading');
             if (loader) loader.style.display = 'none';
             
             showAccessModal();
-        }, 50); // 50 milliseconds is invisible to the user, but beats the event bubble
+        }, 50); 
     }
 
-    // --- 5. PAYMENT TRIGGER (FIXED) ---
+    // --- 5. PAYMENT TRIGGER (FIXED WITH METADATA) ---
     window.triggerPaystack = function(planType, price) {
         
         // Define Success Handler Separately to satisfy "valid function" check
         function onPaymentSuccess(response) {
             console.log("Ref:", response.reference);
+            showLoading('Finalizing activation...');
             
             // Logic to save to DB
-            let newDate = (planType === 'semester') ? '2026-06-01' : '2026-12-31';
+            let newDate = (planType === 'semester') ? '2026-06-30' : '2026-12-31';
 
             paymentClient.from('profiles').upsert({ 
                 id: currentUserId,
@@ -84,10 +108,13 @@
                 subscription_end: newDate
             }).then(({ error }) => {
                 if (!error) {
+                    hideLoading();
                     alert("Subscription Active!"); 
                     window.location.reload();
                 } else {
-                    alert("Error saving subscription. Contact Admin.");
+                    hideLoading();
+                    alert("Payment received! Your profile is updating. Please wait a moment.");
+                    window.location.reload();
                 }
             });
         }
@@ -99,6 +126,14 @@
             amount: price * 100, // Kobo
             currency: 'NGN', 
             ref: '' + Math.floor((Math.random() * 1000000000) + 1),
+            
+            // DATA FOR THE WEBHOOK
+            metadata: {
+                user_id: currentUserId,
+                email: currentUserEmail,
+                plan_type: planType
+            },
+
             callback: onPaymentSuccess, // <--- PASSING THE FUNCTION NAME ONLY
             onClose: function() {
                 alert('Payment window closed.');
@@ -937,5 +972,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
-
-    
