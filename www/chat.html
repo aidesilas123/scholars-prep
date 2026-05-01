@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scholars Prep | Nexus AI</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="dark-mode"> 
+
+    <div class="app-container">
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <button class="new-chat-btn" id="new-chat-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    New chat
+                </button>
+            </div>
+
+            <div class="sidebar-middle">
+                <p class="section-title">Recent Chats</p>
+                <div class="history-list" id="history-list">
+                    <div class="history-item">Calculus Review</div>
+                    <div class="history-item">Database Schema</div>
+                </div>
+            </div>
+
+            <div class="sidebar-bottom">
+                <button class="settings-btn" id="theme-toggle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    Toggle Theme
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <header class="main-header">
+                <!-- Hamburger Menu for All Devices -->
+                <button id="menu-btn" class="icon-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <h2>Nexus AI</h2>
+            </header>
+
+            <!-- Centered Greeting -->
+            <div class="greeting-container" id="greeting-container">
+                <h1 class="greeting-name">Hi <span id="user-name-display">...</span></h1>
+                <h1 class="greeting-question">Where should we start?</h1>
+            </div>
+
+            <!-- Chat Area (Hidden until user types) -->
+            <div class="chat-conversation-area" id="chat-messages" style="display: none;">
+                <div class="messages-wrapper" id="messages-wrapper"></div>
+                
+                <!-- The Multi-Color Thinking Animation -->
+                <div id="ai-thinking-indicator" class="thinking-container" style="display: none;">
+                    <div class="multi-color-ring"></div>
+                    <img src="Logo.png" alt="Nexus AI" class="center-logo"> 
+                </div>
+            </div>
+
+            <!-- Input Box -->
+            <div class="input-wrapper">
+                <div class="input-box-container">
+                    <textarea id="chat-input" rows="1" placeholder="Ask Nexus AI..." autocomplete="off"></textarea>
+                    <div class="input-controls">
+                        <div class="left-controls">
+                            <button class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                        </div>
+                        <div class="right-controls">
+                            <button class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></button>
+                            <button class="icon-btn send-btn" id="send-btn" style="display: none;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Scholars Prep Disclaimer Added Here -->
+                <p class="disclaimer">Nexus AI is built and powered by Scholars Prep.</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="nexus.js"></script>
+</body>
+</html>
