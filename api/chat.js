@@ -1,9 +1,10 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// We use 'require' here so it perfectly matches standard Node.js apps like your webhook
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Initialize the official, stable Gemini SDK
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Enforce secure POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -35,4 +36,4 @@ export default async function handler(req, res) {
     console.error("Gemini API Error:", error);
     res.status(500).json({ error: "Nexus AI is currently over capacity. Please try again." });
   }
-}
+};
