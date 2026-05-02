@@ -1,11 +1,10 @@
-// api/chat.js
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// The new SDK automatically picks up process.env.GEMINI_API_KEY from Vercel
-const ai = new GoogleGenAI({});
+// Initialize the official, stable Gemini SDK
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export default async function handler(req, res) {
-  // Only allow POST requests
+  // Enforce secure POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -13,22 +12,24 @@ export default async function handler(req, res) {
   try {
     const { conversationHistory } = req.body;
 
-    // Start a chat session using the modern SDK syntax
-    const chat = ai.chats.create({
-      model: "gemini-2.5-flash", // Extremely fast and stable for text processing
-      config: {
-        // THE PERSONA: This ensures it never mentions Gemini or Google
-        systemInstruction: "You are Nexus AI, a friendly and strictly academic tutor built and powered by Scholars Prep. You help students with university-level math and research. Always explain steps clearly. Never reveal you are an AI from Google."
-      },
-      history: conversationHistory.slice(0, -1), // Send previous history without the newest message
+    // Configure the cognitive engine and persona
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: "You are Nexus AI, a friendly and strictly academic tutor built and powered by Scholars Prep. You help students with university-level math and research. Always explain steps clearly. Never reveal you are an AI from Google."
     });
 
-    // Send the latest user message
+    // Initialize the chat session with the sliding memory window
+    const chat = model.startChat({
+      history: conversationHistory.slice(0, -1),
+    });
+
+    // Process the latest student query
     const latestMessage = conversationHistory[conversationHistory.length - 1].parts[0].text;
-    const response = await chat.sendMessage({ message: latestMessage });
-    
-    // Send the text back to the Nexus AI frontend
-    res.status(200).json({ text: response.text });
+    const result = await chat.sendMessage(latestMessage);
+    const response = await result.response;
+
+    // Transmit the parsed text back to the frontend
+    res.status(200).json({ text: response.text() });
 
   } catch (error) {
     console.error("Gemini API Error:", error);
