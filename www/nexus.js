@@ -6,7 +6,60 @@ const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey
 
 let slidingWindowHistory = []; 
 
-// --- 2. Startup & Name Fetching ---
+// --- 2. Interactive UI Helpers & Markdown Config ---
+const renderer = new marked.Renderer();
+
+// Custom code block renderer to include the Copy Top-Bar
+renderer.code = function(code, lang) {
+    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+    const highlighted = hljs.highlight(code, { language }).value;
+    const escapedCode = encodeURIComponent(code);
+    
+    return `
+        <div class="code-wrapper">
+            <div class="code-header">
+                <span>${lang || 'code'}</span>
+                <button class="copy-code-btn" onclick="copyToClipboard(this, decodeURIComponent('${escapedCode}'))">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copy
+                </button>
+            </div>
+            <pre><code class="hljs ${language}">${highlighted}</code></pre>
+        </div>
+    `;
+};
+marked.use({ renderer });
+
+// Enable Highlight.js integration within Marked
+marked.setOptions({
+    highlight: function(code, lang) {
+        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+        return hljs.highlight(code, { language }).value;
+    }
+});
+
+// Universal Copy Function
+window.copyToClipboard = async function(buttonElement, textToCopy) {
+    try {
+        await navigator.clipboard.writeText(textToCopy);
+        const originalHTML = buttonElement.innerHTML;
+        buttonElement.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+        buttonElement.style.color = "#4caf50";
+        setTimeout(() => {
+            buttonElement.innerHTML = originalHTML;
+            buttonElement.style.color = "";
+        }, 2000);
+    } catch (err) { console.error('Failed to copy text: ', err); }
+};
+
+window.editUserMessage = function(btn) {
+    const textNode = btn.closest('.message-bubble').querySelector('.message-content');
+    chatInput.value = textNode.innerText;
+    chatInput.focus();
+    chatInput.dispatchEvent(new Event('input')); 
+};
+
+// --- 3. Startup & DOM Elements ---
 async function initializeNexus() {
     try {
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -20,10 +73,9 @@ async function initializeNexus() {
     } catch (err) { console.error("Auth error:", err); }
 }
 
-// --- 3. DOM Elements ---
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
-const micBtn = document.getElementById('mic-btn'); // New for Phase 2
+const micBtn = document.getElementById('mic-btn'); 
 const greetingContainer = document.getElementById('greeting-container');
 const chatMessagesArea = document.getElementById('chat-messages');
 const messagesWrapper = document.getElementById('messages-wrapper');
@@ -35,60 +87,86 @@ const menuBtn = document.getElementById('menu-btn');
 function appendMessage(role, text) {
     const bubble = document.createElement('div');
     bubble.className = `message-bubble ${role}`;
-    bubble.innerText = text;
-    messagesWrapper.appendChild(bubble);
     
-    // Auto-scroll to the bottom
+    // Message text container
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    if (text) {
+        contentDiv.innerHTML = role === 'model' ? marked.parse(text) : text;
+    }
+    bubble.appendChild(contentDiv);
+
+    // Interactive Action Bar
+    const actionBar = document.createElement('div');
+    actionBar.className = 'message-actions';
+
+    if (role === 'user') {
+        actionBar.innerHTML = `
+            <button class="action-btn" title="Edit" onclick="editUserMessage(this)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+        `;
+    } else {
+        actionBar.innerHTML = `
+            <button class="action-btn" title="Good response">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+            </button>
+            <button class="action-btn" title="Bad response">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-2"></path></svg>
+            </button>
+            <button class="action-btn copy-main-btn" title="Copy">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+        `;
+    }
+    
+    bubble.appendChild(actionBar);
+    messagesWrapper.appendChild(bubble);
     chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
     
-    return bubble; // Return bubble so we can inject streaming text
+    // Return all parts so handleSend can inject the streaming text
+    return { bubble, contentDiv, actionBar };
 }
 
-// UPGRADED FOR PHASE 2: Live-Typing Stream Receiver
+// Live-Typing Stream Receiver
 async function handleSend() {
     const userText = chatInput.value.trim();
     if (!userText) return;
 
-    // Hide Greeting, Show Chat Area
     greetingContainer.style.display = 'none';
     chatMessagesArea.style.display = 'flex';
 
-    // 1. Show User Bubble
     appendMessage('user', userText);
     
-    // Reset Input instantly
     chatInput.value = '';
     chatInput.style.height = 'auto';
     sendBtn.style.display = 'none';
 
-    // Add to memory (matching Vercel Phase 1 structure)
     slidingWindowHistory.push({ role: 'user', content: userText });
 
-    // 2. Show the Nexus "Thinking" Animation & Create empty AI bubble
     thinkingIndicator.style.display = 'flex';
     chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight; 
-    const aiBubble = appendMessage('model', '');
+    
+    // Destructure the returned elements so we can stream into the contentDiv
+    const { contentDiv, actionBar } = appendMessage('model', '');
 
     try {
-        // 3. ACTUAL API CALL to your Vercel Backend
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: slidingWindowHistory })
         });
 
-        // Hide thinking animation the moment we connect
         thinkingIndicator.style.display = 'none'; 
 
         if (!response.ok) {
             if (response.status === 503) {
-                aiBubble.textContent = "Nexus AI is currently over capacity. Please try again in a few seconds.";
+                contentDiv.textContent = "Nexus AI is currently over capacity. Please try again in a few seconds.";
                 return;
             }
             throw new Error("Network response was not ok");
         }
 
-        // 4. Read the streaming data chunk by chunk
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let aiFullText = "";
@@ -97,23 +175,24 @@ async function handleSend() {
             const { done, value } = await reader.read();
             if (done) break;
 
-            // Decode the incoming chunk and append it
             const chunkText = decoder.decode(value, { stream: true });
             aiFullText += chunkText;
             
-            // Update the UI in real-time
-            aiBubble.textContent = aiFullText;
+            // MAGIC: Parse raw markdown into styled HTML in real-time
+            contentDiv.innerHTML = marked.parse(aiFullText);
             
-            // Keep the chat scrolled to the bottom as it types
             chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
         }
 
-        // Save AI response to memory
         slidingWindowHistory.push({ role: 'model', content: aiFullText });
 
-        // Once streaming is completely finished, render the math equations (KaTeX)
+        // Bind the copy button for the full response once generation is complete
+        actionBar.querySelector('.copy-main-btn').onclick = function() {
+            copyToClipboard(this, aiFullText);
+        };
+
         if (window.renderMathInElement) {
-            renderMathInElement(aiBubble, {
+            renderMathInElement(contentDiv, {
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
                     {left: '$', right: '$', display: false}
@@ -123,7 +202,7 @@ async function handleSend() {
 
     } catch (error) {
         thinkingIndicator.style.display = 'none';
-        aiBubble.textContent = "Connection error. Please ensure your network is stable and Vercel is running.";
+        contentDiv.textContent = "Connection error. Please ensure your network is stable and Vercel is running.";
         console.error("Fetch error:", error);
     }
 }
@@ -133,24 +212,24 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 if (SpeechRecognition && micBtn) {
     const recognition = new SpeechRecognition();
-    recognition.continuous = false; // Stop listening when they stop talking
+    recognition.continuous = false; 
     recognition.interimResults = false; 
 
     micBtn.addEventListener('click', () => {
         recognition.start();
-        micBtn.style.color = "#007bff"; // Visual feedback that mic is active
+        micBtn.style.color = "#007bff"; 
         chatInput.placeholder = "Listening...";
     });
 
     recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         chatInput.value += (chatInput.value ? " " : "") + transcript;
-        chatInput.dispatchEvent(new Event('input')); // Trigger auto-expand & send button
+        chatInput.dispatchEvent(new Event('input')); 
     };
 
     recognition.onspeechend = () => {
         recognition.stop();
-        micBtn.style.color = ""; // Reset color
+        micBtn.style.color = ""; 
         chatInput.placeholder = "Ask Nexus AI...";
     };
 
@@ -160,29 +239,23 @@ if (SpeechRecognition && micBtn) {
         chatInput.placeholder = "Ask Nexus AI...";
     };
 } else if (micBtn) {
-    // Hide mic button if browser doesn't support it
     micBtn.style.display = 'none'; 
 }
 
 // --- 6. Event Listeners ---
-
-// Global Sidebar Toggle
 menuBtn.addEventListener('click', (e) => {
     e.stopPropagation(); 
     sidebar.classList.toggle('active');
 });
 
-// Close sidebar if user clicks the main content area
 document.querySelector('.main-content').addEventListener('click', () => {
     if (sidebar.classList.contains('active')) {
         sidebar.classList.remove('active');
     }
 });
 
-// Send Button Click
 sendBtn.addEventListener('click', handleSend);
 
-// Textarea: Enter to send (Shift+Enter for new line), Auto-expand, and Show Send Button
 chatInput.addEventListener('input', function() {
     sendBtn.style.display = this.value.trim().length > 0 ? 'flex' : 'none';
     this.style.height = 'auto'; 
@@ -197,12 +270,10 @@ chatInput.addEventListener('keydown', function(e) {
     }
 });
 
-// Theme Toggle
 document.getElementById('theme-toggle').addEventListener('click', () => {
     document.body.classList.toggle('light-mode');
 });
 
-// Reset UI on "New Chat" click
 document.getElementById('new-chat-btn').addEventListener('click', () => {
     chatMessagesArea.style.display = 'none';
     greetingContainer.style.display = 'flex';
