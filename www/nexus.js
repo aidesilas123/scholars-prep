@@ -8,31 +8,35 @@ let slidingWindowHistory = [];
 // --- 2. Interactive UI Helpers & Markdown Config ---
 const renderer = new marked.Renderer();
 
-// Custom code block renderer to include the Copy Top-Bar
-// Custom code block renderer to include the Copy Top-Bar (Fixed for v12+)
+// Custom code block renderer to include the Copy Top-Bar (Bulletproof Version)
 renderer.code = function(token) {
-    // Safely extract the text whether marked.js sends an Object (v12+) or a String (older)
-    const codeText = typeof token === 'object' ? token.text : token;
-    const langText = typeof token === 'object' ? token.lang : arguments[1];
+    try {
+        // Safely extract the text, forcing it into a strict String format
+        let codeText = String(typeof token === 'object' ? (token.text || '') : (arguments[0] || ''));
+        let langText = String(typeof token === 'object' ? (token.lang || '') : (arguments[1] || '')).trim();
 
-    const language = hljs.getLanguage(langText) ? langText : 'plaintext';
-    const highlighted = hljs.highlight(codeText, { language }).value;
-    
-    // Escape the code so the copy button doesn't break the HTML
-    const escapedCode = encodeURIComponent(codeText);
-    
-    return `
-        <div class="code-wrapper">
-            <div class="code-header">
-                <span>${langText || 'code'}</span>
-                <button class="copy-code-btn" onclick="copyToClipboard(this, decodeURIComponent('${escapedCode}'))">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    Copy
-                </button>
+        const language = hljs.getLanguage(langText) ? langText : 'plaintext';
+        const highlighted = hljs.highlight(codeText, { language }).value;
+        const escapedCode = encodeURIComponent(codeText);
+        
+        return `
+            <div class="code-wrapper">
+                <div class="code-header">
+                    <span>${langText || 'code'}</span>
+                    <button class="copy-code-btn" onclick="copyToClipboard(this, decodeURIComponent('${escapedCode}'))">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copy
+                    </button>
+                </div>
+                <pre><code class="hljs ${language}">${highlighted}</code></pre>
             </div>
-            <pre><code class="hljs ${language}">${highlighted}</code></pre>
-        </div>
-    `;
+        `;
+    } catch (err) {
+        // FAILSAFE: If highlighter panics during streaming, return safe plain text instead of crashing
+        console.warn("Highlighting falls back to safe text.");
+        const safeText = String(typeof token === 'object' ? token.text : arguments[0]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return `<div class="code-wrapper"><pre style="padding:16px;"><code>${safeText}</code></pre></div>`;
+    }
 };
 marked.use({ renderer });
 
@@ -90,7 +94,13 @@ function appendMessage(role, text) {
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
     if (text) {
-        contentDiv.innerHTML = role === 'model' ? marked.parse(text) : text;
+        if (role === 'model') {
+            // The AI uses Markdown, so we parse it safely
+            contentDiv.innerHTML = marked.parse(text);
+        } else {
+            // NEVER use innerHTML for the user, use textContent to display code safely!
+            contentDiv.textContent = text; 
+        }
     }
     bubble.appendChild(contentDiv);
 
