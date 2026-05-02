@@ -21,7 +21,7 @@ body.light-mode {
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-body { background-color: var(--bg-main); color: var(--text-primary); height: 100vh; overflow: hidden; transition: background-color 0.3s; }
+body { background-color: var(--bg-main); color: var(--text-primary); height: 100dvh; overflow: hidden; transition: background-color 0.3s; }
 .app-container { display: flex; height: 100%; }
 
 /* SIDEBAR & HEADER (Now Global Slide-in) */
@@ -80,7 +80,5 @@ body { background-color: var(--bg-main); color: var(--text-primary); height: 100
 .disclaimer { text-align: center; font-size: 12px; color: var(--text-secondary); margin-top: 15px; }
 
 /* MOBILE RESPONSIVENESS */
-@media (max-width: 768px) {
-    .greeting-name, .greeting-question { font-size: 2rem; }
-    .input-wrapper, .chat-conversation-area { padding: 15px 5%; }
-}
+.input-wrapper, .chat-conversation-area { padding: 10px 5% 15px 5%; }
+.disclaimer { margin-bottom: 5px; }
