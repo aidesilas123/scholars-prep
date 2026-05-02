@@ -1,5 +1,5 @@
 // --- DATABASE STATE VARIABLES ---
-let currentUser = null;
+let currentUserEmail = null;
 let currentSessionId = null;
 // --------------------------------
 
@@ -13,10 +13,9 @@ let slidingWindowHistory = [];
 // --- 2. Interactive UI Helpers & Markdown Config ---
 const renderer = new marked.Renderer();
 
-// Custom code block renderer to include the Copy Top-Bar (Bulletproof Version)
+// Custom code block renderer to include the Copy Top-Bar
 renderer.code = function(token) {
     try {
-        // Safely extract the text, forcing it into a strict String format
         let codeText = String(typeof token === 'object' ? (token.text || '') : (arguments[0] || ''));
         let langText = String(typeof token === 'object' ? (token.lang || '') : (arguments[1] || '')).trim();
 
@@ -37,7 +36,6 @@ renderer.code = function(token) {
             </div>
         `;
     } catch (err) {
-        // FAILSAFE: If highlighter panics during streaming, return safe plain text instead of crashing
         console.warn("Highlighting falls back to safe text.");
         const safeText = String(typeof token === 'object' ? token.text : arguments[0]).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return `<div class="code-wrapper"><pre style="padding:16px;"><code>${safeText}</code></pre></div>`;
@@ -45,7 +43,6 @@ renderer.code = function(token) {
 };
 marked.use({ renderer });
 
-// Universal Copy Function
 window.copyToClipboard = async function(buttonElement, textToCopy) {
     try {
         await navigator.clipboard.writeText(textToCopy);
@@ -66,36 +63,29 @@ window.editUserMessage = function(btn) {
     chatInput.dispatchEvent(new Event('input')); 
 };
 
-// --- 3. Startup & DOM Elements ---
-async function initializeNexus() {
+// --- 3. Startup & Auth Guard ---
+function initializeNexus() {
     try {
         // 1. CBT-Style Gatekeeper: Check local storage
         const loggedInObj = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
         const fallbackEmail = localStorage.getItem('userEmail');
         
-        if ((!loggedInObj || !loggedInObj.email) && !fallbackEmail) {
+        currentUserEmail = (loggedInObj && loggedInObj.email) ? loggedInObj.email : fallbackEmail;
+
+        if (!currentUserEmail) {
             console.warn("No local CBT session found. Redirecting to login...");
             window.location.href = 'index.html';
             return;
         }
 
-        // 2. Extract name from the email saved in local storage
-        const userEmail = (loggedInObj && loggedInObj.email) ? loggedInObj.email : fallbackEmail;
-        const firstName = userEmail.split('@')[0]; // Grabs 'mkavter001' from 'mkavter001@gmail.com'
+        // 2. Extract name from the email
+        const firstName = currentUserEmail.split('@')[0]; 
         const nameDisplay = document.getElementById('user-name-display');
         nameDisplay.innerText = firstName;
 
-        // 3. Connect to Supabase Auth to get the ID for Database saving
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        
-        if (user) {
-            currentUser = user;
-            loadSidebarSessions(); // Load their specific chats
-        } else {
-            // If they have local storage but NO Supabase session, RLS won't let them save.
-            console.warn("Warning: Local storage found, but Supabase session is missing.");
-            document.getElementById('history-list').innerHTML = '<p style="padding:10px; font-size:12px; color:#a0a0a0;">Session expired. Please log in again to save chats.</p>';
-        }
+        // 3. Hydrate the Sidebar with their specific long-term memory
+        loadSidebarSessions();
+
     } catch (err) { 
         console.error("Auth error:", err); 
         window.location.href = 'index.html';
@@ -103,13 +93,14 @@ async function initializeNexus() {
 }
 
 async function loadSidebarSessions() {
-    if (!currentUser) return;
+    if (!currentUserEmail) return;
     const historyList = document.getElementById('history-list');
-    historyList.innerHTML = ''; // Clear hardcoded HTML
+    historyList.innerHTML = ''; 
 
     const { data: sessions, error } = await supabaseClient
         .from('nexus_sessions')
         .select('id, title')
+        .eq('user_email', currentUserEmail) // Load only this user's chats
         .order('created_at', { ascending: false });
 
     if (error) return console.error("Error loading sessions:", error);
@@ -125,17 +116,14 @@ async function loadSidebarSessions() {
 
 async function loadPastSession(sessionId, sessionTitle) {
     currentSessionId = sessionId;
-    slidingWindowHistory = []; // Reset short-term memory array
+    slidingWindowHistory = []; 
     
-    // UI Resets
     greetingContainer.style.display = 'none';
     chatMessagesArea.style.display = 'flex';
     messagesWrapper.innerHTML = ''; 
     
-    // Close sidebar on mobile
     if (window.innerWidth <= 768) sidebar.classList.remove('active');
 
-    // Fetch messages from Supabase
     const { data: messages, error } = await supabaseClient
         .from('nexus_messages')
         .select('role, content')
@@ -144,7 +132,6 @@ async function loadPastSession(sessionId, sessionTitle) {
 
     if (error) return console.error("Error loading messages:", error);
 
-    // Rebuild the UI and Short-Term Memory
     messages.forEach(msg => {
         appendMessage(msg.role, msg.content);
         slidingWindowHistory.push({ role: msg.role, content: msg.content });
@@ -168,21 +155,17 @@ function appendMessage(role, text) {
     const bubble = document.createElement('div');
     bubble.className = `message-bubble ${role}`;
     
-    // Message text container
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
     if (text) {
         if (role === 'model') {
-            // The AI uses Markdown, so we parse it safely
             contentDiv.innerHTML = marked.parse(text);
         } else {
-            // NEVER use innerHTML for the user, use textContent to display code safely!
             contentDiv.textContent = text; 
         }
     }
     bubble.appendChild(contentDiv);
 
-    // Interactive Action Bar
     const actionBar = document.createElement('div');
     actionBar.className = 'message-actions';
 
@@ -210,16 +193,13 @@ function appendMessage(role, text) {
     messagesWrapper.appendChild(bubble);
     chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
     
-    // Return all parts so handleSend can inject the streaming text
     return { bubble, contentDiv, actionBar };
 }
 
-// Live-Typing Stream Receiver
 async function handleSend() {
     const userText = chatInput.value.trim();
     if (!userText) return;
 
-    // 1. UI Updates
     greetingContainer.style.display = 'none';
     chatMessagesArea.style.display = 'flex';
     appendMessage('user', userText);
@@ -228,41 +208,37 @@ async function handleSend() {
     chatInput.style.height = 'auto';
     sendBtn.style.display = 'none';
 
-    // 2. Add to Short-Term Memory
     slidingWindowHistory.push({ role: 'user', content: userText });
 
-    // 3. LONG-TERM MEMORY: Create Session & Save User Message
-    if (currentUser) {
+    // Database Save: Tied directly to the Custom Local Storage Email
+    if (currentUserEmail) {
         if (!currentSessionId) {
-            // First message of a new chat: Create folder
-            const { data: session } = await supabaseClient
+            const { data: session, error } = await supabaseClient
                 .from('nexus_sessions')
-                .insert({ user_id: currentUser.id })
+                .insert({ user_email: currentUserEmail })
                 .select().single();
             
-            currentSessionId = session.id;
+            if (error) console.error("Session Create Error:", error);
+            else currentSessionId = session.id;
             
-            // Fire off the Auto-Titler in the background (does not slow down chat)
-            generateAndSaveTitle(userText, currentSessionId);
+            if (currentSessionId) generateAndSaveTitle(userText, currentSessionId);
         }
         
-        // Save the file (message) to the folder
-        await supabaseClient.from('nexus_messages').insert({ 
-            session_id: currentSessionId, 
-            role: 'user', 
-            content: userText 
-        });
+        if (currentSessionId) {
+            await supabaseClient.from('nexus_messages').insert({ 
+                session_id: currentSessionId, 
+                role: 'user', 
+                content: userText 
+            });
+        }
     }
 
     thinkingIndicator.style.display = 'flex';
     chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight; 
     
-    // Destructure the returned elements so we can stream into the contentDiv
     const { contentDiv, actionBar } = appendMessage('model', '');
 
     try {
-        // 4. THE SLIDING WINDOW CONTEXT (Protecting Token Limits)
-        // We only send the last 16 messages (8 user/AI exchanges) to Vercel
         const protectedPayload = slidingWindowHistory.slice(-16);
 
         const response = await fetch('/api/chat', {
@@ -273,13 +249,7 @@ async function handleSend() {
 
         thinkingIndicator.style.display = 'none'; 
 
-        if (!response.ok) {
-            if (response.status === 503) {
-                contentDiv.textContent = "Nexus AI is currently over capacity. Please try again in a few seconds.";
-                return;
-            }
-            throw new Error("Network response was not ok");
-        }
+        if (!response.ok) throw new Error("Network response was not ok");
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -292,16 +262,13 @@ async function handleSend() {
             const chunkText = decoder.decode(value, { stream: true });
             aiFullText += chunkText;
             
-            // MAGIC: Parse raw markdown into styled HTML in real-time
             contentDiv.innerHTML = marked.parse(aiFullText);
-            
             chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
         }
 
-        // 5. Update Memories with AI Response
         slidingWindowHistory.push({ role: 'model', content: aiFullText });
         
-        if (currentUser && currentSessionId) {
+        if (currentUserEmail && currentSessionId) {
             await supabaseClient.from('nexus_messages').insert({ 
                 session_id: currentSessionId, 
                 role: 'model', 
@@ -309,7 +276,6 @@ async function handleSend() {
             });
         }
 
-        // Bind the copy button for the full response once generation is complete
         actionBar.querySelector('.copy-main-btn').onclick = function() {
             copyToClipboard(this, aiFullText);
         };
@@ -330,7 +296,6 @@ async function handleSend() {
     }
 }
 
-// Background Auto-Titler function
 async function generateAndSaveTitle(firstPrompt, sessionId) {
     try {
         const response = await fetch('/api/title', {
@@ -340,10 +305,7 @@ async function generateAndSaveTitle(firstPrompt, sessionId) {
         });
         const data = await response.json();
         
-        // Update Supabase
         await supabaseClient.from('nexus_sessions').update({ title: data.title }).eq('id', sessionId);
-        
-        // Refresh the sidebar to show the new title
         loadSidebarSessions();
     } catch (err) {
         console.error("Titler failed:", err);
@@ -425,7 +387,6 @@ document.getElementById('new-chat-btn').addEventListener('click', () => {
     chatInput.style.height = 'auto';
     sendBtn.style.display = 'none';
     
-    // Wipe memory cleanly
     slidingWindowHistory = []; 
     currentSessionId = null; 
     
