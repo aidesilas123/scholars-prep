@@ -23,6 +23,7 @@ async function initializeNexus() {
 // --- 3. DOM Elements ---
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
+const micBtn = document.getElementById('mic-btn'); // New for Phase 2
 const greetingContainer = document.getElementById('greeting-container');
 const chatMessagesArea = document.getElementById('chat-messages');
 const messagesWrapper = document.getElementById('messages-wrapper');
@@ -39,9 +40,11 @@ function appendMessage(role, text) {
     
     // Auto-scroll to the bottom
     chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
+    
+    return bubble; // Return bubble so we can inject streaming text
 }
 
-// THE FIX: Added 'async' to this function!
+// UPGRADED FOR PHASE 2: Live-Typing Stream Receiver
 async function handleSend() {
     const userText = chatInput.value.trim();
     if (!userText) return;
@@ -53,45 +56,115 @@ async function handleSend() {
     // 1. Show User Bubble
     appendMessage('user', userText);
     
-    // Reset Input
+    // Reset Input instantly
     chatInput.value = '';
     chatInput.style.height = 'auto';
     sendBtn.style.display = 'none';
 
-    // Add to memory
-    slidingWindowHistory.push({ role: 'user', parts: [{ text: userText }] });
+    // Add to memory (matching Vercel Phase 1 structure)
+    slidingWindowHistory.push({ role: 'user', content: userText });
 
-    // 2. Show the Nexus "Thinking" Animation
+    // 2. Show the Nexus "Thinking" Animation & Create empty AI bubble
     thinkingIndicator.style.display = 'flex';
     chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight; 
+    const aiBubble = appendMessage('model', '');
 
     try {
         // 3. ACTUAL API CALL to your Vercel Backend
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversationHistory: slidingWindowHistory })
+            body: JSON.stringify({ messages: slidingWindowHistory })
         });
 
-        const data = await response.json();
+        // Hide thinking animation the moment we connect
+        thinkingIndicator.style.display = 'none'; 
 
-        thinkingIndicator.style.display = 'none'; // Hide animation
+        if (!response.ok) {
+            if (response.status === 503) {
+                aiBubble.textContent = "Nexus AI is currently over capacity. Please try again in a few seconds.";
+                return;
+            }
+            throw new Error("Network response was not ok");
+        }
 
-        if (data.text) {
-            appendMessage('model', data.text);
-            slidingWindowHistory.push({ role: 'model', parts: [{ text: data.text }] });
-        } else {
-            appendMessage('model', "I'm having trouble connecting to my brain. Check your Vercel logs!");
+        // 4. Read the streaming data chunk by chunk
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiFullText = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            // Decode the incoming chunk and append it
+            const chunkText = decoder.decode(value, { stream: true });
+            aiFullText += chunkText;
+            
+            // Update the UI in real-time
+            aiBubble.textContent = aiFullText;
+            
+            // Keep the chat scrolled to the bottom as it types
+            chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
+        }
+
+        // Save AI response to memory
+        slidingWindowHistory.push({ role: 'model', content: aiFullText });
+
+        // Once streaming is completely finished, render the math equations (KaTeX)
+        if (window.renderMathInElement) {
+            renderMathInElement(aiBubble, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ]
+            });
         }
 
     } catch (error) {
         thinkingIndicator.style.display = 'none';
-        appendMessage('model', "Connection error. Please ensure you are running this through a Vercel deployment.");
+        aiBubble.textContent = "Connection error. Please ensure your network is stable and Vercel is running.";
         console.error("Fetch error:", error);
     }
 }
 
-// --- 5. Event Listeners ---
+// --- 5. Phase 2: Voice-to-Text Engine ---
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition && micBtn) {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false; // Stop listening when they stop talking
+    recognition.interimResults = false; 
+
+    micBtn.addEventListener('click', () => {
+        recognition.start();
+        micBtn.style.color = "#007bff"; // Visual feedback that mic is active
+        chatInput.placeholder = "Listening...";
+    });
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        chatInput.value += (chatInput.value ? " " : "") + transcript;
+        chatInput.dispatchEvent(new Event('input')); // Trigger auto-expand & send button
+    };
+
+    recognition.onspeechend = () => {
+        recognition.stop();
+        micBtn.style.color = ""; // Reset color
+        chatInput.placeholder = "Ask Nexus AI...";
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Microphone error:", event.error);
+        micBtn.style.color = "";
+        chatInput.placeholder = "Ask Nexus AI...";
+    };
+} else if (micBtn) {
+    // Hide mic button if browser doesn't support it
+    micBtn.style.display = 'none'; 
+}
+
+// --- 6. Event Listeners ---
 
 // Global Sidebar Toggle
 menuBtn.addEventListener('click', (e) => {

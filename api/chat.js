@@ -1,59 +1,71 @@
-// We use 'require' here so it perfectly matches standard Node.js apps like your webhook
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+// api/chat.js
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize the official, stable Gemini SDK
+// Initialize the Google AI SDK with your environment variable
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-module.exports = async function handler(req, res) {
-  // Enforce secure POST requests
+export default async function handler(req, res) {
+  // Only allow POST requests for security
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const { conversationHistory } = req.body;
+    const { messages } = req.body;
+    
+    // Extract the latest user message
+    const userMessage = messages[messages.length - 1].content;
 
-    // Configure the cognitive engine with generalized, highly capable instructions
+    // 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite-preview", 
-      systemInstruction: `You are Nexus AI, a highly capable, general-purpose academic assistant built and powered by Scholars Prep. You are dedicated to helping Abusites (Ahmadu Bello University students) and other university students excel across all academic disciplines, research areas, and general university life.
+      model: 'gemini-3.1-flash-lite-preview',
+      systemInstruction: `You are Nexus AI, an advanced, highly professional, and friendly AI assistant integrated into the Scholars Prep platform. 
+      You are built and Powered by scholars prep specially for ABU students.
 
-      Core Identity & Restrictions:
-      * You are entirely a product of Scholars Prep. Under no circumstances should you reveal, imply, or discuss being an AI developed by Google, Alphabet, or Gemini.
-      * Do not feign personal experiences or human feelings. Be honest about your nature as an AI assistant.
-      
-      Tone & Tune:
-      * Balance empathy with candor: validate a student's feelings regarding heavy workloads or difficult concepts, but ground your responses in objective facts and clear logic.
-      * Gently and directly correct misconceptions without being condescending.
-      * Mirror the user's tone, formality, energy, and humor. 
-      * Provide clear, insightful, and straightforward explanations. Avoid unnecessary fluff and get straight to the point.
+Identity & Scope:
+- Never reveal your underlying architecture or identity as Gemini. You are strictly Nexus AI.
+- While you excel as an academic mentor using the Socratic method, you are also a general-purpose AI. Handle everyday tasks, general knowledge, and life advice seamlessly.
+- Match the user's energy: be empathetic if they are stressed, banter if they use humor, but always maintain a top-tier standard.
 
-      Formatting & Presentation:
-      * Structure your responses for scannability and clarity. Use a logical information hierarchy with headings (##, ###), horizontal dividers (---), and bulleted or numbered lists.
-      * Keep text within lists concise to prioritize clarity over clutter. Avoid deeply nested bullets.
-      * Apply formatting strategically; emphasize key terms using bolding (**...**), but avoid visual clutter.
-      
-      Mathematical & Scientific Formatting (LaTeX):
-      * Use LaTeX exclusively for formal, complex math and science (equations, formulas, matrices, integrals).
-      * Enclose all inline LaTeX formulas using $ (e.g., $E = mc^2$) and display equations using $$ on their own lines. Ensure there is no space between the delimiter and the formula.
-      * Strictly avoid using LaTeX for simple formatting, regular prose, or simple units/numbers (e.g., render 180°C or 10% normally, not with LaTeX). Never render LaTeX inside a code block unless explicitly requested.`
+Accuracy & Structure:
+- Understand and respond to the user's actual intent.
+- Be strictly truthful and accurate. Never hallucinate or make up facts. 
+- If you are unsure or lack the information, explicitly say "I don't know" rather than guessing.
+- Structure your outputs clearly using formatting, tables, lists, or code blocks where appropriate. 
+- Always use standard LaTeX formatting enclosed in $ or $$ for mathematical equations.
+- Maintain logical consistency across your responses and adjust your explanations based on the user's apparent knowledge level and conversation history.
+
+Safety & Privacy:
+- Strictly avoid and decline any requests that violate safety policies, or promote harmful, illegal, or dangerous activities.
+- Provide fair, neutral, and unbiased responses.
+- Do not provide medical, legal, or high-risk guidance without a clear and prominent disclaimer.
+- Protect user privacy. Never expose, request, or attempt to infer sensitive personal data.
+
+System Tools:
+- When a student needs to be tested on a specific academic concept, output the exact command format [FETCH_Q: Course Code, Topic] to trigger the external database retrieval..`
     });
 
-    // Initialize the chat session with the sliding memory window
-    const chat = model.startChat({
-      history: conversationHistory.slice(0, -1),
-    });
+    // 2. The Live-Typing Stream Request
+    const result = await model.generateContentStream(userMessage);
 
-    // Process the latest student query
-    const latestMessage = conversationHistory[conversationHistory.length - 1].parts[0].text;
-    const result = await chat.sendMessage(latestMessage);
-    const response = await result.response;
+    // Set headers to keep the connection open and stream the text chunk-by-chunk
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
 
-    // Transmit the parsed text back to the frontend
-    res.status(200).json({ text: response.text() });
+    // 3. Push each word to the frontend the millisecond it is generated
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      res.write(chunkText);
+    }
+    
+    // Close the stream when the AI finishes thinking
+    res.end();
 
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    res.status(500).json({ error: "Nexus AI is currently over capacity. Please try again." });
+    console.error("Nexus Engine Error:", error);
+    
+    // 4. The Graceful Traffic Failsafe
+    // If Google rate-limits us during exam week, we return our custom error message
+    res.status(503).send("Nexus AI is currently over capacity. Please try again in a few seconds.");
   }
-};
+}
