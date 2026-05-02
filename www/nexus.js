@@ -135,6 +135,19 @@ async function loadPastSession(sessionId, sessionTitle) {
     });
     
     chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
+
+    // --- BUG FIX 1: Trigger the Math Engine on historical messages ---
+    if (window.renderMathInElement) {
+        renderMathInElement(messagesWrapper, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ]
+        });
+    } else if (window.MathJax) {
+        // Fallback if you are using MathJax instead of KaTeX
+        MathJax.typesetPromise([messagesWrapper]).catch(err => console.log(err));
+    }
 }
 
 const chatInput = document.getElementById('chat-input');
@@ -207,7 +220,7 @@ async function handleSend() {
 
     slidingWindowHistory.push({ role: 'user', content: userText });
 
-    // Database Save: Now passing user_email to BOTH tables
+    // Database Save
     if (currentUserEmail) {
         if (!currentSessionId) {
             const { data: session, error } = await supabaseClient
@@ -224,7 +237,7 @@ async function handleSend() {
         if (currentSessionId) {
             await supabaseClient.from('nexus_messages').insert({ 
                 session_id: currentSessionId, 
-                user_email: currentUserEmail, // <- Your suggested column in action!
+                user_email: currentUserEmail,
                 role: 'user', 
                 content: userText 
             });
@@ -237,7 +250,14 @@ async function handleSend() {
     const { contentDiv, actionBar } = appendMessage('model', '');
 
     try {
-        const protectedPayload = slidingWindowHistory.slice(-16);
+        let protectedPayload = slidingWindowHistory.slice(-16);
+
+        // --- BUG FIX 2: Prevent Gemini Context Crash ---
+        // Gemini API strictly demands that history arrays begin with a 'user' message.
+        // If our slice(-16) accidentally grabbed an AI ('model') message first, we remove it.
+        if (protectedPayload.length > 0 && protectedPayload[0].role !== 'user') {
+            protectedPayload.shift(); 
+        }
 
         const response = await fetch('/api/chat', {
             method: 'POST',
@@ -269,7 +289,7 @@ async function handleSend() {
         if (currentUserEmail && currentSessionId) {
             await supabaseClient.from('nexus_messages').insert({ 
                 session_id: currentSessionId, 
-                user_email: currentUserEmail, // <- Your suggested column in action!
+                user_email: currentUserEmail,
                 role: 'model', 
                 content: aiFullText 
             });
