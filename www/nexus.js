@@ -13,7 +13,6 @@ let slidingWindowHistory = [];
 // --- 2. Interactive UI Helpers & Markdown Config ---
 const renderer = new marked.Renderer();
 
-// Custom code block renderer to include the Copy Top-Bar
 renderer.code = function(token) {
     try {
         let codeText = String(typeof token === 'object' ? (token.text || '') : (arguments[0] || ''));
@@ -66,7 +65,7 @@ window.editUserMessage = function(btn) {
 // --- 3. Startup & Auth Guard ---
 function initializeNexus() {
     try {
-        // 1. CBT-Style Gatekeeper: Check local storage
+        // CBT-Style Gatekeeper
         const loggedInObj = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
         const fallbackEmail = localStorage.getItem('userEmail');
         
@@ -78,12 +77,10 @@ function initializeNexus() {
             return;
         }
 
-        // 2. Extract name from the email
         const firstName = currentUserEmail.split('@')[0]; 
         const nameDisplay = document.getElementById('user-name-display');
         nameDisplay.innerText = firstName;
 
-        // 3. Hydrate the Sidebar with their specific long-term memory
         loadSidebarSessions();
 
     } catch (err) { 
@@ -100,7 +97,7 @@ async function loadSidebarSessions() {
     const { data: sessions, error } = await supabaseClient
         .from('nexus_sessions')
         .select('id, title')
-        .eq('user_email', currentUserEmail) // Load only this user's chats
+        .eq('user_email', currentUserEmail) 
         .order('created_at', { ascending: false });
 
     if (error) return console.error("Error loading sessions:", error);
@@ -210,7 +207,7 @@ async function handleSend() {
 
     slidingWindowHistory.push({ role: 'user', content: userText });
 
-    // Database Save: Tied directly to the Custom Local Storage Email
+    // Database Save: Now passing user_email to BOTH tables
     if (currentUserEmail) {
         if (!currentSessionId) {
             const { data: session, error } = await supabaseClient
@@ -227,6 +224,7 @@ async function handleSend() {
         if (currentSessionId) {
             await supabaseClient.from('nexus_messages').insert({ 
                 session_id: currentSessionId, 
+                user_email: currentUserEmail, // <- Your suggested column in action!
                 role: 'user', 
                 content: userText 
             });
@@ -271,6 +269,7 @@ async function handleSend() {
         if (currentUserEmail && currentSessionId) {
             await supabaseClient.from('nexus_messages').insert({ 
                 session_id: currentSessionId, 
+                user_email: currentUserEmail, // <- Your suggested column in action!
                 role: 'model', 
                 content: aiFullText 
             });
