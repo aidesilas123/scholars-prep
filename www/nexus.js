@@ -1,6 +1,5 @@
 // --- 1. Supabase Initialization ---
 const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
-// WARNING: Put your Anon Key back in here before pushing!
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5ODI5MTUsImV4cCI6MjA4NTM0MjkxNX0.2ZdfheXA3EtLLoCZenNVmoHq8XDe4geFdUVHAanwNYQ'; 
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
@@ -10,15 +9,22 @@ let slidingWindowHistory = [];
 const renderer = new marked.Renderer();
 
 // Custom code block renderer to include the Copy Top-Bar
-renderer.code = function(code, lang) {
-    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-    const highlighted = hljs.highlight(code, { language }).value;
-    const escapedCode = encodeURIComponent(code);
+// Custom code block renderer to include the Copy Top-Bar (Fixed for v12+)
+renderer.code = function(token) {
+    // Safely extract the text whether marked.js sends an Object (v12+) or a String (older)
+    const codeText = typeof token === 'object' ? token.text : token;
+    const langText = typeof token === 'object' ? token.lang : arguments[1];
+
+    const language = hljs.getLanguage(langText) ? langText : 'plaintext';
+    const highlighted = hljs.highlight(codeText, { language }).value;
+    
+    // Escape the code so the copy button doesn't break the HTML
+    const escapedCode = encodeURIComponent(codeText);
     
     return `
         <div class="code-wrapper">
             <div class="code-header">
-                <span>${lang || 'code'}</span>
+                <span>${langText || 'code'}</span>
                 <button class="copy-code-btn" onclick="copyToClipboard(this, decodeURIComponent('${escapedCode}'))">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     Copy
@@ -29,14 +35,6 @@ renderer.code = function(code, lang) {
     `;
 };
 marked.use({ renderer });
-
-// Enable Highlight.js integration within Marked
-marked.setOptions({
-    highlight: function(code, lang) {
-        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-        return hljs.highlight(code, { language }).value;
-    }
-});
 
 // Universal Copy Function
 window.copyToClipboard = async function(buttonElement, textToCopy) {
