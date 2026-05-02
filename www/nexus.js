@@ -1,3 +1,8 @@
+// --- DATABASE STATE VARIABLES ---
+let currentUser = null;
+let currentSessionId = null;
+// --------------------------------
+
 // --- 1. Supabase Initialization ---
 const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bW9vbHl4eHlseWx0dHVnamVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5ODI5MTUsImV4cCI6MjA4NTM0MjkxNX0.2ZdfheXA3EtLLoCZenNVmoHq8XDe4geFdUVHAanwNYQ'; 
@@ -64,15 +69,72 @@ window.editUserMessage = function(btn) {
 // --- 3. Startup & DOM Elements ---
 async function initializeNexus() {
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
         const nameDisplay = document.getElementById('user-name-display');
+        
         if (user) {
+            currentUser = user;
             const firstName = (user.user_metadata?.full_name || 'Student').split(' ')[0];
             nameDisplay.innerText = firstName;
+            
+            // Hydrate the Sidebar with long-term memory
+            loadSidebarSessions();
         } else {
             nameDisplay.innerText = "Scholar"; 
+            document.getElementById('history-list').innerHTML = '<p style="padding:10px; font-size:12px; color:#a0a0a0;">Log in to save chats.</p>';
         }
     } catch (err) { console.error("Auth error:", err); }
+}
+
+async function loadSidebarSessions() {
+    if (!currentUser) return;
+    const historyList = document.getElementById('history-list');
+    historyList.innerHTML = ''; // Clear hardcoded HTML
+
+    const { data: sessions, error } = await supabaseClient
+        .from('nexus_sessions')
+        .select('id, title')
+        .order('created_at', { ascending: false });
+
+    if (error) return console.error("Error loading sessions:", error);
+
+    sessions.forEach(session => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.innerText = session.title;
+        div.onclick = () => loadPastSession(session.id, session.title);
+        historyList.appendChild(div);
+    });
+}
+
+async function loadPastSession(sessionId, sessionTitle) {
+    currentSessionId = sessionId;
+    slidingWindowHistory = []; // Reset short-term memory array
+    
+    // UI Resets
+    greetingContainer.style.display = 'none';
+    chatMessagesArea.style.display = 'flex';
+    messagesWrapper.innerHTML = ''; 
+    
+    // Close sidebar on mobile
+    if (window.innerWidth <= 768) sidebar.classList.remove('active');
+
+    // Fetch messages from Supabase
+    const { data: messages, error } = await supabaseClient
+        .from('nexus_messages')
+        .select('role, content')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+
+    if (error) return console.error("Error loading messages:", error);
+
+    // Rebuild the UI and Short-Term Memory
+    messages.forEach(msg => {
+        appendMessage(msg.role, msg.content);
+        slidingWindowHistory.push({ role: msg.role, content: msg.content });
+    });
+    
+    chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
 }
 
 const chatInput = document.getElementById('chat-input');
@@ -141,16 +203,40 @@ async function handleSend() {
     const userText = chatInput.value.trim();
     if (!userText) return;
 
+    // 1. UI Updates
     greetingContainer.style.display = 'none';
     chatMessagesArea.style.display = 'flex';
-
     appendMessage('user', userText);
     
     chatInput.value = '';
     chatInput.style.height = 'auto';
     sendBtn.style.display = 'none';
 
+    // 2. Add to Short-Term Memory
     slidingWindowHistory.push({ role: 'user', content: userText });
+
+    // 3. LONG-TERM MEMORY: Create Session & Save User Message
+    if (currentUser) {
+        if (!currentSessionId) {
+            // First message of a new chat: Create folder
+            const { data: session } = await supabaseClient
+                .from('nexus_sessions')
+                .insert({ user_id: currentUser.id })
+                .select().single();
+            
+            currentSessionId = session.id;
+            
+            // Fire off the Auto-Titler in the background (does not slow down chat)
+            generateAndSaveTitle(userText, currentSessionId);
+        }
+        
+        // Save the file (message) to the folder
+        await supabaseClient.from('nexus_messages').insert({ 
+            session_id: currentSessionId, 
+            role: 'user', 
+            content: userText 
+        });
+    }
 
     thinkingIndicator.style.display = 'flex';
     chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight; 
@@ -159,10 +245,14 @@ async function handleSend() {
     const { contentDiv, actionBar } = appendMessage('model', '');
 
     try {
+        // 4. THE SLIDING WINDOW CONTEXT (Protecting Token Limits)
+        // We only send the last 16 messages (8 user/AI exchanges) to Vercel
+        const protectedPayload = slidingWindowHistory.slice(-16);
+
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: slidingWindowHistory })
+            body: JSON.stringify({ messages: protectedPayload })
         });
 
         thinkingIndicator.style.display = 'none'; 
@@ -192,7 +282,16 @@ async function handleSend() {
             chatMessagesArea.scrollTop = chatMessagesArea.scrollHeight;
         }
 
+        // 5. Update Memories with AI Response
         slidingWindowHistory.push({ role: 'model', content: aiFullText });
+        
+        if (currentUser && currentSessionId) {
+            await supabaseClient.from('nexus_messages').insert({ 
+                session_id: currentSessionId, 
+                role: 'model', 
+                content: aiFullText 
+            });
+        }
 
         // Bind the copy button for the full response once generation is complete
         actionBar.querySelector('.copy-main-btn').onclick = function() {
@@ -212,6 +311,26 @@ async function handleSend() {
         thinkingIndicator.style.display = 'none';
         contentDiv.textContent = "Connection error. Please ensure your network is stable and Vercel is running.";
         console.error("Fetch error:", error);
+    }
+}
+
+// Background Auto-Titler function
+async function generateAndSaveTitle(firstPrompt, sessionId) {
+    try {
+        const response = await fetch('/api/title', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: firstPrompt })
+        });
+        const data = await response.json();
+        
+        // Update Supabase
+        await supabaseClient.from('nexus_sessions').update({ title: data.title }).eq('id', sessionId);
+        
+        // Refresh the sidebar to show the new title
+        loadSidebarSessions();
+    } catch (err) {
+        console.error("Titler failed:", err);
     }
 }
 
@@ -289,8 +408,12 @@ document.getElementById('new-chat-btn').addEventListener('click', () => {
     chatInput.value = '';
     chatInput.style.height = 'auto';
     sendBtn.style.display = 'none';
+    
+    // Wipe memory cleanly
     slidingWindowHistory = []; 
-    sidebar.classList.remove('active'); 
+    currentSessionId = null; 
+    
+    if (window.innerWidth <= 768) sidebar.classList.remove('active');
 });
 
 initializeNexus();
