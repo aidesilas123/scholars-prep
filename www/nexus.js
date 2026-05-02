@@ -69,21 +69,37 @@ window.editUserMessage = function(btn) {
 // --- 3. Startup & DOM Elements ---
 async function initializeNexus() {
     try {
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        // 1. CBT-Style Gatekeeper: Check local storage
+        const loggedInObj = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
+        const fallbackEmail = localStorage.getItem('userEmail');
+        
+        if ((!loggedInObj || !loggedInObj.email) && !fallbackEmail) {
+            console.warn("No local CBT session found. Redirecting to login...");
+            window.location.href = 'index.html';
+            return;
+        }
+
+        // 2. Extract name from the email saved in local storage
+        const userEmail = (loggedInObj && loggedInObj.email) ? loggedInObj.email : fallbackEmail;
+        const firstName = userEmail.split('@')[0]; // Grabs 'mkavter001' from 'mkavter001@gmail.com'
         const nameDisplay = document.getElementById('user-name-display');
+        nameDisplay.innerText = firstName;
+
+        // 3. Connect to Supabase Auth to get the ID for Database saving
+        const { data: { user } } = await supabaseClient.auth.getUser();
         
         if (user) {
             currentUser = user;
-            const firstName = (user.user_metadata?.full_name || 'Student').split(' ')[0];
-            nameDisplay.innerText = firstName;
-            
-            // Hydrate the Sidebar with long-term memory
-            loadSidebarSessions();
+            loadSidebarSessions(); // Load their specific chats
         } else {
-            nameDisplay.innerText = "Scholar"; 
-            document.getElementById('history-list').innerHTML = '<p style="padding:10px; font-size:12px; color:#a0a0a0;">Log in to save chats.</p>';
+            // If they have local storage but NO Supabase session, RLS won't let them save.
+            console.warn("Warning: Local storage found, but Supabase session is missing.");
+            document.getElementById('history-list').innerHTML = '<p style="padding:10px; font-size:12px; color:#a0a0a0;">Session expired. Please log in again to save chats.</p>';
         }
-    } catch (err) { console.error("Auth error:", err); }
+    } catch (err) { 
+        console.error("Auth error:", err); 
+        window.location.href = 'index.html';
+    }
 }
 
 async function loadSidebarSessions() {
