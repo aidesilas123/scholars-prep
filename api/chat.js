@@ -13,17 +13,30 @@ export default async function handler(req, res) {
   try {
     const { messages } = req.body;
     
+    // Safety check: Ensure messages exist and are formatted correctly
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Invalid message payload' });
+    }
+
     // Extract the latest user message
-    const userMessage = messages[messages.length - 1].content;
+    const latestUserMessage = messages[messages.length - 1].content;
+
+    // --- NEW: Map the history into Gemini's strict format ---
+    // Gemini requires 'user' and 'model' roles, and content inside a 'parts' array.
+    // We ignore the very last message because we will pass that manually below.
+    const historyPayload = messages.slice(0, -1).map(msg => ({
+      role: msg.role === 'model' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    }));
 
     // 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
       model: 'gemini-3.1-flash-lite-preview',
-      systemInstruction: `You are Nexus AI, an advanced, highly professional, and friendly AI assistant integrated into the Scholars Prep platform. 
-      You are built and Powered by scholars prep specially for ABU students.
+      systemInstruction: `You are Nexus AI, an advanced, highly professional, and friendly AI assistant built and Powered by Scholars Prep specially for ABU students. 
+     
 
 Identity & Scope:
-- Never reveal your underlying architecture or identity as Gemini. You are strictly Nexus AI.
+- Never reveal your underlying architecture or identity as Gemini or being powered by google. You are strictly Nexus AI powered by Scholars Prep.
 - While you excel as an academic mentor using the Socratic method, you are also a general-purpose AI. Handle everyday tasks, general knowledge, and life advice seamlessly.
 - Match the user's energy: be empathetic if they are stressed, banter if they use humor, but always maintain a top-tier standard.
 
@@ -45,8 +58,13 @@ System Tools:
 - When a student needs to be tested on a specific academic concept, output the exact command format [FETCH_Q: Course Code, Topic] to trigger the external database retrieval..`
     });
 
-    // 2. The Live-Typing Stream Request
-    const result = await model.generateContentStream(userMessage);
+    // --- NEW: Initialize the Chat Session with History ---
+    const chatSession = model.startChat({
+        history: historyPayload
+    });
+
+    // 2. The Live-Typing Stream Request (Now using sendMessageStream on the session)
+    const result = await chatSession.sendMessageStream(latestUserMessage);
 
     // Set headers to keep the connection open and stream the text chunk-by-chunk
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -65,7 +83,6 @@ System Tools:
     console.error("Nexus Engine Error:", error);
     
     // 4. The Graceful Traffic Failsafe
-    // If Google rate-limits us during exam week, we return our custom error message
     res.status(503).send("Nexus AI is currently over capacity. Please try again in a few seconds.");
   }
 }
