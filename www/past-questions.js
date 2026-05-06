@@ -134,6 +134,41 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
       return fixed;
     }
 
+    // --- SMILES DRAWER SETUP ---
+    const smilesOptions = { 
+        width: 250, 
+        height: 250, 
+        bondThickness: 1.5,
+        fontSizeLarge: 6
+    };
+    let smilesDrawerInstance = null;
+
+    function parseSmilesTags(text) {
+        if (!text) return { htmlText: "", smilesQueue: [] };
+        let smilesQueue = [];
+        const htmlText = text.replace(/\[SMILES:\s*(.*?)\s*\]/g, (match, smilesString) => {
+            const canvasId = 'smiles-' + Math.random().toString(36).substr(2, 9);
+            smilesQueue.push({ id: canvasId, smiles: smilesString });
+            return `<canvas id="${canvasId}"></canvas>`;
+        });
+        return { htmlText, smilesQueue };
+    }
+
+    function drawMolecules(smilesQueue) {
+        if (smilesQueue.length === 0) return;
+        if (!smilesDrawerInstance) {
+             smilesDrawerInstance = new SmilesDrawer.Drawer(smilesOptions);
+        }
+        smilesQueue.forEach(item => {
+            SmilesDrawer.parse(item.smiles, function(tree) {
+                smilesDrawerInstance.draw(tree, item.id, 'light', false);
+            }, function (err) {
+                console.error("Error drawing SMILES:", err);
+            });
+        });
+    }
+    // ---------------------------
+
     async function loadQuestions(year) {
       closeYearModal();
       showLoading(true);
@@ -152,6 +187,8 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
         container.innerHTML = '';
         document.getElementById('questionsTitle').textContent = `${selectedCourseCode} ${selectedType.toUpperCase()} - ${year}`;
 
+        let globalSmilesQueue = []; // NEW: Keep track of all molecules to draw
+
         qs.forEach((q, idx) => {
           const ansIdx = parseInt(q.answer);
           let opts = q.options;
@@ -160,17 +197,22 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
           }
           if (!opts) opts = [];
 
-          const fixedQuestionText = fixMathText(q.question_text);
-          const fixedDetails = fixMathText(q.Details || q.details || "No explanation provided.");
+          // 1. Fix math first, then parse SMILES tags
+          const parsedQ = parseSmilesTags(fixMathText(q.question_text));
+          const parsedDetails = parseSmilesTags(fixMathText(q.Details || q.details || "No explanation provided."));
+          
+          globalSmilesQueue.push(...parsedQ.smilesQueue, ...parsedDetails.smilesQueue);
 
           let optHtml = '';
           opts.forEach((opt, i) => {
             const isCorrect = i === ansIdx;
-            const fixedOption = fixMathText(opt);
+            const parsedOpt = parseSmilesTags(fixMathText(opt));
+            globalSmilesQueue.push(...parsedOpt.smilesQueue);
+
             optHtml += `
               <div class="option-item ${isCorrect ? 'correct' : ''}">
                 ${isCorrect ? '<span class="checkmark">✔</span>' : '<span class="circle-mark">○</span>'}
-                ${String.fromCharCode(65+i)}. ${fixedOption}
+                ${String.fromCharCode(65+i)}. ${parsedOpt.htmlText}
               </div>
             `;
           });
@@ -178,12 +220,12 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
           const div = document.createElement('div');
           div.className = 'question-item';
           div.innerHTML = `
-            <div class="question-text">Q${idx+1}. ${fixedQuestionText}</div>
+            <div class="question-text">Q${idx+1}. ${parsedQ.htmlText}</div>
             <div>${optHtml}</div>
             <button class="reveal-btn" onclick="toggleSolution('sol-${idx}')">💡 Reveal Solution</button>
             <div id="sol-${idx}" class="solution-box">
               <strong>Solving / Explanation:</strong>
-              ${fixedDetails}
+              ${parsedDetails.htmlText}
             </div>
           `;
           container.appendChild(div);
@@ -191,6 +233,9 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 
         document.getElementById('courseList').style.display = 'none';
         document.getElementById('questionsContainer').style.display = 'block';
+
+        // NEW: Draw the molecules now that the canvases are in the DOM!
+        drawMolecules(globalSmilesQueue);
 
         if (window.MathJax) {
             MathJax.typesetPromise();

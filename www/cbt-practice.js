@@ -1,5 +1,4 @@
-    
-    /***********************
+/***********************
      * SUPABASE CONFIGURATION - FIXED
      ***********************/
     let supabaseClient;
@@ -13,6 +12,7 @@
       supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
       console.log('Supabase initialized:', !!supabaseClient);
     })();
+
     // --- ROBUST MATH FIXER ---
     // --- ROBUST MATH FIXER ---
     // --- FINAL ROBUST MATH FIXER ---
@@ -67,6 +67,42 @@ function fixMathText(text) {
   
   return fixed;
 }
+
+// --- SMILES DRAWER SETUP ---
+const smilesOptions = { 
+    width: 250, 
+    height: 250, 
+    bondThickness: 1.5,
+    fontSizeLarge: 6
+};
+let smilesDrawerInstance = null;
+
+function parseSmilesTags(text) {
+    if (!text) return { htmlText: "", smilesQueue: [] };
+    let smilesQueue = [];
+    const htmlText = text.replace(/\[SMILES:\s*(.*?)\s*\]/g, (match, smilesString) => {
+        const canvasId = 'smiles-' + Math.random().toString(36).substr(2, 9);
+        smilesQueue.push({ id: canvasId, smiles: smilesString });
+        return `<canvas id="${canvasId}"></canvas>`;
+    });
+    return { htmlText, smilesQueue };
+}
+
+function drawMolecules(smilesQueue) {
+    if (smilesQueue.length === 0) return;
+    if (!smilesDrawerInstance) {
+         smilesDrawerInstance = new SmilesDrawer.Drawer(smilesOptions);
+    }
+    smilesQueue.forEach(item => {
+        SmilesDrawer.parse(item.smiles, function(tree) {
+            smilesDrawerInstance.draw(tree, item.id, 'light', false);
+        }, function (err) {
+            console.error("Error drawing SMILES:", err);
+        });
+    });
+}
+// ---------------------------
+
     /***********************
      * STATE
      ***********************/
@@ -194,7 +230,6 @@ function fixMathText(text) {
   }
 }
     // Make chooseCourse globally available
-    // Make chooseCourse globally available
     window.chooseCourse = async function(courseId, courseName, examType) { // Made Async
       showLoading(true);
       
@@ -219,7 +254,7 @@ function fixMathText(text) {
         yearSelect.innerHTML = '';
         if(uniqueYears.length === 0) {
            const opt = document.createElement('option');
-           opt.text = "No years found";
+           opt.text = "No Questions Available for the selected Year";
            yearSelect.appendChild(opt);
         } else {
            uniqueYears.forEach(y => {
@@ -406,13 +441,19 @@ function fixMathText(text) {
       const qText = document.getElementById('qText');
       const qOptions = document.getElementById('qOptions');
       
-      // Use innerHTML to allow HTML/MathJax tags
-      qText.innerHTML = `${currentIndex+1}. ${q.q}`;
+      let currentSmilesQueue = [];
+
+      // Parse Q text
+      const parsedQ = parseSmilesTags(`${currentIndex+1}. ${q.q}`);
+      currentSmilesQueue.push(...parsedQ.smilesQueue);
+      qText.innerHTML = parsedQ.htmlText;
       
+      // Parse Options
       qOptions.innerHTML = q.opts.map((t,idx)=>{
         const checked = answers[currentIndex]===idx ? 'checked' : '';
-        // Add span for better alignment
-        return `<label class="opt"><input type="radio" name="opt" value="${idx}" ${checked}> <span>${t}</span></label>`;
+        const parsedOpt = parseSmilesTags(t);
+        currentSmilesQueue.push(...parsedOpt.smilesQueue);
+        return `<label class="opt"><input type="radio" name="opt" value="${idx}" ${checked}> <span>${parsedOpt.htmlText}</span></label>`;
       }).join('');
       
       buildQGrid();
@@ -423,6 +464,9 @@ function fixMathText(text) {
           buildQGrid();
         });
       });
+
+      // NEW: Draw molecules!
+      drawMolecules(currentSmilesQueue);
 
       // TRIGGER MATHJAX
       if(window.MathJax) {
@@ -471,18 +515,29 @@ function fixMathText(text) {
       setTimeout(() => {
         const list = document.getElementById('reviewList');
         
+        let reviewSmilesQueue = []; // NEW: Track review molecules
+
         list.innerHTML = questions.map((q,i)=>{
           const userIdx = answers[i];
           const ok = userIdx===q.ans;
           
-          // WARNING: We do NOT escapeHtml here because it breaks LaTeX symbols like < or > 
-          // Since we sanitized/fixed the text in startExam, it is safe enough for this purpose.
-          const your = userIdx==null ? '<em>No answer</em>' : q.opts[userIdx]; 
-          const correct = q.opts[q.ans];
+          const parsedQ = parseSmilesTags(`Q${i+1}: ${q.q}`);
+          reviewSmilesQueue.push(...parsedQ.smilesQueue);
+
+          let yourText = '<em>No answer</em>';
+          if (userIdx != null) {
+              const yourParsed = parseSmilesTags(q.opts[userIdx]);
+              reviewSmilesQueue.push(...yourParsed.smilesQueue);
+              yourText = yourParsed.htmlText;
+          }
+
+          const correctParsed = parseSmilesTags(q.opts[q.ans]);
+          reviewSmilesQueue.push(...correctParsed.smilesQueue);
+          const correctText = correctParsed.htmlText;
 
           return `<div class="card" style="background:rgba(255,255,255,0.05)">
             <div style="font-weight:700; margin-bottom:10px; font-size:16px; line-height:1.5">
-               Q${i+1}: ${q.q}
+               ${parsedQ.htmlText}
             </div>
             <div style="display:flex; flex-direction:column; gap:8px;">
               <div class="pill" style="width:fit-content; background:${ok?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.25)'}; border:1px solid ${ok?'#10b981':'#ef4444'}">
@@ -490,11 +545,11 @@ function fixMathText(text) {
               </div>
               <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:6px;">
                  <span style="color:#aaa; font-size:12px;">YOUR ANSWER:</span><br>
-                 <strong>${your}</strong>
+                 <strong>${yourText}</strong>
               </div>
               <div style="background:rgba(16,185,129,0.1); padding:8px; border-radius:6px; border:1px solid rgba(16,185,129,0.2)">
                  <span style="color:#10b981; font-size:12px;">CORRECT ANSWER:</span><br>
-                 <strong>${correct}</strong>
+                 <strong>${correctText}</strong>
               </div>
             </div>
           </div>`;
@@ -503,6 +558,9 @@ function fixMathText(text) {
         document.getElementById('stepResult').style.display='none';
         document.getElementById('stepReview').style.display='block';
         
+        // NEW: Draw molecules before MathJax
+        drawMolecules(reviewSmilesQueue);
+
         // --- CRITICAL FIX: WAKE UP MATHJAX ---
         if(window.MathJax) {
             MathJax.typesetPromise([list]).then(() => {
@@ -514,6 +572,7 @@ function fixMathText(text) {
 
       }, 500);
     };
+    
     window.backToResults = function(){
       showLoading(true);
       setTimeout(() => {
@@ -589,4 +648,3 @@ function fixMathText(text) {
     if (!logged || !logged.email) {
       window.location.href = "index.html";
     }
-  
