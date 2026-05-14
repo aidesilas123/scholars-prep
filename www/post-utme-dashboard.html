@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>POST UTME — Dashboard</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <!-- IONIC NATIVE FRAMEWORK -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+  <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
+
+  <!-- Supabase Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      
+      --ion-color-primary: #044908;
+      --ion-color-primary-rgb: 4,73,8;
+      --ion-color-primary-contrast: #ffffff;
+      --ion-color-primary-tint: #1d5b20;
+      
+      /* DESTRUCTIVE RED */
+      --ion-color-danger: #d32f2f;
+    }
+    /* PREVENT RAW TEXT FLASH */
+    ion-app:not(.hydrated) {
+      visibility: hidden;
+      opacity: 0;
+    }
+    
+    ion-app.hydrated {
+      visibility: visible;
+      opacity: 1;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    /* DARK MODE STYLES (Activated by adding 'dark' class to body) */
+    body.dark {
+      --ion-background-color: #121212;
+      --ion-text-color: #ffffff;
+      --ion-color-step-50: #1e1e1e;
+      --ion-toolbar-background: #1f1f1f;
+      --ion-item-background: #1e1e1e;
+      --ion-card-background: #1e1e1e;
+      --ion-tab-bar-background: #121212;
+    }
+
+    /* CAROUSEL SLIDER STYLES */
+    /* CAROUSEL SLIDER STYLES */
+    .slider-container {
+      width: 100%;
+      overflow: hidden;
+      margin: 20px 0;
+      border-radius: 12px;
+      position: relative;
+    }
+    .slider-track {
+      display: flex;
+      overflow-x: auto;               /* Enables manual swiping */
+      scroll-snap-type: x mandatory;  /* Forces snapping to cards */
+      scroll-behavior: smooth;        /* Smooth auto-scroll */
+      -webkit-overflow-scrolling: touch; /* Native iOS momentum */
+      width: 100%;                    /* Changed from 300% */
+    }
+    .slider-track::-webkit-scrollbar {
+      display: none;                  /* Hides the ugly scrollbar */
+    }
+    .slide-card {
+      min-width: 100%;                /* Forces 1 card per screen */
+      scroll-snap-align: center;      /* Snaps the card to the middle */
+      margin: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid rgba(128,128,128,0.1);
+    }
+    
+    /* CUSTOM BOTTOM TABS (Spotify Vibe) */
+    ion-tab-bar {
+      border-top: 1px solid rgba(128,128,128,0.1);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nexus-icon {
+      width: 24px;
+      height: 24px;
+      margin-bottom: 2px;
+      opacity: 0.6;
+      transition: 0.2s;
+    }
+    ion-tab-button.tab-selected .nexus-icon {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <ion-app>
+    <!-- 1. SLIDE BAR (HAMBURGER MENU) -->
+    <ion-menu side="end" content-id="main-content">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Menu</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content>
+        <ion-list lines="none">
+          <ion-item button style="margin-top: 10px;">
+            <ion-icon name="person-circle-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>Profile</ion-label>
+          </ion-item>
+          
+          <ion-item button style="margin-top: 10px;">
+            <ion-icon name="alert-circle-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>Report Issue</ion-label>
+          </ion-item>
+          
+          <ion-item button style="margin-top: 10px;">
+            <ion-icon name="settings-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>Settings</ion-label>
+          </ion-item>
+
+          <ion-item button id="themeToggleBtn" style="margin-top: 10px;">
+            <ion-icon name="moon-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>Toggle Theme</ion-label>
+          </ion-item>
+
+          <!-- RED BUTTON FOR POPUP/LOGOUT ACTION -->
+          <ion-item button id="logoutBtn" style="margin-top: 30px; --background: rgba(211, 47, 47, 0.1); border-radius: 8px; margin-inline: 16px;">
+            <ion-icon name="log-out-outline" slot="start" color="danger"></ion-icon>
+            <ion-label color="danger" style="font-weight: bold;">Logout</ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-content>
+    </ion-menu>
+
+    <!-- 2. MAIN DASHBOARD CONTENT -->
+    <div class="ion-page" id="main-content">
+      
+      <!-- HEADER -->
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <!-- Logo on the left -->
+          <img src="favicon1.png" alt="Logo" style="height: 35px; margin-left: 16px; border-radius: 50%;" slot="start">
+          
+          <!-- Text and Menu on the right -->
+          <div slot="end" style="display: flex; align-items: center;">
+            <span style="font-weight: bold; color: var(--ion-color-primary); font-size: 14px; margin-right: 8px;">Scholars Prep</span>
+            <ion-menu-button color="primary"></ion-menu-button>
+          </div>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding">
+        
+        <!-- ========================================== -->
+        <!-- SKELETON UI (Shown instantly, ZERO white screen) -->
+        <!-- ========================================== -->
+        <div id="skeleton-ui">
+          <ion-skeleton-text animated style="width: 50%; height: 28px; margin-bottom: 8px; border-radius: 4px;"></ion-skeleton-text>
+          <ion-skeleton-text animated style="width: 80%; height: 16px; margin-bottom: 24px; border-radius: 4px;"></ion-skeleton-text>
+          
+          <ion-skeleton-text animated style="width: 100%; height: 180px; border-radius: 12px; margin-bottom: 20px;"></ion-skeleton-text>
+          
+          <ion-skeleton-text animated style="width: 100%; height: 60px; border-radius: 8px; margin-bottom: 12px;"></ion-skeleton-text>
+          <ion-skeleton-text animated style="width: 100%; height: 60px; border-radius: 8px;"></ion-skeleton-text>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- REAL CONTENT (Fades in after data loads) -->
+        <!-- ========================================== -->
+        <div id="real-ui" style="display: none; opacity: 0; transition: opacity 0.4s ease;">
+          <h2 style="margin-top: 0; font-weight: bold;">Welcome, <span id="candidateName">Candidate</span> 👋</h2>
+          <p style="color: gray; margin-top: -5px; margin-bottom: 20px;">Let's ace your POST UTME Exams.</p>
+
+          <!-- AUTO-SLIDING CAROUSEL -->
+          <div class="slider-container">
+            <div class="slider-track" id="sliderTrack">
+              
+              <!-- CARD 1 -->
+              <ion-card class="slide-card">
+                <ion-card-header>
+                  <ion-icon name="library" color="primary" style="font-size: 42px;"></ion-icon>
+                  <ion-card-title style="font-size: 18px; font-weight: bold;">Question Bank</ion-card-title>
+                </ion-card-header>
+                <ion-card-content>
+                  Comprehensive past questions tailored for ABU Aspirants.
+                  <br><br><ion-button fill="outline" size="small">Start Practicing</ion-button>
+                </ion-card-content>
+              </ion-card>
+
+              <!-- CARD 2 -->
+              <ion-card class="slide-card">
+                <ion-card-header>
+                  <ion-icon name="logo-whatsapp" style="font-size: 42px; color: #25D366;"></ion-icon>
+                  <ion-card-title style="font-size: 18px; font-weight: bold;">WhatsApp Channel</ion-card-title>
+                </ion-card-header>
+                <ion-card-content>
+                  Join our WhatsApp channel below for instant admission updates.
+                  <br><br><ion-button fill="outline" color="success" size="small">Join Now</ion-button>
+                </ion-card-content>
+              </ion-card>
+
+              <!-- CARD 3 -->
+              <ion-card class="slide-card">
+                <ion-card-header>
+                  <ion-icon name="gift" style="font-size: 42px; color: #FF4500;"></ion-icon>
+                  <ion-card-title style="font-size: 18px; font-weight: bold;">Earn Gifts</ion-card-title>
+                </ion-card-header>
+                <ion-card-content>
+                  Invite other candidates using your link for massive discounts.
+                  <br><br><ion-button fill="outline" color="warning" size="small">Get Link</ion-button>
+                </ion-card-content>
+              </ion-card>
+
+            </div>
+          </div>
+
+          <!-- Extra content space to push tabs down if needed -->
+          <h3 style="font-weight: bold; margin-top: 30px;">Quick Actions</h3>
+          <ion-button expand="block" color="primary" style="--border-radius: 10px; margin-bottom: 12px;">
+            <ion-icon name="book-outline" slot="start"></ion-icon> View Syllabus
+          </ion-button>
+          <ion-button expand="block" fill="outline" color="primary" style="--border-radius: 10px;">
+            <ion-icon name="bar-chart-outline" slot="start"></ion-icon> My Statistics
+          </ion-button>
+          
+          <br><br> <!-- Space for bottom tabs -->
+        </div>
+
+      </ion-content>
+
+      <!-- 3. BOTTOM NAVIGATION BAR -->
+      <!-- 3. BOTTOM NAVIGATION BAR -->
+      <ion-tab-bar slot="bottom" id="bottomNavBar">
+        <!-- Dashboard / Home -->
+        <ion-tab-button tab="home" href="post-utme-dashboard.html" class="tab-selected">
+          <ion-icon name="home"></ion-icon>
+          <ion-label>Home</ion-label>
+        </ion-tab-button>
+
+        <!-- Nexus AI (Mapped to your chat.html) -->
+        <ion-tab-button tab="nexus" onclick="window.location.href='chat.html'">
+          <img src="Logo.png" alt="Nexus" class="nexus-icon">
+          <ion-label>Nexus</ion-label>
+        </ion-tab-button>
+
+        <!-- Exam Mode (Mapped to your mock-exam.html) -->
+        <ion-tab-button tab="exam" onclick="window.location.href='exam-mode.html'">
+          <ion-icon name="document-text-outline"></ion-icon>
+          <ion-label>Exam Mode</ion-label>
+        </ion-tab-button>
+
+        <!-- CBT Practice (Mapped to your cbt.html) -->
+        <ion-tab-button tab="cbt" onclick="window.location.href='post-utme-cbt.html'">
+          <ion-icon name="laptop-outline"></ion-icon>
+          <ion-label>CBT</ion-label>
+        </ion-tab-button>
+
+        <!-- Alerts / Notifications (Mapped to your notifications.html) -->
+        <ion-tab-button tab="notifications" onclick="window.location.href='post-utme-alerts.html'">
+          <ion-icon name="notifications-outline"></ion-icon>
+          <ion-label>Alerts</ion-label>
+        </ion-tab-button>
+      </ion-tab-bar>
+
+    </div>
+  </ion-app>
+
+  <script src="post-utme-dashboard.js"></script>
+</body>
+</html>
