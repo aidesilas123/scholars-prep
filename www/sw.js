@@ -1,17 +1,45 @@
 const CACHE_NAME = 'scholars-prep-cache-v6';
 
+
 const PRECACHE_URLS = [
   '/',
-  '/index.html',
   '/favicon1.png',
   '/supabase-config.js',
-  '/post-utme-login.html',
+  '/dashboard',
+  '/dashboard.js',
+  '/login',
+  '/login.js',
+  '/cbt',
+  '/cbt.js',
+  '/leaderboard',
+  '/leaderboard.js',
+  '/history',
+  '/history.js',
+  '/mock-exam',
+  '/mock-exam.js',
+  '/pastquestions',
+  '/past-questions.js',
+  '/chat',
+  '/nexus.js',
+  '/messages',
+  '/messages.js',
+  '/notifications',
+  '/notifications.js',
+  '/feedback',
+  '/feedback.js',
+  '/update-password',
+  '/update-password.js',
+  // POST UTME
+  '/post-utme-login',
   '/post-utme-login.js',
-  '/post-utme-dashboard.html',
+  '/post-utme-dashboard',
   '/post-utme-dashboard.js',
-  '/post-utme-cbt.html',
-  '/post-utme-cbt.js'
-  // Note: I shortened the list here for speed, but you can add your other files back in!
+  '/post-utme-cbt',
+  '/post-utme-cbt.js',
+  '/post-utme-alerts',
+  '/post-utme-alerts.js',
+  '/exam-mode',
+  '/exam-mode.js'
 ];
 
 // 1. INSTALL
@@ -20,58 +48,89 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return Promise.allSettled(
-        PRECACHE_URLS.map(url => cache.add(url).catch(() => console.warn('Skipped:', url)))
+        PRECACHE_URLS.map(url =>
+          cache.add(url).catch(err => console.warn('Cache skipped:', url, err))
+        )
       );
     })
   );
 });
 
-// 2. ACTIVATE
+// 2. ACTIVATE — nuke old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
-        })
-      );
-    })
+    caches.keys().then(cacheNames =>
+      Promise.all(
+        cacheNames
+          .filter(name => name !== CACHE_NAME)
+          .map(name => caches.delete(name))
+      )
+    )
   );
   self.clients.claim();
 });
 
-// 3. FETCH (The Vercel Redirect Fix)
+// 3. FETCH — Cache-first, zero white screen
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
-  if (event.request.url.includes('supabase.co')) return; // Never cache database
 
-  event.respondWith((async () => {
-    try {
-      // THE FIX: If loading a full HTML page, fetch the raw URL to bypass the strict redirect security block.
-      // Otherwise, fetch the normal request (for CSS, JS, images).
-      const fetchTarget = event.request.mode === 'navigate' ? event.request.url : event.request;
-      
-      // Try the network (Vercel) first
-      const networkResponse = await fetch(fetchTarget);
+  // Never intercept Supabase — always live
+  if (event.request.url.includes('supabase.co')) return;
 
-      // Save a clean backup to the cache if it succeeds
-      if (networkResponse && networkResponse.status === 200) {
-        const cache = await caches.open(CACHE_NAME);
-        cache.put(event.request, networkResponse.clone());
+  // Never intercept cdn/external scripts — let them pass through
+  if (
+    event.request.url.includes('cdn.jsdelivr.net') ||
+    event.request.url.includes('fonts.googleapis.com') ||
+    event.request.url.includes('fonts.gstatic.com')
+  ) return;
+
+  event.respondWith(
+    caches.match(event.request).then(cachedResponse => {
+      // ✅ Serve from cache instantly (zero white screen)
+      if (cachedResponse) {
+        // Silently refresh cache in background
+        fetch(event.request, { redirect: 'follow' })
+          .then(networkResponse => {
+            if (
+              networkResponse &&
+              networkResponse.status === 200 &&
+              networkResponse.type === 'basic' &&
+              !networkResponse.redirected
+            ) {
+              caches.open(CACHE_NAME).then(cache =>
+                cache.put(event.request, networkResponse.clone())
+              );
+            }
+          })
+          .catch(() => {});
+
+        return cachedResponse; // ← instant response, no waiting
       }
-      
-      return networkResponse;
-    } catch (error) {
-      // If Vercel fails (Offline), pull the backup from the cache
-      const cachedResponse = await caches.match(event.request);
-      if (cachedResponse) return cachedResponse;
 
-      // Failsafe to prevent ERR_FAILED crashes
-      return new Response('Offline. No connection available.', { 
-          status: 503, 
-          headers: { 'Content-Type': 'text/plain' }
-      });
-    }
-  })());
+      // Not in cache — fetch from network and cache it
+      return fetch(event.request, { redirect: 'follow' })
+        .then(networkResponse => {
+          if (
+            networkResponse &&
+            networkResponse.status === 200 &&
+            networkResponse.type === 'basic' &&
+            !networkResponse.redirected
+          ) {
+            caches.open(CACHE_NAME).then(cache =>
+              cache.put(event.request, networkResponse.clone())
+            );
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Offline fallback
+          return new Response('You are offline. Please check your connection.', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({ 'Content-Type': 'text/plain' })
+          });
+        });
+    })
+  );
 });
