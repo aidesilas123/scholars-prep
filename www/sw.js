@@ -1,6 +1,6 @@
-const CACHE_NAME = 'scholars-prep-cache-v3';
+const CACHE_NAME = 'scholars-prep-cache-v5';
 
-// 1. THE PRE-CACHE LIST
+// 1. THE PRE-CACHE LIST (The Original Plan)
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -43,77 +43,65 @@ const PRECACHE_URLS = [
   '/exam-mode.js'
 ];
 
-// INSTALL EVENT: Safe Install Strategy
+// 2. INSTALL: Safe Background Caching
 self.addEventListener('install', event => {
+  self.skipWaiting(); 
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
+      // Safe Install: Caches one by one. Does NOT crash if a file is missing.
       return Promise.allSettled(
         PRECACHE_URLS.map(url => cache.add(url).catch(err => console.warn('Cache skipped missing file:', url)))
       );
     })
   );
-  self.skipWaiting();
 });
 
-// ACTIVATE EVENT: Clean up old v1/v2 caches
+// 3. ACTIVATE: Nuke Old Caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
-  self.clients.claim();
+  self.clients.claim(); 
 });
 
-// FETCH EVENT: The Bulletproof Traffic Controller
+// 4. FETCH: Zero White Screen Logic
 self.addEventListener('fetch', event => {
-  const requestUrl = new URL(event.request.url);
+  if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
+  
+  // NEVER cache Supabase Database calls (always fetch live questions/auth)
+  if (event.request.url.includes('supabase.co')) return;
 
-  // RULE A: STRICT BYPASS FOR SUPABASE (Always Live)
-  if (requestUrl.hostname.includes('supabase.co')) {
-    return; 
-  }
+  event.respondWith(
+    caches.match(event.request).then(cachedResponse => {
+      
+      // Fetch fresh files from Vercel silently in the background
+      const networkFetch = fetch(event.request).then(networkResponse => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+        }
+        return networkResponse;
+      }).catch(() => {
+        // Fail silently if offline, rely entirely on the cache
+      });
 
-  // RULE B: ONLY INTERCEPT OUR OWN DOMAIN'S GET REQUESTS
-  if (requestUrl.origin === location.origin && event.request.method === 'GET') {
-    event.respondWith(
-      caches.match(event.request).then(cachedResponse => {
-        
-        // BUG FIX 1: Explicitly tell the fetch to follow Vercel's redirects
-        const networkFetch = fetch(event.request, { redirect: 'follow' })
-          .then(networkResponse => {
-            // BUG FIX 2: Only clone and cache valid, basic HTTP 200 responses
-            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-            }
-            return networkResponse;
-          })
-          .catch(error => {
-            console.warn('Network unavailable for:', event.request.url);
-            
-            // BUG FIX 3: Prevent the ERR_FAILED crash!
-            // If network fails, return the cache. If cache is also empty, return a fake 503 response.
-            // NEVER return undefined.
-            return cachedResponse || new Response('Offline. Please check your internet connection.', {
-              status: 503,
-              statusText: 'Service Unavailable',
-              headers: new Headers({ 'Content-Type': 'text/plain' })
-            });
-          });
-
-        // Return cache instantly if we have it, otherwise wait for the network
-        return cachedResponse || networkFetch;
-      })
-    );
-  }
+      // ORIGINAL PLAN: Instantly return the cached file so the screen loads in 0ms.
+      // If it isn't cached yet, wait for the network.
+      // If both fail, return a safe fallback so the browser doesn't crash with ERR_FAILED.
+      return cachedResponse || networkFetch || new Response('Offline. Please check your internet connection.', {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: new Headers({ 'Content-Type': 'text/plain' })
+      });
+    })
+  );
 });
