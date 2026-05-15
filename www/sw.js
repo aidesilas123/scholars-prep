@@ -1,20 +1,17 @@
-const CACHE_NAME = 'scholars-prep-cache-v6';
-
+const CACHE_NAME = 'scholars-prep-cache-v7';
 
 const PRECACHE_URLS = [
   '/',
   '/favicon1.png',
   '/supabase-config.js',
-  '/dashboard',
-  '/dashboard.js',
   '/login',
   '/login.js',
+  '/dashboard',
+  '/dashboard.js',
   '/cbt',
   '/cbt.js',
   '/leaderboard',
   '/leaderboard.js',
-  '/history',
-  '/history.js',
   '/mock-exam',
   '/mock-exam.js',
   '/pastquestions',
@@ -27,17 +24,12 @@ const PRECACHE_URLS = [
   '/notifications.js',
   '/feedback',
   '/feedback.js',
-  '/update-password',
-  '/update-password.js',
-  // POST UTME
   '/post-utme-login',
   '/post-utme-login.js',
   '/post-utme-dashboard',
   '/post-utme-dashboard.js',
   '/post-utme-cbt',
-  '/post-utme-cbt.js',
   '/post-utme-alerts',
-  '/post-utme-alerts.js',
   '/exam-mode',
   '/exam-mode.js'
 ];
@@ -46,91 +38,88 @@ const PRECACHE_URLS = [
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return Promise.allSettled(
+    caches.open(CACHE_NAME).then(cache =>
+      Promise.allSettled(
         PRECACHE_URLS.map(url =>
-          cache.add(url).catch(err => console.warn('Cache skipped:', url, err))
+          cache.add(url).catch(() => console.warn('Skipped (not found on server):', url))
         )
-      );
-    })
+      )
+    )
   );
 });
 
-// 2. ACTIVATE — nuke old caches
+// 2. ACTIVATE
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames =>
-      Promise.all(
-        cacheNames
-          .filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
-      )
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-// 3. FETCH — Cache-first, zero white screen
+// ✅ HELPER: Normalize any request — strips .html so both
+// /login.html and /login always resolve to the same cache key
+function normalizeRequest(request) {
+  const url = new URL(request.url);
+  if (url.pathname.endsWith('.html')) {
+    const clean = url.origin + url.pathname.replace(/\.html$/, '') + url.search;
+    return new Request(clean, { mode: 'same-origin' });
+  }
+  return request; // already clean, return as-is
+}
+
+// 3. FETCH
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
 
-  // Never intercept Supabase — always live
-  if (event.request.url.includes('supabase.co')) return;
+  const url = new URL(event.request.url);
 
-  // Never intercept cdn/external scripts — let them pass through
+  // Always bypass external services
   if (
-    event.request.url.includes('cdn.jsdelivr.net') ||
-    event.request.url.includes('fonts.googleapis.com') ||
-    event.request.url.includes('fonts.gstatic.com')
+    url.hostname.includes('supabase.co') ||
+    url.hostname.includes('jsdelivr.net') ||
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('gstatic.com')
   ) return;
 
+  // ✅ Normalize ONCE — all logic below uses the clean request
+  const req = normalizeRequest(event.request);
+
   event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      // ✅ Serve from cache instantly (zero white screen)
+    caches.match(req).then(cachedResponse => {
+
+      // Cache hit — serve instantly, update in background
       if (cachedResponse) {
-        // Silently refresh cache in background
-        fetch(event.request, { redirect: 'follow' })
-          .then(networkResponse => {
-            if (
-              networkResponse &&
-              networkResponse.status === 200 &&
-              networkResponse.type === 'basic' &&
-              !networkResponse.redirected
-            ) {
-              caches.open(CACHE_NAME).then(cache =>
-                cache.put(event.request, networkResponse.clone())
-              );
+        fetch(req, { redirect: 'follow' })
+          .then(res => {
+            if (res && res.status === 200 && res.type === 'basic' && !res.redirected) {
+              const clone = res.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(req, clone));
             }
           })
           .catch(() => {});
 
-        return cachedResponse; // ← instant response, no waiting
+        return cachedResponse;
       }
 
-      // Not in cache — fetch from network and cache it
-      return fetch(event.request, { redirect: 'follow' })
-        .then(networkResponse => {
-          if (
-            networkResponse &&
-            networkResponse.status === 200 &&
-            networkResponse.type === 'basic' &&
-            !networkResponse.redirected
-          ) {
-            caches.open(CACHE_NAME).then(cache =>
-              cache.put(event.request, networkResponse.clone())
-            );
+      // Cache miss — fetch, cache, return
+      return fetch(req, { redirect: 'follow' })
+        .then(res => {
+          if (res && res.status === 200 && res.type === 'basic' && !res.redirected) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(req, clone));
           }
-          return networkResponse;
+          return res;
         })
-        .catch(() => {
-          // Offline fallback
-          return new Response('You are offline. Please check your connection.', {
+        .catch(() =>
+          new Response('You are offline. Please check your connection.', {
             status: 503,
             statusText: 'Service Unavailable',
             headers: new Headers({ 'Content-Type': 'text/plain' })
-          });
-        });
+          })
+        );
     })
   );
 });
