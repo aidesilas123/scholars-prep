@@ -1,7 +1,6 @@
-const CACHE_NAME = 'scholars-prep-cache-v2';
+const CACHE_NAME = 'scholars-prep-cache-v3';
 
-// 1. THE PRE-CACHE LIST (The App Shell)
-// Keep this list small! Only the absolute essentials for instant loading.
+// 1. THE PRE-CACHE LIST
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -9,7 +8,6 @@ const PRECACHE_URLS = [
   '/supabase-config.js',
   '/dashboard.html',
   '/dashboard.js',
-
   '/login.html',
   '/login.js',
   '/cbt.html',
@@ -32,7 +30,6 @@ const PRECACHE_URLS = [
   '/feedback.js',
   '/update-password.html',
   '/update-password.js',
-
   // POST UTME Core Files:
   '/post-utme-login.html',
   '/post-utme-login.js',
@@ -50,23 +47,22 @@ const PRECACHE_URLS = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      // SAFE INSTALL: Maps through the list and caches one by one.
-      // If a file is missing, it logs a warning but DOES NOT crash the app.
       return Promise.allSettled(
         PRECACHE_URLS.map(url => cache.add(url).catch(err => console.warn('Cache skipped missing file:', url)))
       );
     })
   );
-  self.skipWaiting(); // Forces the browser to activate this worker immediately
+  self.skipWaiting();
 });
 
-// ACTIVATE EVENT: Clean up old data (e.g., deletes v1 when v2 installs)
+// ACTIVATE EVENT: Clean up old v1/v2 caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -76,41 +72,47 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// FETCH EVENT: The Traffic Controller
+// FETCH EVENT: The Bulletproof Traffic Controller
 self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
 
-  // RULE A: STRICT BYPASS FOR SUPABASE (Always 100% Live)
+  // RULE A: STRICT BYPASS FOR SUPABASE (Always Live)
   if (requestUrl.hostname.includes('supabase.co')) {
     return; 
   }
 
-  // RULE B: STALE-WHILE-REVALIDATE
-  // Only intercept GET requests from our own domain
+  // RULE B: ONLY INTERCEPT OUR OWN DOMAIN'S GET REQUESTS
   if (requestUrl.origin === location.origin && event.request.method === 'GET') {
     event.respondWith(
       caches.match(event.request).then(cachedResponse => {
         
-        // Fetch fresh code from Vercel in the background
-        const fetchPromise = fetch(event.request).then(networkResponse => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, networkResponse.clone());
+        // BUG FIX 1: Explicitly tell the fetch to follow Vercel's redirects
+        const networkFetch = fetch(event.request, { redirect: 'follow' })
+          .then(networkResponse => {
+            // BUG FIX 2: Only clone and cache valid, basic HTTP 200 responses
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then(cache => {
+                cache.put(event.request, responseToCache);
+              });
+            }
+            return networkResponse;
+          })
+          .catch(error => {
+            console.warn('Network unavailable for:', event.request.url);
+            
+            // BUG FIX 3: Prevent the ERR_FAILED crash!
+            // If network fails, return the cache. If cache is also empty, return a fake 503 response.
+            // NEVER return undefined.
+            return cachedResponse || new Response('Offline. Please check your internet connection.', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: new Headers({ 'Content-Type': 'text/plain' })
             });
-          }
-          return networkResponse;
-        }).catch(error => {
-           // Fails silently if offline, relies strictly on cache
-           console.warn('Network unavailable, relying on cache for:', event.request.url);
-           throw error; 
-        });
+          });
 
-        // Return the instant cached version to eliminate the white screen.
-        // If it isn't in the cache, fallback to the network promise.
-        return cachedResponse || fetchPromise;
-      }).catch(() => {
-         // Failsafe for Android WebViews: If BOTH cache and network fail, 
-         // prevent the ERR_FAILED crash by doing nothing and letting the browser handle it.
+        // Return cache instantly if we have it, otherwise wait for the network
+        return cachedResponse || networkFetch;
       })
     );
   }
