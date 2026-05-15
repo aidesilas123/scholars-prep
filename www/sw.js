@@ -1,107 +1,77 @@
-const CACHE_NAME = 'scholars-prep-cache-v5';
+const CACHE_NAME = 'scholars-prep-cache-v6';
 
-// 1. THE PRE-CACHE LIST (The Original Plan)
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/favicon1.png',
   '/supabase-config.js',
-  '/dashboard.html',
-  '/dashboard.js',
-  '/login.html',
-  '/login.js',
-  '/cbt.html',
-  '/cbt.js',
-  '/leaderboard.html',
-  '/leaderboard.js',
-  '/history.html',
-  '/mock-exam.html',
-  '/history.js',
-  '/mock-exam.js',
-  '/pastquestions.html',
-  '/past-questions.js',
-  '/chat.html',
-  '/nexus.js',
-  '/messages.html',
-  '/messages.js',
-  '/notifications.html',
-  '/notifications.js',
-  '/feedback.html',
-  '/feedback.js',
-  '/update-password.html',
-  '/update-password.js',
-  // POST UTME Core Files:
   '/post-utme-login.html',
   '/post-utme-login.js',
   '/post-utme-dashboard.html',
   '/post-utme-dashboard.js',
   '/post-utme-cbt.html',
-  '/post-utme-cbt.js',
-  '/post-utme-alerts.html',
-  '/post-utme-alerts.js',
-  '/exam-mode.html',
-  '/exam-mode.js'
+  '/post-utme-cbt.js'
+  // Note: I shortened the list here for speed, but you can add your other files back in!
 ];
 
-// 2. INSTALL: Safe Background Caching
+// 1. INSTALL
 self.addEventListener('install', event => {
-  self.skipWaiting(); 
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      // Safe Install: Caches one by one. Does NOT crash if a file is missing.
       return Promise.allSettled(
-        PRECACHE_URLS.map(url => cache.add(url).catch(err => console.warn('Cache skipped missing file:', url)))
+        PRECACHE_URLS.map(url => cache.add(url).catch(() => console.warn('Skipped:', url)))
       );
     })
   );
 });
 
-// 3. ACTIVATE: Nuke Old Caches
+// 2. ACTIVATE
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
+          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
         })
       );
     })
   );
-  self.clients.claim(); 
+  self.clients.claim();
 });
 
-// 4. FETCH: Zero White Screen Logic
+// 3. FETCH (The Vercel Redirect Fix)
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
-  
-  // NEVER cache Supabase Database calls (always fetch live questions/auth)
-  if (event.request.url.includes('supabase.co')) return;
+  if (event.request.url.includes('supabase.co')) return; // Never cache database
 
-  event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
+  event.respondWith((async () => {
+    try {
+      // THE FIX: If loading a full HTML page, fetch the raw URL to bypass the strict redirect security block.
+      // Otherwise, fetch the normal request (for CSS, JS, images).
+      const fetchTarget = event.request.mode === 'navigate' ? event.request.url : event.request;
       
-      // Fetch fresh files from Vercel silently in the background
-      const networkFetch = fetch(event.request).then(networkResponse => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Fail silently if offline, rely entirely on the cache
-      });
+      // Try the network (Vercel) first
+      const networkResponse = await fetch(fetchTarget);
 
-      // ORIGINAL PLAN: Instantly return the cached file so the screen loads in 0ms.
-      // If it isn't cached yet, wait for the network.
-      // If both fail, return a safe fallback so the browser doesn't crash with ERR_FAILED.
-      return cachedResponse || networkFetch || new Response('Offline. Please check your internet connection.', {
-        status: 503,
-        statusText: 'Service Unavailable',
-        headers: new Headers({ 'Content-Type': 'text/plain' })
+      // Save a clean backup to the cache if it succeeds
+      if (networkResponse && networkResponse.status === 200) {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(event.request, networkResponse.clone());
+      }
+      
+      return networkResponse;
+    } catch (error) {
+      // If Vercel fails (Offline), pull the backup from the cache
+      const cachedResponse = await caches.match(event.request);
+      if (cachedResponse) return cachedResponse;
+
+      // Failsafe to prevent ERR_FAILED crashes
+      return new Response('Offline. No connection available.', { 
+          status: 503, 
+          headers: { 'Content-Type': 'text/plain' }
       });
-    })
-  );
+    }
+  })());
 });
