@@ -163,5 +163,12 @@
   <div id="modalRoot" style="display:none;"></div>
 
   <script src="post-utme-login.js"></script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
+</script>
 </body>
 </html>

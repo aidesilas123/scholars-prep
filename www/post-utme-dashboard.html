@@ -268,5 +268,12 @@
   </ion-app>
 
   <script src="post-utme-dashboard.js"></script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
+</script>
 </body>
 </html>
