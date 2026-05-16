@@ -11,10 +11,36 @@ const _sb = window.supabase.createClient('https://xtmoolyxxylylttugjek.supabase.
 document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('post_utme_theme') === 'dark') document.body.classList.add('dark');
     
-    // Set initial history state to hook into hardware back button
+    // Setup Linear Navigation Stack
     history.replaceState({ view: 'view-selection' }, '', '');
+    
+    // Load config in the background without freezing the UI
     loadExamSetup();
 });
+
+// --- OFFLINE DROPPED NETWORK DETECTOR ---
+window.addEventListener('offline', function() {
+    showModal('Network Error', '⚠️ You have lost internet connection. Please check your network to ensure your results save properly.', hideModal, false);
+});
+
+// --- CUSTOM MODAL SYSTEM ---
+function showModal(title, msg, onOk, showCancel = true) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalMsg').innerHTML = msg; // Allows HTML inside modal
+    const cancelBtn = document.getElementById('modalCancel');
+    cancelBtn.style.display = showCancel ? 'block' : 'none';
+
+    const okBtn = document.getElementById('modalOk');
+    const newOkBtn = okBtn.cloneNode(true);
+    okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+
+    newOkBtn.onclick = () => {
+        hideModal();
+        if (onOk) onOk();
+    };
+    document.getElementById('overlay').style.display = 'flex';
+}
+window.hideModal = () => document.getElementById('overlay').style.display = 'none';
 
 // --- STATE ---
 let subjectsData = [];
@@ -31,7 +57,7 @@ function showLoading(show, text="Loading...") {
     document.getElementById('loadText').textContent = text;
 }
 
-// Linear Navigation Engine
+// --- LINEAR NAVIGATION ENGINE ---
 function switchView(viewId, pushToHistory = true) {
     document.querySelectorAll('.cbt-view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
@@ -42,7 +68,6 @@ function switchView(viewId, pushToHistory = true) {
 
 window.addEventListener('popstate', (e) => {
     if (e.state && e.state.view) {
-        // Prevent backing out of the exam once started
         if (e.state.view === 'view-selection' && Object.keys(examData).length > 0 && timerId !== null) {
             history.pushState({ view: 'view-exam' }, '', '');
             confirmDashboardReturn();
@@ -70,65 +95,62 @@ function fixMathText(text) {
     return fixed;
 }
 
-// --- 1. LOAD DATA ---
+// --- 1. ASYNC LOAD DATA ---
 async function loadExamSetup() {
-    showLoading(true, "Configuring Exam Environment...");
-    
-    // Fetch Settings
-    const { data: settings } = await _sb.from('putme_exam_setting').select('*').limit(1).single();
-    if (settings) {
-        durationSec = (settings.duration_minutes || 120) * 60;
-        maxDurationSec = durationSec;
-        qLimitPerSubject = settings.question_limit || 50;
-    }
-    
-    document.getElementById('instQCount').innerText = qLimitPerSubject;
-    document.getElementById('instTime').innerText = `${Math.round(durationSec/60)} Minutes`;
-
-    // Fetch Subjects & Available Years
-    const { data: subjects } = await _sb.from('putme_subjects').select('*');
-    const { data: qYears } = await _sb.from('putme_questions').select('subject_id, year');
-    
-    const container = document.getElementById('subjectListContainer');
-    container.innerHTML = '';
-    
-    if(subjects) {
-        subjects.forEach(sub => {
-            subjectsData.push(sub);
+    try {
+        const { data: settings, error: setErr } = await _sb.from('putme_exam_setting').select('*').limit(1).single();
+        if (settings) {
+            durationSec = (settings.duration_minutes || 120) * 60;
+            maxDurationSec = durationSec;
+            qLimitPerSubject = settings.question_limit || 50;
             
-            let yearsHTML = '<ion-select-option value="random">Random</ion-select-option>';
-            if (qYears) {
-                const subYears = [...new Set(qYears.filter(q => q.subject_id === sub.id).map(q => q.year))].sort((a,b)=>b-a);
-                yearsHTML += subYears.map(y => `<ion-select-option value="${y}">${y}</ion-select-option>`).join('');
-            }
+            document.getElementById('instQCount').innerText = qLimitPerSubject;
+            document.getElementById('instTime').innerText = `${Math.round(durationSec/60)} Minutes`;
+        }
 
-            container.innerHTML += `
-            <ion-card class="subject-card" id="card-${sub.id}" onclick="toggleSubject(${sub.id})">
-                <ion-item lines="none" style="--background: transparent; cursor: pointer;">
-                    <ion-icon name="${sub.icon}" slot="start" color="primary"></ion-icon>
-                    <ion-label style="font-weight: bold;">${sub.name}</ion-label>
-                    <ion-checkbox slot="end" id="chk-${sub.id}" style="pointer-events: none;"></ion-checkbox>
-                </ion-item>
-                <div class="config-area" onclick="event.stopPropagation()">
-                    <ion-item fill="outline" style="--border-radius: 6px;">
-                        <ion-label position="stacked">Select Year</ion-label>
-                        <ion-select id="yr-${sub.id}" value="random">${yearsHTML}</ion-select>
+        const { data: subjects, error: subErr } = await _sb.from('putme_subjects').select('*');
+        const { data: qYears } = await _sb.from('putme_questions').select('subject_id, year');
+        
+        const container = document.getElementById('subjectListContainer');
+        container.innerHTML = '';
+        
+        if(subjects) {
+            subjects.forEach(sub => {
+                subjectsData.push(sub);
+                let yearsHTML = '<ion-select-option value="random">Random</ion-select-option>';
+                if (qYears) {
+                    const subYears = [...new Set(qYears.filter(q => q.subject_id === sub.id).map(q => q.year))].sort((a,b)=>b-a);
+                    yearsHTML += subYears.map(y => `<ion-select-option value="${y}">${y}</ion-select-option>`).join('');
+                }
+
+                container.innerHTML += `
+                <ion-card class="subject-card" id="card-${sub.id}" onclick="toggleSubject(${sub.id})">
+                    <ion-item lines="none" style="--background: transparent; cursor: pointer;">
+                        <ion-icon name="${sub.icon}" slot="start" color="primary"></ion-icon>
+                        <ion-label style="font-weight: bold;">${sub.name}</ion-label>
+                        <ion-checkbox slot="end" id="chk-${sub.id}" style="pointer-events: none;"></ion-checkbox>
                     </ion-item>
-                </div>
-            </ion-card>`;
-        });
+                    <div class="config-area" onclick="event.stopPropagation()">
+                        <ion-item fill="outline" style="--border-radius: 6px;">
+                            <ion-label position="stacked">Select Year</ion-label>
+                            <ion-select id="yr-${sub.id}" value="random">${yearsHTML}</ion-select>
+                        </ion-item>
+                    </div>
+                </ion-card>`;
+            });
+        }
+    } catch (err) {
+        console.error("Setup load failed:", err);
     }
-    showLoading(false);
 }
 
 window.toggleSubject = function(id) {
     const card = document.getElementById(`card-${id}`);
     const chk = document.getElementById(`chk-${id}`);
     
-    // Enforce max 4 subjects
     const currentSelected = document.querySelectorAll('.subject-card.selected').length;
     if (!card.classList.contains('selected') && currentSelected >= 4) {
-        alert("You can only select exactly 4 subjects for a full exam.");
+        showModal("Limit Reached", "You can only select exactly 4 subjects for a full exam.", null, false);
         return;
     }
 
@@ -137,17 +159,17 @@ window.toggleSubject = function(id) {
     document.getElementById('selCount').innerText = document.querySelectorAll('.subject-card.selected').length;
 };
 
-function goToInstructions() {
+window.goToInstructions = function() {
     const selectedCards = document.querySelectorAll('.subject-card.selected');
     if(selectedCards.length !== 4) {
-        alert("Please select exactly 4 subjects to proceed.");
+        showModal("Selection Error", "Please select exactly 4 subjects to proceed.", null, false);
         return;
     }
     switchView('view-instructions');
-}
+};
 
 // --- 2. START EXAM ---
-async function startExam() {
+window.startExam = async function() {
     showLoading(true, "Generating Exam...");
     const selectedCards = document.querySelectorAll('.subject-card.selected');
     
@@ -155,7 +177,6 @@ async function startExam() {
     const tabsContainer = document.getElementById('examSubjectTabs');
     tabsContainer.innerHTML = '';
     
-    // Generate unified session ID for database
     globalSessionId = `EXAM_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
     let isFirst = true;
@@ -164,19 +185,16 @@ async function startExam() {
         const subName = subjectsData.find(s => s.id == subId).name;
         const yearOpt = document.getElementById(`yr-${subId}`).value;
 
-        // Fetch query logic
         let query = _sb.from('putme_questions').select('*').eq('subject_id', subId);
         if (yearOpt !== 'random') {
             query = query.eq('year', yearOpt);
         }
         
-        // Fetch extra to allow for random shuffling if 'random' is selected
         const fetchLimit = yearOpt === 'random' ? 200 : qLimitPerSubject;
         const { data: rawData } = await query.limit(fetchLimit);
         
         let finalQuestions = [];
         if (rawData && rawData.length > 0) {
-            // Shuffle and slice
             finalQuestions = rawData.sort(() => 0.5 - Math.random()).slice(0, qLimitPerSubject);
             
             examData[subId] = {
@@ -190,6 +208,7 @@ async function startExam() {
                     };
                 }),
                 answers: Array(finalQuestions.length).fill(null),
+                flags: Array(finalQuestions.length).fill(false), // Initialize flags
                 currentQ: 0
             };
             
@@ -202,7 +221,7 @@ async function startExam() {
     startTimer();
     switchView('view-exam');
     showLoading(false);
-}
+};
 
 // --- 3. EXAM UI LOGIC ---
 window.switchSubject = function(subId) {
@@ -221,6 +240,7 @@ function renderGrid() {
         const btn = document.createElement('button');
         btn.className = 'qbtn';
         if(data.answers[i] !== null) btn.classList.add('answered');
+        if(data.flags[i]) btn.classList.add('flag'); // Added flag CSS rule
         if(data.currentQ === i) btn.classList.add('current');
         btn.innerText = i + 1;
         btn.onclick = () => { data.currentQ = i; renderGrid(); renderQuestion(); };
@@ -253,7 +273,13 @@ function renderQuestion() {
 window.saveAnswer = function(idx) {
     examData[activeSubjectId].answers[examData[activeSubjectId].currentQ] = idx;
     renderGrid();
-    renderQuestion(); // Re-render to update the highlight class
+    renderQuestion(); 
+};
+
+window.toggleFlag = function() {
+    const d = examData[activeSubjectId];
+    d.flags[d.currentQ] = !d.flags[d.currentQ];
+    renderGrid();
 };
 
 window.nextQuestion = function() {
@@ -270,7 +296,7 @@ window.prevQuestion = function() {
     }
 };
 
-// --- TIMER & SUBMIT ---
+// --- TIMER & SUBMIT LOGIC ---
 function startTimer() {
     timerId = setInterval(() => {
         durationSec--;
@@ -285,15 +311,11 @@ function startTimer() {
 }
 
 window.confirmSubmit = function() {
-    if(confirm('Are you sure you want to submit? All answers will be finalized.')) {
-        submitExam(false);
-    }
+    showModal('Submit Exam', 'Are you sure you want to submit? All answers will be finalized.', () => submitExam(false));
 };
 
 window.confirmDashboardReturn = function() {
-    if(confirm('Are you sure you want to quit? Your progress will be lost.')) {
-        window.location.replace('/post-utme-dashboard');
-    }
+    showModal('Quit Exam?', 'Are you sure you want to quit? Your progress will be lost.', () => { window.location.replace('/post-utme-dashboard'); });
 };
 
 async function submitExam(auto) {
@@ -304,7 +326,6 @@ async function submitExam(auto) {
     let timeSpentSec = maxDurationSec - Math.max(0, durationSec);
     let detailsHTML = '';
     
-    // Database payload builder
     const userObj = JSON.parse(localStorage.getItem('post_utme_logged_in_user'));
     const authEmail = userObj.email;
     const dbPayload = [];
@@ -321,7 +342,6 @@ async function submitExam(auto) {
             }
         });
         
-        // Scale to 100 per subject
         const scaledSubScore = Math.round((subScore / d.questions.length) * 100);
         totalScore += scaledSubScore;
 
@@ -336,7 +356,7 @@ async function submitExam(auto) {
         dbPayload.push({
             user_email: authEmail,
             session_id: globalSessionId,
-            subject_id: subId,
+            subject_id: parseInt(subId),
             subject_name: d.name,
             score: scaledSubScore,
             attempted: attempted,
@@ -345,12 +365,17 @@ async function submitExam(auto) {
         });
     }
     
-    // Save to Database
-    await _sb.from('putme_exam_results').insert(dbPayload).catch(err => console.log(err));
+    // SUPABASE DB INSERT - TypeError Fix Applied Here!
+    try {
+        const { error: dbError } = await _sb.from('putme_exam_results').insert(dbPayload);
+        if (dbError) console.error("Database Insert Error:", dbError);
+    } catch (err) {
+        console.error("Network/DB Request Failed:", err);
+    }
 
     // Render Pie Charts
     const scorePercent = Math.round((totalScore / 400) * 100);
-    const scoreColor = scorePercent >= 50 ? '#10b981' : '#ef4444'; // Green if >= 50%, else Red
+    const scoreColor = scorePercent >= 50 ? '#10b981' : '#ef4444';
     
     document.getElementById('scoreDonutChart').style.background = `conic-gradient(${scoreColor} ${scorePercent}%, #d1d5db 0)`;
     document.getElementById('scoreDonutText').innerText = `${scorePercent}%`;
@@ -360,7 +385,7 @@ async function submitExam(auto) {
     document.getElementById('timeDonutChart').style.background = `conic-gradient(#f59e0b ${timePercent}%, #d1d5db 0)`;
     document.getElementById('timeDonutText').innerText = `${timePercent}%`;
 
-    // Render Table
+    // Render Summary Table
     document.getElementById('finalTotalScore').innerText = `${totalScore}/400`;
     document.getElementById('finalTimeSpent').innerText = `${Math.round(timeSpentSec/60)} min`;
     document.getElementById('detailsTableBody').innerHTML = detailsHTML;
@@ -368,5 +393,72 @@ async function submitExam(auto) {
     switchView('view-review');
     showLoading(false);
     
-    if (auto) alert('Time Up! Your answers have been submitted automatically.');
+    if (auto) showModal('Time Up!', 'Your exam time has elapsed. Your answers have been submitted automatically.', null, false);
+}
+
+// --- CALCULATOR & DRAG LOGIC ---
+window.toggleCalc = () => { 
+    const c = document.getElementById('calc'); 
+    c.style.display = c.style.display === 'block' ? 'none' : 'block'; 
+};
+window.ins = (ch) => document.getElementById('calcInput').value += ch;
+window.clr = () => { document.getElementById('calcInput').value=''; document.getElementById('calcOut').innerText='—'; };
+window.evalCalc = () => {
+    try { 
+        const input = document.getElementById('calcInput').value;
+        if(!/^[0-9+\-*/().\s]+$/.test(input)) throw new Error();
+        const result = new Function('return ' + input)();
+        document.getElementById('calcOut').innerText = result; 
+    } 
+    catch(e) { document.getElementById('calcOut').innerText = 'Error'; }
+};
+
+const calcEl = document.getElementById('calc');
+const calcHeader = document.getElementById('calcHeader');
+let isDragging = false, startX, startY, initialX, initialY;
+
+calcHeader.addEventListener('mousedown', dragStart);
+calcHeader.addEventListener('touchstart', dragStart, {passive: false});
+
+function dragStart(e) {
+    if(e.target.tagName === 'SPAN') return; 
+    isDragging = true;
+    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    
+    const rect = calcEl.getBoundingClientRect();
+    initialX = rect.left;
+    initialY = rect.top;
+    startX = clientX;
+    startY = clientY;
+    
+    calcEl.style.right = 'auto';
+    calcEl.style.bottom = 'auto';
+    calcEl.style.margin = '0';
+    
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('touchmove', drag, {passive: false});
+    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('touchend', dragEnd);
+}
+
+function drag(e) {
+    if (!isDragging) return;
+    e.preventDefault(); 
+    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+    
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    
+    calcEl.style.left = `${initialX + dx}px`;
+    calcEl.style.top = `${initialY + dy}px`;
+}
+
+function dragEnd() {
+    isDragging = false;
+    document.removeEventListener('mousemove', drag);
+    document.removeEventListener('touchmove', drag);
+    document.removeEventListener('mouseup', dragEnd);
+    document.removeEventListener('touchend', dragEnd);
 }

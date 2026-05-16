@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Exam History — Scholars Prep</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+  <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --ion-color-primary: #044908;
+      --panel: #ffffff;
+      --muted: #8f96a3;
+      --page-bg: #f3f4f6;
+      --table-header: rgba(4,73,8,0.1);
+      --table-border: rgba(128,128,128,0.2);
+    }
+
+    body.dark {
+      --ion-background-color: #121212; 
+      --ion-text-color: #ffffff; 
+      --panel: #1e1e1e;
+      --page-bg: #121212;
+      --table-header: rgba(255,255,255,0.05);
+      --table-border: rgba(255,255,255,0.1);
+    }
+
+    body { background: var(--page-bg); }
+    ion-app:not(.hydrated) { visibility: hidden; opacity: 0; }
+    ion-app.hydrated { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
+    
+    /* Linear Navigation Stack Animations */
+    .view-layer { display: none; height: 100%; width: 100%; flex-direction: column; }
+    .view-layer.active { display: flex; animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* History List Card */
+    .history-card {
+        background: var(--panel); border: 1px solid var(--table-border);
+        border-radius: 12px; padding: 16px; margin-bottom: 12px;
+        display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer;
+    }
+    
+    /* Donut Charts (Matching your design) */
+    .summary-charts { display: flex; justify-content: space-evenly; flex-wrap: wrap; margin-top: 10px; }
+    .chart-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .donut { 
+        width: 140px; height: 140px; border-radius: 50%; 
+        display: flex; justify-content: center; align-items: center; 
+        background: conic-gradient(var(--ion-color-primary) 0%, #d1d5db 0);
+        position: relative; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .donut::after { content: ''; position: absolute; width: 100px; height: 100px; background: var(--panel); border-radius: 50%; }
+    .donut-text { position: absolute; z-index: 10; font-size: 24px; font-weight: bold; }
+    
+    /* Summary Tables */
+    .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--panel); border-radius: 12px; overflow: hidden; border: 1px solid var(--table-border); }
+    .summary-table th { background: var(--table-header); padding: 12px; font-weight: bold; text-align: center; border-bottom: 2px solid var(--table-border); color: #10b981; }
+    .summary-table td { padding: 12px; text-align: center; border-bottom: 1px solid var(--table-border); font-weight: bold; }
+    .summary-table tr:last-child td { border-bottom: none; }
+    
+    .text-green { color: #10b981; }
+    .text-red { color: #ef4444; }
+  </style>
+</head>
+<body class="noselect">
+  <ion-app>
+    
+    <div id="view-list" class="view-layer active">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button onclick="window.location.replace('/post-utme-dashboard')"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title>Exam History</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding">
+        <div id="historySkeleton">
+            <ion-skeleton-text animated style="height: 70px; border-radius: 12px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 12px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 12px; margin-bottom: 12px;"></ion-skeleton-text>
+        </div>
+        
+        <div id="emptyState" style="display: none; text-align: center; padding-top: 40px; color: var(--muted);">
+            <ion-icon name="document-text-outline" style="font-size: 64px; opacity: 0.5;"></ion-icon>
+            <p style="margin-top: 16px; font-size: 16px;">You haven't taken any full exams yet.</p>
+        </div>
+
+        <div id="historyListContainer"></div>
+      </ion-content>
+    </div>
+
+    <div id="view-details" class="view-layer">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button onclick="history.back()"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title>Exam Summary</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding">
+        
+        <div class="summary-charts">
+            <div class="chart-box">
+                <div class="donut" id="scoreDonutChart">
+                    <span class="donut-text" id="scoreDonutText">0%</span>
+                </div>
+                <div style="font-weight: bold; color: var(--muted); margin-top: 8px;">Score</div>
+            </div>
+            <div class="chart-box">
+                <div class="donut" id="timeDonutChart">
+                    <span class="donut-text" id="timeDonutText" style="color: #ffffff;">0%</span>
+                </div>
+                <div style="font-weight: bold; color: var(--muted); margin-top: 8px;">Time Spent</div>
+            </div>
+        </div>
+
+        <table class="summary-table" style="margin-top: 30px;">
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Total Score</th>
+                    <th id="finalTotalScore" style="text-align: right;" class="text-green">0/400</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align: left;">Total Time Spent</td>
+                    <td id="finalTimeSpent" style="text-align: right;">0 min</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="margin-top: 30px; border-bottom: 2px solid var(--table-border); padding-bottom: 8px;">Detail Breakdown</h3>
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Subject</th>
+                    <th>Attempted</th>
+                    <th style="text-align: right;">Score</th>
+                </tr>
+            </thead>
+            <tbody id="detailsTableBody">
+                </tbody>
+        </table>
+
+      </ion-content>
+    </div>
+
+  </ion-app>
+
+  <script src="post-utme-history.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+    }
+  </script>
+</body>
+</html>
