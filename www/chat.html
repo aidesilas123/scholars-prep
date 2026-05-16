@@ -15,102 +15,138 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" 
-      onload="renderMathInElement(document.body, {
-        delimiters: [
-          {left: '$$', right: '$$', display: true},
-          {left: '$', right: '$', display: false}
-        ]
-      });">
+      onload="renderMathInElement(document.body, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });">
     </script>
+
+    <style>
+        /* PAGE SLIDE ANIMATION & IONIC FIXES */
+        .page-slide-in {
+            animation: slideInFromRight 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+        @keyframes slideInFromRight {
+            0% { transform: translateX(100%); opacity: 0.5; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Force Ionic to respect your Dark Mode Theme */
+        body.dark-mode { --ion-background-color: #0d1117; --ion-text-color: #c9d1d9; }
+        .dark-mode ion-toolbar, .dark-mode ion-menu { --background: #161b22; color: #c9d1d9; }
+        .dark-mode ion-content { --background: #0d1117; }
+        
+        /* Skeleton UI Styling */
+        .skeleton-wrapper { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .skeleton-bubble { width: 70%; height: 60px; border-radius: 12px; }
+        .skeleton-right { align-self: flex-end; --background: rgba(46, 125, 50, 0.3); }
+    </style>
 </head>
 <body class="dark-mode"> 
 
-    <div class="app-container">
-        <aside class="sidebar">
-            <div class="sidebar-top">
-                <button class="new-chat-btn" onclick="returnToDashboard()" style="margin-bottom: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
-                    <ion-icon name="arrow-back-outline" style="font-size: 18px; margin-right: 8px;"></ion-icon>
-                    Dashboard
-                </button>
+    <ion-app>
+        <ion-menu content-id="main-content" side="start">
+            <ion-header class="ion-no-border">
+                <ion-toolbar>
+                    <ion-title style="font-size: 16px; font-weight: bold;">Menu</ion-title>
+                    <ion-buttons slot="end">
+                        <ion-menu-toggle>
+                            <ion-button><ion-icon name="close-outline" style="font-size: 24px;"></ion-icon></ion-button>
+                        </ion-menu-toggle>
+                    </ion-buttons>
+                </ion-toolbar>
+            </ion-header>
 
-                <button class="new-chat-btn" id="new-chat-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <ion-content class="ion-padding">
+                <button class="new-chat-btn" id="new-chat-btn" style="width: 100%; margin-bottom: 20px;">
+                    <ion-icon name="add-outline" style="margin-right: 8px; font-size: 18px;"></ion-icon>
                     New chat
                 </button>
-            </div>
 
-            <div class="sidebar-middle">
                 <p class="section-title">Recent Chats</p>
                 <div class="history-list" id="history-list">
-                    <div class="history-item">Calculus Review</div>
-                    <div class="history-item">Database Schema</div>
+                    <ion-skeleton-text animated style="width: 100%; height: 35px; border-radius: 8px; margin-bottom: 8px;"></ion-skeleton-text>
+                    <ion-skeleton-text animated style="width: 80%; height: 35px; border-radius: 8px;"></ion-skeleton-text>
                 </div>
-            </div>
+            </ion-content>
 
-            <div class="sidebar-bottom">
-                <button class="settings-btn" id="theme-toggle">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                    Toggle Theme
-                </button>
-            </div>
-        </aside>
+            <ion-footer class="ion-no-border">
+                <ion-toolbar style="padding: 10px;">
+                    <button class="settings-btn" id="theme-toggle" style="width: 100%;">
+                        <ion-icon name="moon-outline" style="margin-right: 8px; font-size: 18px;"></ion-icon>
+                        Toggle Theme
+                    </button>
+                </ion-toolbar>
+            </ion-footer>
+        </ion-menu>
 
-        <main class="main-content">
-            <header class="main-header">
-                <button id="menu-btn" class="icon-btn">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                </button>
-                <h2>Nexus AI</h2>
-            </header>
+        <div class="ion-page page-slide-in" id="main-content">
+            <ion-header class="ion-no-border">
+                <ion-toolbar style="padding: 0 10px;">
+                    <ion-buttons slot="start">
+                        <ion-menu-button></ion-menu-button>
+                    </ion-buttons>
+                    <ion-title style="font-weight: bold;">Nexus AI</ion-title>
+                </ion-toolbar>
+            </ion-header>
 
-            <div class="greeting-container" id="greeting-container">
-                <h1 class="greeting-name">Hi <span id="user-name-display">...</span></h1>
-                <h1 class="greeting-question">Where should we start?</h1>
-            </div>
-
-            <div class="chat-conversation-area" id="chat-messages" style="display: none;">
-                <div class="messages-wrapper" id="messages-wrapper"></div>
+            <ion-content id="chat-scroller" class="ion-padding">
                 
-                <div id="ai-thinking-indicator" class="thinking-container" style="display: none;">
-                    <div class="multi-color-ring"></div>
-                    <img src="Logo.png" alt="Nexus AI" class="center-logo"> 
+                <div id="page-skeleton" class="skeleton-wrapper">
+                    <ion-skeleton-text animated class="skeleton-bubble skeleton-right"></ion-skeleton-text>
+                    <ion-skeleton-text animated class="skeleton-bubble"></ion-skeleton-text>
+                    <ion-skeleton-text animated style="width: 40%; height: 40px; border-radius: 12px;"></ion-skeleton-text>
                 </div>
-            </div>
 
-            <div class="input-wrapper">
-                <div class="input-box-container">
-                    <textarea id="chat-input" rows="1" placeholder="Ask Nexus AI..." autocomplete="off"></textarea>
-                    <div class="input-controls">
-                        <div class="left-controls">
-                            <button class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                        </div>
-                        <div class="right-controls">
-                            <button class="icon-btn" id="mic-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></button>
-                            <button class="icon-btn send-btn" id="send-btn" style="display: none;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                            </button>
-                        </div>
+                <div class="greeting-container" id="greeting-container" style="display: none;">
+                    <h1 class="greeting-name">Hi <span id="user-name-display">...</span></h1>
+                    <h1 class="greeting-question">Where should we start?</h1>
+                </div>
+
+                <div class="chat-conversation-area" id="chat-messages" style="display: none;">
+                    <div class="messages-wrapper" id="messages-wrapper"></div>
+                    
+                    <div id="ai-thinking-indicator" class="thinking-container" style="display: none;">
+                        <div class="multi-color-ring"></div>
+                        <img src="Logo.png" alt="Nexus AI" class="center-logo"> 
                     </div>
                 </div>
-                <p class="disclaimer">Nexus AI is built by Scholars Prep.</p>
-            </div>
-        </main>
-    </div>
+            </ion-content>
+
+            <ion-footer class="ion-no-border">
+                <ion-toolbar style="padding: 8px;">
+                    <div class="input-wrapper" style="margin: 0; position: relative;">
+                        <div class="input-box-container">
+                            <textarea id="chat-input" rows="1" placeholder="Ask Nexus AI..." autocomplete="off"></textarea>
+                            <div class="input-controls">
+                                <div class="left-controls">
+                                    <button class="icon-btn"><ion-icon name="attach-outline" style="font-size: 20px;"></ion-icon></button>
+                                </div>
+                                <div class="right-controls">
+                                    <button class="icon-btn" id="mic-btn"><ion-icon name="mic-outline" style="font-size: 20px;"></ion-icon></button>
+                                    <button class="icon-btn send-btn" id="send-btn" style="display: none;">
+                                        <ion-icon name="send" style="font-size: 18px;"></ion-icon>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="disclaimer" style="text-align: center; font-size: 11px; margin-top: 6px; color: var(--muted);">Nexus AI is built and powered by Scholars Prep.</p>
+                    </div>
+                </ion-toolbar>
+            </ion-footer>
+        </div>
+    </ion-app>
 
     <script src="nexus.js"></script>
     <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
-    });
-  }
-</script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
 </body>
 </html>
