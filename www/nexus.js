@@ -244,7 +244,7 @@ async function handleSend() {
         let protectedPayload = slidingWindowHistory.slice(-16);
         if (protectedPayload.length > 0 && protectedPayload[0].role !== 'user') protectedPayload.shift(); 
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch('https://scholars-prep.vercel.app/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: protectedPayload })
