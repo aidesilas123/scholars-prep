@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Exam Mode — Scholars Prep</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+  <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
+
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, startup: { typeset: false } };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://unpkg.com/smiles-drawer@2.0.1/dist/smiles-drawer.min.js"></script>
+
+  <style>
+    :root {
+      --ion-color-primary: #044908;
+      --ion-color-primary-rgb: 4,73,8;
+      --ion-color-danger: #d32f2f;
+      --card-bg-selected: rgba(4, 73, 8, 0.05);
+      --panel: #ffffff;
+      --muted: #8f96a3;
+      --page-bg: #f3f4f6;
+    }
+
+    body.dark {
+      --ion-background-color: #121212; 
+      --ion-text-color: #ffffff; 
+      --panel: #1e1e1e;
+      --page-bg: #121212;
+      --card-bg-selected: rgba(4, 73, 8, 0.2);
+    }
+
+    body { background: var(--page-bg); }
+
+    ion-app:not(.hydrated) { visibility: hidden; opacity: 0; }
+    ion-app.hydrated { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
+    
+    /* Global Loading & Skeleton */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19,1,1,0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); color: white;}
+    .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: var(--ion-color-primary); animation: spin 1s infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Linear Navigation Stack Animations */
+    .cbt-view { display: none; height: 100%; width: 100%; flex-direction: column; }
+    .cbt-view.active { display: flex; animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Accordion Selection Cards */
+    .subject-card { border: 2px solid transparent; transition: 0.2s; margin-bottom: 16px; border-radius: 12px; background: var(--panel); }
+    .subject-card.selected { border-color: var(--ion-color-primary); background: var(--card-bg-selected); }
+    .config-area { display: none; padding: 0 16px 16px 16px; animation: fadeInDown 0.2s ease forwards; }
+    .subject-card.selected .config-area { display: block; }
+    @keyframes fadeInDown { from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:translateY(0)} }
+
+    /* Exam Grid */
+    .qwrap { display: grid; grid-template-columns: 260px 1fr; gap: 14px; height: 100%; }
+    @media (max-width:900px){ .qwrap { grid-template-columns: 1fr; } }
+    .qnav { background: var(--panel); border: 1px solid rgba(128,128,128,0.2); border-radius: 14px; padding: 10px; max-height: 60vh; overflow-y: auto; }
+    .qgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .qbtn { border: 1px solid rgba(128,128,128,0.3); background: transparent; color: inherit; border-radius: 8px; padding: 10px 0; font-weight: bold; cursor: pointer; }
+    .qbtn.answered { background: rgba(4,73,8,0.15); border-color: var(--ion-color-primary); color: var(--ion-color-primary); }
+    .qbtn.current { outline: 2px solid var(--ion-color-primary); }
+
+    .question-card { background: var(--panel); border: 1px solid rgba(128,128,128,0.2); border-radius: 14px; padding: 20px; }
+    .opt { display: block; margin: 8px 0; padding: 12px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); cursor: pointer; transition: 0.2s; }
+    .opt.selected { background: var(--card-bg-selected); border-color: var(--ion-color-primary); }
+    
+    .subject-tabs { display: flex; overflow-x: auto; padding: 10px; background: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(128,128,128,0.1); scroll-snap-type: x mandatory; }
+    .subject-tabs::-webkit-scrollbar { display: none; }
+    .tab-pill { padding: 8px 16px; margin-right: 10px; border-radius: 20px; font-weight: bold; background: transparent; color: var(--ion-color-primary); border: 1px solid var(--ion-color-primary); white-space: nowrap; cursor: pointer; }
+    .tab-pill.active { background: var(--ion-color-primary); color: white; }
+
+    .bottom-nav { padding: 16px; display: flex; justify-content: space-between; border-top: 1px solid rgba(128,128,128,0.1); background: var(--panel); }
+
+    /* --- PIE CHART CSS SUMMARY --- */
+    .summary-charts { display: flex; justify-content: space-evenly; flex-wrap: wrap; margin-top: 20px; }
+    .chart-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .donut { 
+        width: 140px; height: 140px; border-radius: 50%; 
+        display: flex; justify-content: center; align-items: center; 
+        background: conic-gradient(var(--ion-color-primary) 0%, #d1d5db 0);
+        position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .donut::after {
+        content: ''; position: absolute; width: 100px; height: 100px; 
+        background: var(--panel); border-radius: 50%;
+    }
+    .donut-text { position: absolute; z-index: 10; font-size: 24px; font-weight: bold; color: var(--ion-text-color); }
+    
+    /* Summary Table */
+    .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--panel); border-radius: 12px; overflow: hidden; border: 1px solid rgba(128,128,128,0.2); }
+    .summary-table th { background: rgba(4,73,8,0.1); padding: 12px; font-weight: bold; text-align: center; border-bottom: 2px solid rgba(128,128,128,0.2); color: var(--ion-color-primary); }
+    .summary-table td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(128,128,128,0.1); }
+  </style>
+</head>
+<body class="noselect">
+  
+  <div class="loading-overlay" id="globalLoading"><div class="page-loading"><div class="loading-spinner"></div><div id="loadText">Loading...</div></div></div>
+
+  <ion-app>
+    <div id="view-selection" class="cbt-view active">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button onclick="window.location.href='/post-utme-dashboard'"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title>Full Exam Mode</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <div style="background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 20px; color: #b45309; text-align: center; font-weight: 600;">
+            <ion-icon name="information-circle-outline" style="vertical-align: middle;"></ion-icon> Select exactly 4 subjects to proceed.
+        </div>
+        <div id="subjectListContainer">
+            <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
+        </div>
+      </ion-content>
+      <div class="bottom-nav" style="justify-content: center;">
+        <ion-button expand="block" color="primary" style="width: 100%; --border-radius: 10px;" onclick="goToInstructions()">Continue (<span id="selCount">0</span>/4)</ion-button>
+      </div>
+    </div>
+
+    <div id="view-instructions" class="cbt-view">
+      <ion-header class="ion-no-border"><ion-toolbar><ion-buttons slot="start"><ion-button onclick="history.back()"><ion-icon name="arrow-back-outline"></ion-icon></ion-button></ion-buttons><ion-title>Instructions</ion-title></ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <h2 style="font-weight: bold; margin-top: 0;">Exam Guidelines</h2>
+        <ul style="line-height: 1.8; color: var(--muted); background: var(--panel); padding: 20px 40px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.2);">
+          <li>You are about to take a full mock examination consisting of 4 subjects.</li>
+          <li>Each subject contains <b id="instQCount">50</b> questions.</li>
+          <li>Your total exam duration is <b id="instTime">2 Hours</b>.</li>
+          <li>The final score is graded out of 400 (100 marks per subject).</li>
+          <li>Do not refresh your browser during the exam.</li>
+        </ul>
+      </ion-content>
+      <div class="bottom-nav">
+        <ion-button fill="outline" color="primary" onclick="history.back()">Back</ion-button>
+        <ion-button color="primary" onclick="startExam()">Begin Exam</ion-button>
+      </div>
+    </div>
+
+    <div id="view-exam" class="cbt-view">
+      <ion-header class="ion-no-border" style="background: var(--ion-color-primary);">
+        <ion-toolbar style="--background: transparent; color: white;">
+          <ion-buttons slot="start">
+            <ion-button style="font-weight: bold; font-size: 13px;" onclick="confirmDashboardReturn()">Quit</ion-button>
+          </ion-buttons>
+          <ion-title style="text-align:center; font-family: monospace; font-size: 20px; font-weight:bold;" id="timerDisplay">00:00:00</ion-title>
+          <ion-buttons slot="end">
+            <ion-button color="danger" fill="solid" style="margin-right: 10px; font-weight: bold; --border-radius: 6px;" onclick="confirmSubmit()">Submit</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      
+      <div class="subject-tabs" id="examSubjectTabs"></div>
+
+      <ion-content class="ion-padding">
+        <div class="qwrap">
+          <aside class="qnav">
+            <div class="qgrid" id="questionGrid"></div>
+          </aside>
+          <div class="question-card">
+            <h3 id="qText" style="font-weight: bold; line-height: 1.5; margin-top:0;"></h3>
+            <div id="qOptions"></div>
+          </div>
+        </div>
+      </ion-content>
+
+      <div class="bottom-nav">
+        <ion-button fill="outline" color="primary" onclick="prevQuestion()"><ion-icon name="arrow-back-outline" slot="start"></ion-icon> Prev</ion-button>
+        <ion-button color="primary" onclick="nextQuestion()">Next <ion-icon name="arrow-forward-outline" slot="end"></ion-icon></ion-button>
+      </div>
+    </div>
+
+    <div id="view-review" class="cbt-view">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Exam Summary</ion-title>
+          <ion-buttons slot="end">
+            <ion-button color="primary" style="font-weight: bold;" onclick="window.location.replace('/post-utme-dashboard')">Finish</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        
+        <div class="summary-charts">
+            <div class="chart-box">
+                <div class="donut" id="scoreDonutChart">
+                    <span class="donut-text" id="scoreDonutText">0%</span>
+                </div>
+                <div style="font-weight: bold; color: var(--muted); margin-top: 8px;">Score</div>
+            </div>
+            <div class="chart-box">
+                <div class="donut" id="timeDonutChart" style="background: conic-gradient(#f59e0b 0%, #d1d5db 0);">
+                    <span class="donut-text" id="timeDonutText">0%</span>
+                </div>
+                <div style="font-weight: bold; color: var(--muted); margin-top: 8px;">Time Spent</div>
+            </div>
+        </div>
+
+        <table class="summary-table" style="margin-top: 30px;">
+            <thead>
+                <tr>
+                    <th>Total Score</th>
+                    <th id="finalTotalScore">0/400</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="font-weight:bold;">Total Time Spent</td>
+                    <td id="finalTimeSpent">0 min</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="margin-top: 30px; border-bottom: 2px solid rgba(128,128,128,0.2); padding-bottom: 8px;">Detail Breakdown</h3>
+        <table class="summary-table" id="detailsTable">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Attempted</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="detailsTableBody">
+                </tbody>
+        </table>
+
+      </ion-content>
+    </div>
+  </ion-app>
+
+  <script src="exam-mode.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+    }
+  </script>
+</body>
+</html>
