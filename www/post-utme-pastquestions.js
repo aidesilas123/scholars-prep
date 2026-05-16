@@ -1,0 +1,274 @@
+// --- AUTH GUARD & INIT ---
+(function protectPage() {
+    const putmeUser = localStorage.getItem('post_utme_logged_in_user');
+    if (!putmeUser) window.location.replace('/'); 
+})();
+
+const _sb = window.supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Bulletproof Theme Inheritance
+    const isDark = localStorage.getItem('post_utme_theme') === 'dark' || localStorage.getItem('theme') === 'dark' || document.documentElement.classList.contains('dark');
+    if (isDark) {
+        document.body.classList.add('dark');
+        document.body.classList.add('dark-mode');
+    }
+    
+    // Linear Navigation Stack
+    history.replaceState({ view: 'view-selection' }, '', '');
+    loadSubjects();
+});
+
+// --- STATE ---
+let subjectsData = [];
+let activeSubjectId = null;
+let currentPQData = []; // Holds the fetched questions
+
+function showLoading(show, text="Loading...") {
+    document.getElementById('globalLoading').style.display = show ? 'flex' : 'none';
+    document.getElementById('loadText').textContent = text;
+}
+
+// --- LINEAR NAVIGATION ENGINE ---
+function switchView(viewId, pushToHistory = true) {
+    document.querySelectorAll('.cbt-view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    if (pushToHistory) history.pushState({ view: viewId }, '', '');
+}
+
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.view) {
+        switchView(e.state.view, false);
+    } else {
+        window.location.replace('/post-utme-dashboard');
+    }
+});
+
+// --- MATH FIXER ---
+function fixMathText(text) {
+    if (!text) return "";
+    let fixed = text;
+    const mathWords = ["frac", "sqrt", "int", "lim", "sum", "infty", "times", "div", "pm", "sin", "cos", "tan", "theta", "pi", "alpha"];
+    mathWords.forEach(word => {
+        const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'g');
+        fixed = fixed.replace(regex, `\\${word}`);
+    });
+    fixed = fixed.replace(/\\\\/g, "\\");
+    const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
+    const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
+    if (isMathSymbol && !hasDelimiters && fixed.length < 50) return `\\( ${fixed} \\)`;
+    return fixed;
+}
+
+// --- 1. LOAD SUBJECTS (Single Selection) ---
+async function loadSubjects() {
+    try {
+        const { data: subjects } = await _sb.from('putme_subjects').select('*');
+        const { data: qYears } = await _sb.from('putme_questions').select('subject_id, year');
+        
+        const container = document.getElementById('subjectListContainer');
+        container.innerHTML = '';
+        
+        if(subjects) {
+            subjects.forEach(sub => {
+                subjectsData.push(sub);
+                
+                // NO 'Random' Option for Question Bank
+                let yearsHTML = '';
+                if (qYears) {
+                    const subYears = [...new Set(qYears.filter(q => q.subject_id === sub.id).map(q => q.year))].sort((a,b)=>b-a);
+                    yearsHTML = subYears.map(y => `<ion-select-option value="${y}">${y}</ion-select-option>`).join('');
+                }
+
+                container.innerHTML += `
+                <ion-card class="subject-card" id="card-${sub.id}" onclick="toggleSubject(${sub.id})">
+                    <ion-item lines="none" style="--background: transparent; cursor: pointer;">
+                        <ion-icon name="${sub.icon}" slot="start" color="primary"></ion-icon>
+                        <ion-label style="font-weight: bold;">${sub.name}</ion-label>
+                        <ion-checkbox slot="end" id="chk-${sub.id}" style="pointer-events: none;"></ion-checkbox>
+                    </ion-item>
+                    <div class="config-area" onclick="event.stopPropagation()">
+                        <ion-item fill="outline" style="--border-radius: 6px;">
+                            <ion-label position="stacked">Select Year</ion-label>
+                            <ion-select id="yr-${sub.id}" value="${qYears ? (qYears.filter(q => q.subject_id === sub.id)[0]?.year || '') : ''}">
+                                ${yearsHTML}
+                            </ion-select>
+                        </ion-item>
+                    </div>
+                </ion-card>`;
+            });
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// Only allows ONE subject to be selected at a time for studying
+window.toggleSubject = function(id) {
+    document.querySelectorAll('.subject-card').forEach(card => {
+        if(card.id !== `card-${id}`) {
+            card.classList.remove('selected');
+            card.querySelector('ion-checkbox').checked = false;
+        }
+    });
+
+    const card = document.getElementById(`card-${id}`);
+    const chk = document.getElementById(`chk-${id}`);
+    
+    card.classList.toggle('selected');
+    chk.checked = card.classList.contains('selected');
+    
+    activeSubjectId = card.classList.contains('selected') ? id : null;
+    document.getElementById('continueBtn').disabled = !activeSubjectId;
+};
+
+// --- 2. LOAD & RENDER PAST QUESTIONS ---
+window.loadPastQuestions = async function() {
+    showLoading(true, "Fetching Past Questions...");
+    
+    const yearOpt = document.getElementById(`yr-${activeSubjectId}`).value;
+    const subName = subjectsData.find(s => s.id == activeSubjectId).name;
+    
+    document.getElementById('pqTitle').innerText = `${subName} ${yearOpt}`;
+
+    try {
+        // Fetch ALL questions for that year (No Limit)
+        const { data: rawData, error } = await _sb.from('putme_questions')
+            .select('*')
+            .eq('subject_id', activeSubjectId)
+            .eq('year', yearOpt);
+
+        if (error) throw error;
+
+        const contentArea = document.getElementById('pqContent');
+        contentArea.innerHTML = '';
+        currentPQData = []; // Reset
+
+        if (rawData && rawData.length > 0) {
+            let htmlBlock = '';
+
+            rawData.forEach((q, idx) => {
+                const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+                const fixedQText = fixMathText(q.question_text);
+                const correctAnsIdx = parseInt(q.answer);
+                
+                // Store in memory for Nexus AI to reference
+                currentPQData.push({
+                    qText: fixedQText,
+                    correctText: fixMathText(parsedOpts[correctAnsIdx])
+                });
+
+                // Build Options HTML with the correct answer highlighted
+                const optsHtml = parsedOpts.map((opt, i) => {
+                    const isCorrect = (i === correctAnsIdx);
+                    return `<div class="pq-opt ${isCorrect ? 'correct' : ''}">${fixMathText(opt)}</div>`;
+                }).join('');
+
+                // Append Question Card + Nexus Widget
+                htmlBlock += `
+                <div class="pq-card">
+                    <h3 style="margin-top: 0; font-weight: bold; line-height: 1.5;">Q${idx + 1}. ${fixedQText}</h3>
+                    <div>${optsHtml}</div>
+                    
+                    <ion-button size="small" fill="outline" color="primary" style="margin-top: 15px;" onclick="toggleNexusWidget(${idx})">
+                        Ask Nexus <img src="Logo.png" alt="Nexus" style="height: 16px; margin-left: 6px; vertical-align: middle;">
+                    </ion-button>
+
+                    <div id="nexus-widget-${idx}" class="nexus-inline-widget">
+                        <div class="nexus-header">
+                            <span style="font-weight: bold; font-size: 13px;">Nexus AI Tutor</span>
+                            <span onclick="toggleNexusWidget(${idx})" style="cursor: pointer; font-size: 16px;">✖</span>
+                        </div>
+                        <div id="nexus-chat-${idx}" class="nexus-chat-area">
+                            <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below, or click "Explain" for a full breakdown.</div>
+                        </div>
+                        <div class="nexus-input-area">
+                            <input type="text" id="nexus-input-${idx}" placeholder="Ask about this..." autocomplete="off">
+                            <button onclick="sendToNexus(${idx}, false)">Send</button>
+                            <button class="explain-btn" onclick="sendToNexus(${idx}, true)">Explain</button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            contentArea.innerHTML = htmlBlock;
+            
+            // Render Math
+            if(window.MathJax) {
+                MathJax.typesetClear();
+                MathJax.typesetPromise().catch(err => console.error(err));
+            }
+
+            switchView('view-questions');
+        } else {
+            alert("No questions found for this subject and year.");
+        }
+    } catch (err) {
+        console.error("Failed to load questions", err);
+        alert("Failed to load questions. Check your connection.");
+    } finally {
+        showLoading(false);
+    }
+};
+
+// --- 3. NEXUS INLINE AI LOGIC ---
+window.toggleNexusWidget = function(qIndex) {
+    const widget = document.getElementById(`nexus-widget-${qIndex}`);
+    widget.style.display = widget.style.display === 'block' ? 'none' : 'block';
+};
+
+window.sendToNexus = async function(qIndex, isAutoExplain) {
+    const chatArea = document.getElementById(`nexus-chat-${qIndex}`);
+    const inputField = document.getElementById(`nexus-input-${qIndex}`);
+    
+    let userMessage = inputField.value.trim();
+    const qData = currentPQData[qIndex];
+    const questionText = qData.qText;
+    const correctAnswer = qData.correctText;
+
+    let promptToAI = "";
+
+    if (isAutoExplain) {
+        promptToAI = `Act as an expert tutor. Please explain step-by-step why the correct answer to this question is "${correctAnswer}". \n\nQuestion: ${questionText}`;
+        chatArea.innerHTML = `<div style="font-weight:bold; margin-bottom:8px;">Explain this question.</div>`;
+    } else {
+        if (!userMessage) return;
+        promptToAI = `Regarding this question: "${questionText}" (Correct Answer: ${correctAnswer}). \n\nStudent asks: ${userMessage}`;
+        chatArea.innerHTML += `<div style="font-weight:bold; margin-bottom:8px; margin-top: 15px;">You: ${userMessage}</div>`;
+        inputField.value = ''; 
+    }
+
+    const responseContainer = document.createElement('div');
+    responseContainer.innerHTML = `<span style="color: var(--ion-color-primary); font-weight: bold;">Nexus is thinking...</span>`;
+    chatArea.appendChild(responseContainer);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: [{ role: 'user', content: promptToAI }] })
+        });
+
+        if (!response.ok) throw new Error("Network Error");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiFullText = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            aiFullText += decoder.decode(value, { stream: true });
+            responseContainer.innerHTML = marked.parse(aiFullText);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        if (window.MathJax) {
+            MathJax.typesetPromise([responseContainer]).catch(err => console.error(err));
+        }
+    } catch (error) {
+        responseContainer.innerHTML = `<span style="color: var(--ion-color-danger);">Connection error. Please try again.</span>`;
+    }
+};

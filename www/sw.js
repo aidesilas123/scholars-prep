@@ -21,6 +21,8 @@ const PRECACHE_URLS = [
   '/post-utme-alerts', '/post-utme-alerts.js',
   '/exam-mode', '/exam-mode.js',
   '/post-utme-history', '/post-utme-history.js',
+  '/post-utme-pastquestions', '/post-utme-pastquestions.js',
+  '/'
 ];
 
 // 1. INSTALL
