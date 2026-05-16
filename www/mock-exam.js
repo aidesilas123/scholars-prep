@@ -69,7 +69,7 @@
         // STRICT LOGIN CHECK
         const user = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
         if (!user || !user.email) {
-          window.location.href = "index.html";
+          window.location.replace('/');
           return;
         }
         
@@ -89,7 +89,7 @@
           currentAuthId = authUser.id;
           console.log('Current auth ID:', currentAuthId);
         } else {
-          window.location.href = "index.html";
+          window.location.replace('/');
           return;
         }
 
@@ -2274,7 +2274,7 @@
       try {
         const storedUser = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
         if (!storedUser || !storedUser.email || !storedUser.password) {
-          window.location.href = "index.html";
+          window.location.replace('/');
           return;
         }
 
@@ -2288,7 +2288,7 @@
         console.log('Reauthenticated successfully');
       } catch (error) {
         console.error('Reauthentication failed:', error);
-        window.location.href = "index.html";
+        window.location.replace('/');
       }
     }
 
@@ -2527,5 +2527,5 @@
     //Login Protection
     const logged = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
     if (!logged || !logged.email) {
-      window.location.href = "index.html";
+      window.location.replace('/');
     }

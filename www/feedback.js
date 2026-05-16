@@ -8,7 +8,7 @@
   document.addEventListener('DOMContentLoaded', async () => {
     const userData = JSON.parse(localStorage.getItem('abupq_logged_in_user') || '{}');
     if (!userData.id) {
-        window.location.href = 'index.html';
+        window.location.replace('/');
         return;
     }
     currentUser = userData;

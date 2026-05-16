@@ -716,7 +716,7 @@ function performLogout() {
         if(supabaseClient) {
             await supabaseClient.auth.signOut();
         }
-        window.location.href = 'index.html';
+        window.location.replace('/');
     }
 
     function performLogout() {
@@ -734,7 +734,7 @@ function performLogout() {
       // Check if user is logged in
       const userData = JSON.parse(localStorage.getItem('abupq_logged_in_user') || '{}');
       if (!userData.email) {
-        window.location.href = 'index.html';
+        window.location.replace('/');
         return;
       }
       
@@ -879,7 +879,7 @@ window.confirmExit = function() {
         window.Capacitor.Plugins.App.exitApp();
     } else {
         // If on the web, kick them to login
-        window.location.href = 'index.html';
+        window.location.replace('/');
     }
 };
 
@@ -891,7 +891,7 @@ window.confirmExit = function() {
       // Ensure user is still logged in
       const userData = JSON.parse(localStorage.getItem('abupq_logged_in_user') || '{}');
       if (!userData.email) {
-        window.location.href = 'index.html';
+        window.location.replace('/');
       }
     }
 
@@ -906,7 +906,7 @@ window.confirmExit = function() {
         const userData = JSON.parse(localStorage.getItem('abupq_logged_in_user') || '{}');
         if (!userData.email && !window.location.href.includes('index.html')) {
           // User not logged in, redirect to login
-          window.location.href = 'index.html';
+          window.location.replace('/');
         }
       }
     });

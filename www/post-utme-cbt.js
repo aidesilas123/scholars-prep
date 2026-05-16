@@ -5,6 +5,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('post_utme_theme') === 'dark') document.body.classList.add('dark');
     loadSubjects();
 });
+// ---AUTH GUARD ---
+(function protectPage() {
+    const putmeUser = localStorage.getItem('post_utme_logged_in_user');
+    
+    if (!putmeUser) {
+        console.warn("Unauthorized access. Redirecting to home...");
+        // Kicks them to the raw root URL to prevent Vercel redirect crashes
+        window.location.replace('/'); 
+    }
+})();
 
 // --- CUSTOM MODAL SYSTEM ---
 function showModal(title, msg, onOk, showCancel = true) {

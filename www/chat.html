@@ -5,19 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scholars Prep | Nexus AI</title>
     <link rel="icon" type="image" href="favicon1.png">
+    
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
+
     <link rel="stylesheet" href="styles.css">
     
-    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- Markdown Parser (Turns ### into headers and ** into bold) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
-    <!-- Syntax Highlighter (Colors the code blocks) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
-    <!-- KaTeX Styles and Scripts for Lightning-Fast Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" 
@@ -32,9 +33,13 @@
 <body class="dark-mode"> 
 
     <div class="app-container">
-        <!-- LEFT SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-top">
+                <button class="new-chat-btn" onclick="returnToDashboard()" style="margin-bottom: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+                    <ion-icon name="arrow-back-outline" style="font-size: 18px; margin-right: 8px;"></ion-icon>
+                    Dashboard
+                </button>
+
                 <button class="new-chat-btn" id="new-chat-btn">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     New chat
@@ -57,34 +62,28 @@
             </div>
         </aside>
 
-        <!-- MAIN CONTENT AREA -->
         <main class="main-content">
             <header class="main-header">
-                <!-- Hamburger Menu for All Devices -->
                 <button id="menu-btn" class="icon-btn">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
                 <h2>Nexus AI</h2>
             </header>
 
-            <!-- Centered Greeting -->
             <div class="greeting-container" id="greeting-container">
                 <h1 class="greeting-name">Hi <span id="user-name-display">...</span></h1>
                 <h1 class="greeting-question">Where should we start?</h1>
             </div>
 
-            <!-- Chat Area (Hidden until user types) -->
             <div class="chat-conversation-area" id="chat-messages" style="display: none;">
                 <div class="messages-wrapper" id="messages-wrapper"></div>
                 
-                <!-- The Multi-Color Thinking Animation -->
                 <div id="ai-thinking-indicator" class="thinking-container" style="display: none;">
                     <div class="multi-color-ring"></div>
                     <img src="Logo.png" alt="Nexus AI" class="center-logo"> 
                 </div>
             </div>
 
-            <!-- Input Box -->
             <div class="input-wrapper">
                 <div class="input-box-container">
                     <textarea id="chat-input" rows="1" placeholder="Ask Nexus AI..." autocomplete="off"></textarea>
@@ -93,7 +92,6 @@
                             <button class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                         </div>
                         <div class="right-controls">
-                            <!-- ADDED ID="MIC-BTN" HERE -->
                             <button class="icon-btn" id="mic-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></button>
                             <button class="icon-btn send-btn" id="send-btn" style="display: none;">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -101,8 +99,7 @@
                         </div>
                     </div>
                 </div>
-                <!-- Scholars Prep Disclaimer Added Here -->
-                <p class="disclaimer">Nexus AI is built and powered by Scholars Prep.</p>
+                <p class="disclaimer">Nexus AI is built by Scholars Prep.</p>
             </div>
         </main>
     </div>

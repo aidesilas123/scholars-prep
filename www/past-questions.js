@@ -8,7 +8,7 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 
     document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
-      if (!user) { window.location.href = 'index.html'; return; }
+      if (!user) { window.location.replace('/'); return; }
 
       const grid = document.getElementById('watermarkGrid');
       const email = user.email || 'User';

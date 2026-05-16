@@ -1,37 +1,25 @@
-const CACHE_NAME = 'scholars-prep-cache-v7';
+const CACHE_NAME = 'scholars-prep-cache-v8';
 
+// Strictly Clean URLs (No .html allowed in this list)
 const PRECACHE_URLS = [
   '/',
   '/favicon1.png',
   '/supabase-config.js',
-  '/login',
-  '/login.js',
-  '/dashboard',
-  '/dashboard.js',
-  '/cbt',
-  '/cbt.js',
-  '/leaderboard',
-  '/leaderboard.js',
-  '/mock-exam',
-  '/mock-exam.js',
-  '/pastquestions',
-  '/past-questions.js',
-  '/chat',
-  '/nexus.js',
-  '/messages',
-  '/messages.js',
-  '/notifications',
-  '/notifications.js',
-  '/feedback',
-  '/feedback.js',
-  '/post-utme-login',
-  '/post-utme-login.js',
-  '/post-utme-dashboard',
-  '/post-utme-dashboard.js',
-  '/post-utme-cbt',
-  '/post-utme-alerts',
-  '/exam-mode',
-  '/exam-mode.js'
+  '/login', '/login.js',
+  '/dashboard', '/dashboard.js',
+  '/cbt', '/cbt.js',
+  '/leaderboard', '/leaderboard.js',
+  '/mock-exam', '/mock-exam.js',
+  '/pastquestions', '/past-questions.js',
+  '/chat', '/nexus.js',
+  '/messages', '/messages.js',
+  '/notifications', '/notifications.js',
+  '/feedback', '/feedback.js',
+  '/post-utme-login', '/post-utme-login.js',
+  '/post-utme-dashboard', '/post-utme-dashboard.js',
+  '/post-utme-cbt', '/post-utme-cbt.js',
+  '/post-utme-alerts', '/post-utme-alerts.js',
+  '/exam-mode', '/exam-mode.js'
 ];
 
 // 1. INSTALL
@@ -58,17 +46,6 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// ✅ HELPER: Normalize any request — strips .html so both
-// /login.html and /login always resolve to the same cache key
-function normalizeRequest(request) {
-  const url = new URL(request.url);
-  if (url.pathname.endsWith('.html')) {
-    const clean = url.origin + url.pathname.replace(/\.html$/, '') + url.search;
-    return new Request(clean, { mode: 'same-origin' });
-  }
-  return request; // already clean, return as-is
-}
-
 // 3. FETCH
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
@@ -76,7 +53,7 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
-  // Always bypass external services
+  // Always bypass external services (Supabase, CDNs)
   if (
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('jsdelivr.net') ||
@@ -84,32 +61,41 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('gstatic.com')
   ) return;
 
-  // ✅ Normalize ONCE — all logic below uses the clean request
-  const req = normalizeRequest(event.request);
+  // THE STRICT CLEAN URL ENFORCER
+  // If the browser asks for a .html file, strip it internally.
+  // E.g., if a stray code says window.location.href = 'login.html', we fetch '/login' instead.
+  let targetUrl = event.request.url;
+  if (targetUrl.endsWith('.html')) {
+    if (targetUrl.endsWith('index.html')) {
+      targetUrl = targetUrl.replace('index.html', ''); // map index.html to root '/'
+    } else {
+      targetUrl = targetUrl.replace('.html', ''); // strip .html from everything else
+    }
+  }
 
   event.respondWith(
-    caches.match(req).then(cachedResponse => {
+    caches.match(targetUrl).then(cachedResponse => {
 
-      // Cache hit — serve instantly, update in background
+      // Cache hit — serve instantly, update quietly in background
       if (cachedResponse) {
-        fetch(req, { redirect: 'follow' })
+        fetch(targetUrl, { redirect: 'follow' })
           .then(res => {
-            if (res && res.status === 200 && res.type === 'basic' && !res.redirected) {
-              const clone = res.clone();
-              caches.open(CACHE_NAME).then(cache => cache.put(req, clone));
+            // REMOVED !res.redirected so Vercel fetches actually cache
+            if (res && res.status === 200 && res.type === 'basic') {
+              caches.open(CACHE_NAME).then(cache => cache.put(targetUrl, res.clone()));
             }
           })
-          .catch(() => {});
+          .catch(() => {}); // Fails silently if offline
 
         return cachedResponse;
       }
 
-      // Cache miss — fetch, cache, return
-      return fetch(req, { redirect: 'follow' })
+      // Cache miss — fetch from live Vercel, cache it, return it
+      return fetch(targetUrl, { redirect: 'follow' })
         .then(res => {
-          if (res && res.status === 200 && res.type === 'basic' && !res.redirected) {
+          if (res && res.status === 200 && res.type === 'basic') {
             const clone = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(req, clone));
+            caches.open(CACHE_NAME).then(cache => cache.put(targetUrl, clone));
           }
           return res;
         })

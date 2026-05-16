@@ -28,7 +28,7 @@
 
             // 1. Instant Desktop Kick (No DB wait)
             if (isPC && !isApp) {
-                window.location.replace('index.html');
+                window.location.replace('/');
                 return;
             }
 
@@ -42,7 +42,7 @@
                     unlock();
                 } else {
                     // BYPASS ATTEMPT: Kick to index
-                    window.location.replace('index.html');
+                    window.location.replace('/');
                 }
             } else {
                 // MAINTENANCE OFF: Unlock for everyone

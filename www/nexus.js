@@ -15,7 +15,7 @@ const renderer = new marked.Renderer();
 
 renderer.code = function(token) {
     try {
-        let codeText = String(typeof token === 'object' ? (token.text || '') : (arguments[0] || ''));
+        let codeText = String(typeof token === 'object' ? (token.text || '') : (arguments[0] || '')).trim();
         let langText = String(typeof token === 'object' ? (token.lang || '') : (arguments[1] || '')).trim();
 
         const language = hljs.getLanguage(langText) ? langText : 'plaintext';
@@ -62,32 +62,49 @@ window.editUserMessage = function(btn) {
     chatInput.dispatchEvent(new Event('input')); 
 };
 
-// --- 3. Startup & Auth Guard ---
+// --- 3. Startup & Dual-Auth Guard ---
 function initializeNexus() {
     try {
-        // CBT-Style Gatekeeper
-        const loggedInObj = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
+        // 1. Check Main App Auth
+        const mainObj = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
         const fallbackEmail = localStorage.getItem('userEmail');
         
-        currentUserEmail = (loggedInObj && loggedInObj.email) ? loggedInObj.email : fallbackEmail;
+        // 2. Check POST UTME Auth
+        const putmeObj = JSON.parse(localStorage.getItem('post_utme_logged_in_user') || 'null');
+
+        // 3. Merge: If ANY exist, the user is authorized!
+        currentUserEmail = (mainObj && mainObj.email) || fallbackEmail || (putmeObj && putmeObj.email);
 
         if (!currentUserEmail) {
-            console.warn("No local CBT session found. Redirecting to login...");
-            window.location.href = 'index.html';
+            console.warn("No active session found. Redirecting to home...");
+            // Safely redirects to the root URL, bypassing any Clean URL crash
+            window.location.replace('/');
             return;
         }
 
         const firstName = currentUserEmail.split('@')[0]; 
         const nameDisplay = document.getElementById('user-name-display');
-        nameDisplay.innerText = firstName;
+        if (nameDisplay) nameDisplay.innerText = firstName;
 
         loadSidebarSessions();
 
     } catch (err) { 
         console.error("Auth error:", err); 
-        window.location.href = 'index.html';
+        window.location.replace('/');
     }
 }
+
+// --- SMART DASHBOARD RETURN ---
+window.returnToDashboard = function() {
+    const isPostUtme = localStorage.getItem('post_utme_logged_in_user');
+    
+    if (isPostUtme) {
+        // We use the strict clean URL routing per the new Vercel rules
+        window.location.href = '/post-utme-dashboard';
+    } else {
+        window.location.href = '/dashboard';
+    }
+};
 
 async function loadSidebarSessions() {
     if (!currentUserEmail) return;
@@ -145,7 +162,6 @@ async function loadPastSession(sessionId, sessionTitle) {
             ]
         });
     } else if (window.MathJax) {
-        // Fallback if you are using MathJax instead of KaTeX
         MathJax.typesetPromise([messagesWrapper]).catch(err => console.log(err));
     }
 }
@@ -252,9 +268,7 @@ async function handleSend() {
     try {
         let protectedPayload = slidingWindowHistory.slice(-16);
 
-        // --- BUG FIX 2: Prevent Gemini Context Crash ---
-        // Gemini API strictly demands that history arrays begin with a 'user' message.
-        // If our slice(-16) accidentally grabbed an AI ('model') message first, we remove it.
+        // Prevent Gemini Context Crash
         if (protectedPayload.length > 0 && protectedPayload[0].role !== 'user') {
             protectedPayload.shift(); 
         }
@@ -331,7 +345,7 @@ async function generateAndSaveTitle(firstPrompt, sessionId) {
     }
 }
 
-// --- 5. Phase 2: Voice-to-Text Engine ---
+// --- 5. Voice-to-Text Engine ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition && micBtn) {

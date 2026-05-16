@@ -24,7 +24,7 @@
         
         if (!userData.email || !userData.id) {
             console.error('❌ VALIDATION FAILED: Missing email or id');
-            window.location.href = 'index.html';
+            window.location.replace('/');
             return;
         }
         

@@ -6,7 +6,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       const user = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
-      if (!user) { window.location.href = 'index.html'; return; }
+      if (!user) { window.location.replace('/'); return; }
       
       loadHistory(user.id); // Assuming localStorage saves user ID or we fetch it
     });
