@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Leaderboard — Scholars Prep</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+  <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --ion-color-primary: #044908;
+      --panel: #ffffff;
+      --muted: #8f96a3;
+      --page-bg: #f3f4f6;
+      --table-border: rgba(128,128,128,0.2);
+    }
+
+    body.dark, body.dark-mode {
+      --ion-background-color: #121212; 
+      --ion-text-color: #ffffff; 
+      --panel: #1e1e1e;
+      --page-bg: #121212;
+      --table-border: rgba(255,255,255,0.1);
+    }
+
+    body { background: var(--page-bg); font-family: Inter, sans-serif; }
+    ion-app:not(.hydrated) { visibility: hidden; opacity: 0; }
+    ion-app.hydrated { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
+    
+    /* Navigation Animations */
+    .view-layer { display: none; height: 100%; width: 100%; flex-direction: column; }
+    .view-layer.active { display: flex; animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* Leaderboard Cards */
+    .rank-card {
+        background: var(--panel); border: 1px solid var(--table-border);
+        border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;
+        display: flex; align-items: center; justify-content: space-between;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+    }
+    
+    /* Highlight the current user */
+    .rank-card.is-me { border: 2px solid var(--ion-color-primary); background: rgba(4, 73, 8, 0.05); }
+
+    .rank-left { display: flex; align-items: center; gap: 12px; }
+    
+    .rank-badge {
+        width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; 
+        justify-content: center; font-weight: bold; font-size: 14px; background: var(--page-bg); color: var(--muted);
+    }
+    
+    /* Top 3 Colors */
+    .rank-1 .rank-badge { background: #FFD700; color: #856404; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+    .rank-2 .rank-badge { background: #C0C0C0; color: #383d41; }
+    .rank-3 .rank-badge { background: #CD7F32; color: #4a3014; }
+
+    .avatar-circle {
+        width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; 
+        justify-content: center; font-size: 18px; font-weight: bold; color: white;
+        background: linear-gradient(135deg, var(--ion-color-primary), #10b981);
+    }
+
+    .user-info { display: flex; flex-direction: column; }
+    .user-name { font-weight: bold; font-size: 15px; color: var(--ion-text-color); margin: 0; }
+    .user-tag { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .score-box { text-align: right; }
+    .score-val { font-size: 18px; font-weight: 800; color: #10b981; }
+    .score-total { font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body class="noselect">
+  <ion-app>
+    <div id="view-list" class="view-layer active">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button onclick="history.back()"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title>Top Aspirants</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding">
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <ion-icon name="trophy" style="font-size: 50px; color: #FFD700;"></ion-icon>
+            <p style="color: var(--muted); margin-top: 5px; font-size: 14px;">Ranking based on highest overall Mock Exam scores.</p>
+        </div>
+
+        <div id="leaderboardSkeleton">
+            <ion-skeleton-text animated style="height: 70px; border-radius: 14px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 14px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 14px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 14px; margin-bottom: 12px;"></ion-skeleton-text>
+        </div>
+        
+        <div id="emptyState" style="display: none; text-align: center; padding-top: 40px; color: var(--muted);">
+            <ion-icon name="bar-chart-outline" style="font-size: 64px; opacity: 0.3;"></ion-icon>
+            <p style="margin-top: 16px; font-size: 16px;">No exams have been taken yet.<br>Be the first to secure a spot!</p>
+        </div>
+
+        <div id="leaderboardContainer"></div>
+        
+      </ion-content>
+    </div>
+  </ion-app>
+
+  <script src="post-utme-leaderboard.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+    }
+  </script>
+</body>
+</html>
