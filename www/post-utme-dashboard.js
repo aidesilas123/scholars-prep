@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     fetchReferralProgress(); 
+    checkNewAlerts();
 });
 
 // Share Function (Remains exactly the same as before)
@@ -117,24 +118,33 @@ if (localStorage.getItem('post_utme_theme') === 'dark') {
     document.body.classList.add('dark');
 }
 
-// --- 5. LOGOUT LOGIC (Red Destructive Action) ---
+/// --- 5. LOGOUT LOGIC (With Modal Protection) ---
 const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-document.getElementById('logoutBtn').addEventListener('click', async () => {
-    // 1. Log out of Supabase to kill backend session
-    await supabaseClient.auth.signOut();
-    
-    // 2. Clear local storage
-    localStorage.removeItem('post_utme_logged_in_user');
-    
-    // 3. Redirect
-    window.location.replace('post-utme-login.html');
+// 1. Open the Logout Modal when they click the logout button
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    document.getElementById('logoutOverlay').style.display = 'flex';
 });
 
+// 2. Execute the actual logout ONLY if they click YES inside the modal
+document.getElementById('confirmLogoutBtn').addEventListener('click', async () => {
+    // Hide modal instantly for a snappy UI feel
+    document.getElementById('logoutOverlay').style.display = 'none';
+    
+    // Log out of Supabase to kill backend session
+    await supabaseClient.auth.signOut();
+    
+    // Clear local storage
+    localStorage.removeItem('post_utme_logged_in_user');
+    
+    // Redirect
+    window.location.replace('/post-utme-login');
+});
 // --- 6. FETCH REFERRAL PROGRESS (The Missing Engine) ---
 async function fetchReferralProgress() {
+    
     const userString = localStorage.getItem('post_utme_logged_in_user');
     if (!userString) return;
     
@@ -173,5 +183,32 @@ async function fetchReferralProgress() {
 
     } catch (err) {
         console.error("JavaScript Error in fetchReferralProgress:", err);
+    }
+}
+// --- NOTIFICATION BADGE LOGIC ---
+async function checkNewAlerts() {
+    try {
+        // Count the total number of alerts in the database
+        const { count, error } = await supabaseClient.from('putme_notifications')
+            .select('*', { count: 'exact', head: true });
+
+        if (error) throw error;
+
+        if (count) {
+            // Get the ID of the last alert the user viewed (defaults to 0 for new users)
+            const lastSeenId = localStorage.getItem('post_utme_last_seen_alert') || 0;
+
+            // If the total alerts in DB is higher than what they've seen, show the badge!
+            if (count > lastSeenId) {
+                const bellBtn = document.getElementById('alertBellBtn');
+                
+                // Prevent adding multiple badges if the function runs twice
+                if(bellBtn && !bellBtn.innerHTML.includes('ion-badge')) {
+                    bellBtn.innerHTML += `<ion-badge color="danger" style="position:absolute; top: 4px; right: 4px; border-radius: 50%; font-size: 9px; padding: 3px 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">New</ion-badge>`;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Failed to load notification badge:", err);
     }
 }

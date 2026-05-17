@@ -303,6 +303,28 @@
       </ion-tab-bar>
 
     </div>
+
+    <div class="overlay" id="logoutOverlay" style="display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px);">
+    <div class="custom-modal" style="background: var(--panel); border-radius: 14px; padding: 24px; width: min(92vw, 350px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      <h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Log Out</h3>
+      <p style="margin: 0 0 24px; color: var(--muted); line-height: 1.6; font-size: 15px;">Are you sure you want to log out of your account?</p>
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <ion-button fill="outline" color="medium" onclick="document.getElementById('logoutOverlay').style.display='none'">CANCEL</ion-button>
+        <ion-button color="primary" id="confirmLogoutBtn">YES</ion-button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="exitOverlay" style="display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px);">
+    <div class="custom-modal" style="background: var(--panel); border-radius: 14px; padding: 24px; width: min(92vw, 350px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      <h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Exit App</h3>
+      <p style="margin: 0 0 24px; color: var(--muted); line-height: 1.6; font-size: 15px;">Are you sure you want to exit Scholars Prep?</p>
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <ion-button fill="outline" color="medium" onclick="document.getElementById('exitOverlay').style.display='none'">CANCEL</ion-button>
+        <ion-button color="primary" id="confirmExitBtn">YES</ion-button>
+      </div>
+    </div>
+  </div>
   </ion-app>
 
   <script src="post-utme-dashboard.js"></script>
