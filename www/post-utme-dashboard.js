@@ -212,34 +212,47 @@ async function checkNewAlerts() {
         console.error("Failed to load notification badge:", err);
     }
 }
-// --- 7. EXIT APP LOGIC (Hardware Back Button) ---
+// --- 7. EXIT APP LOGIC (Web Swipe & Native Trap) ---
 
-// 1. Trap the Web Browser / System Swipe Navigation
-history.pushState(null, document.title, location.href);
-window.addEventListener('popstate', function (event) {
-    // Instantly push a new state so the browser can't actually go back to the login page
-    history.pushState(null, document.title, location.href);
-    
-    // Open the custom exit modal instead
-    const exitModal = document.getElementById('exitOverlay');
-    if (exitModal) exitModal.style.display = 'flex';
+// 1. Push an initial state into the browser history when the dashboard loads
+window.addEventListener('DOMContentLoaded', () => {
+    history.pushState({ page: 'post-utme-dashboard' }, document.title, window.location.href);
 });
 
-// 2. Trap the Native Capacitor/Cordova Back Button (For when you compile the APK)
+// 2. Intercept the web browser back button (Swipe navigation)
+window.addEventListener('popstate', function(event) {
+    // Push the state back immediately so the app doesn't actually close
+    history.pushState({ page: 'post-utme-dashboard' }, document.title, window.location.href);
+    
+    // Show the exit confirmation modal
+    const exitModal = document.getElementById('exitOverlay');
+    if (exitModal) {
+        exitModal.style.display = 'flex';
+    }
+});
+
+// 3. Trap the Native Android Back Button (For when you compile the APK)
 document.addEventListener('backbutton', (e) => {
     e.preventDefault(); 
     const exitModal = document.getElementById('exitOverlay');
-    if (exitModal) exitModal.style.display = 'flex';
+    if (exitModal) {
+        exitModal.style.display = 'flex';
+    }
 }, false);
 
-// 3. Execute the redirect to index.html when they click YES
+// 4. Modal Action: YES Button (Redirects to index.html)
 const confirmExitBtn = document.getElementById('confirmExitBtn');
 if (confirmExitBtn) {
     confirmExitBtn.addEventListener('click', () => {
-        // Hide modal
+        // Hide the modal
         document.getElementById('exitOverlay').style.display = 'none';
         
-        // Point to the main index page as requested
-        window.location.replace('index.html'); 
+        // If running inside Capacitor (Android/iOS App)
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+            window.Capacitor.Plugins.App.exitApp();
+        } else {
+            // If on the web, kick them to index.html
+            window.location.replace('index.html');
+        }
     });
 }
