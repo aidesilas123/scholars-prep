@@ -212,3 +212,31 @@ async function checkNewAlerts() {
         console.error("Failed to load notification badge:", err);
     }
 }
+// --- 7. EXIT APP LOGIC (Hardware Back Button) ---
+
+// 1. Trap the physical back button
+document.addEventListener('backbutton', (e) => {
+    // This strictly stops the phone from trying to go back to the login page!
+    e.preventDefault(); 
+    
+    // Open the Exit Modal instead
+    const exitModal = document.getElementById('exitOverlay');
+    if (exitModal) {
+        exitModal.style.display = 'flex';
+    }
+}, false);
+
+// 2. Execute the actual app closure if they click YES
+const confirmExitBtn = document.getElementById('confirmExitBtn');
+if (confirmExitBtn) {
+    confirmExitBtn.addEventListener('click', () => {
+        // Trigger Capacitor's native exit command for Android
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+            window.Capacitor.Plugins.App.exitApp();
+        } else if (navigator.app) {
+            navigator.app.exitApp(); // Fallback
+        } else {
+            console.log("Exit app triggered (Note: Browser tabs cannot be closed via script, this only works on mobile).");
+        }
+    });
+}
