@@ -76,29 +76,59 @@ window.addEventListener('popstate', (event) => {
 });
 
 // Initialize first state
+// --- AUTO-FILL REFERRAL CODE FROM LINK ---
 if (!history.state) {
-  history.replaceState({ view: 'login' }, '', '#login');
+  const urlParams = new URLSearchParams(window.location.search);
+  const refCode = urlParams.get('ref');
+  
+  if (refCode) {
+      document.getElementById('signupReferral').value = refCode.toUpperCase();
+      history.replaceState({ view: 'signup' }, '', '#signup');
+      renderView('signup');
+  } else {
+      history.replaceState({ view: 'login' }, '', '#login');
+      renderView('login');
+  }
 }
-
 
 // --- SUPABASE LOGIC ---
 const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// 1. SIGNUP & CUSTOM TABLE INSERT
+// 1. SIGNUP & REFERRAL TRACKING
 document.getElementById('signupBtn').addEventListener('click', async () => {
   const name = document.getElementById('signupName').value.trim();
   const email = document.getElementById('signupEmail').value.trim().toLowerCase();
   const pw = document.getElementById('signupPassword').value;
   const confirmPw = document.getElementById('confirmPassword').value;
+  const enteredRefCode = document.getElementById('signupReferral').value.trim().toUpperCase();
 
-  if(!name || !email || !pw) { showModal('Error', 'Please fill all fields'); return; }
+  if(!name || !email || !pw) { showModal('Error', 'Please fill all required fields'); return; }
   if(pw !== confirmPw) { showModal('Error', 'Passwords do not match'); return; }
 
   showLoading();
+
+  let referrerEmail = null;
+
+  // A. Verify the Referral Code BEFORE creating the account
+  if (enteredRefCode) {
+      const { data: refUser, error: refError } = await supabaseClient
+          .from('post-utme-users')
+          .select('email')
+          .eq('referral_code', enteredRefCode)
+          .single();
+
+      if (refUser) {
+          referrerEmail = refUser.email;
+      } else {
+          hideLoading();
+          showModal('Invalid Code', 'The referral code you entered does not exist. You can leave it blank or try again.');
+          return;
+      }
+  }
   
-  // Create User in standard Auth table
+  // B. Create User in standard Auth table
   const { data: authData, error: authError } = await supabaseClient.auth.signUp({
     email, password: pw, options: { data: { full_name: name, role: 'post_utme' } }
   });
@@ -109,16 +139,24 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
     return;
   }
 
-  // Insert into special POST UTME PostgreSQL table
+  // C. Generate a permanent 8-digit code for this new user
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let myNewRefCode = '';
+  for (let i = 0; i < 8; i++) myNewRefCode += chars.charAt(Math.floor(Math.random() * chars.length));
+
   if (authData.user) {
+    // Insert into POST UTME table with their new referral code
     const { error: dbError } = await supabaseClient
       .from('post-utme-users')
       .insert([
-        { user_id: authData.user.id, full_name: name, email: email }
+        { user_id: authData.user.id, full_name: name, email: email, referral_code: myNewRefCode }
       ]);
       
-    if (dbError) {
-      console.error("Failed to insert into post-utme-users table", dbError);
+    // D. If they used a valid code, reward the referrer!
+    if (referrerEmail) {
+        await supabaseClient.from('putme_referrals').insert([
+            { referrer_email: referrerEmail, referred_email: email }
+        ]);
     }
   }
 
@@ -127,7 +165,7 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
   setTimeout(() => { navigateTo('login'); }, 2000);
 });
 
-// 2. LOGIN
+// 2. LOGIN & FETCH DATA
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim().toLowerCase();
   const pw = document.getElementById('loginPassword').value;
@@ -144,16 +182,15 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     return;
   }
 
-  // Verify they exist in the post-utme-users table to block normal students from logging in here
+  // Fetch their profile AND their referral code
   const { data: profileData, error: profileError } = await supabaseClient
     .from('post-utme-users')
-    .select('id')
+    .select('id, referral_code')
     .eq('user_id', data.user.id)
     .single();
 
   if (profileError) {
     hideLoading();
-    // Force sign out since they aren't a post-utme student
     await supabaseClient.auth.signOut();
     showModal('Access Denied', 'This portal is for POST UTME candidates only.');
     return;
@@ -167,18 +204,22 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
         loggedAt: Date.now()
     };
 
-    // Save under a unique key so it doesn't conflict with main app
+    // Save login session
     localStorage.setItem('post_utme_logged_in_user', JSON.stringify(userObj));
     
+    // Save their permanent referral code for the Dashboard to use
+    if (profileData.referral_code) {
+        localStorage.setItem('my_referral_code', profileData.referral_code);
+    }
+    
     showModal('Success', 'Redirecting to dashboard...', {autoClose: 1000});
-    setTimeout(() => { window.location.href = 'post-utme-dashboard.html'; }, 1000);
+    setTimeout(() => { window.location.href = '/post-utme-dashboard'; }, 1000);
 
   } catch (err) {
     console.error(err);
-    window.location.href = 'post-utme-dashboard.html';
+    window.location.href = '/post-utme-dashboard';
   }
 });
-
 // 3. RESET PASSWORD
 document.getElementById('resetBtn').addEventListener('click', async () => {
   const email = document.getElementById('resetEmail').value.trim().toLowerCase();

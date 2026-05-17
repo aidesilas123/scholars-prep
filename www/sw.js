@@ -26,6 +26,7 @@ const PRECACHE_URLS = [
   '/post-utme-report', '/post-utme-report.js',
   '/post-utme-profile', '/post-utme-profile.js',
   '/post-utme-leaderboard', '/post-utme-leaderboard.js',
+  
   '/'
 ];
 

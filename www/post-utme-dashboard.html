@@ -205,17 +205,22 @@
 </ion-card>
 
               <!-- CARD 3 -->
-              <ion-card class="slide-card">
-                <ion-card-header>
-                  <ion-icon name="gift" style="font-size: 42px; color: #FF4500;"></ion-icon>
-                  <ion-card-title style="font-size: 18px; font-weight: bold;">Earn Gifts</ion-card-title>
-                </ion-card-header>
-                <ion-card-content>
-                  Invite other candidates using your link for massive discounts.
-                  <br><br><ion-button fill="outline" color="warning" size="small">Get Link</ion-button>
-                </ion-card-content>
-              </ion-card>
-
+             <ion-card class="slide-card">
+  <ion-card-header>
+    <ion-icon name="gift" style="font-size: 42px; color: #FF4500;"></ion-icon>
+    <ion-card-title style="font-size: 18px; font-weight: bold;">Earn Gifts</ion-card-title>
+  </ion-card-header>
+  <ion-card-content>
+    Invite 10 candidates using your code to unlock a massive discount.
+    <div style="background: rgba(255, 69, 0, 0.1); border: 1px dashed #FF4500; border-radius: 8px; padding: 10px; margin: 12px 0; text-align: center;">
+        <span style="font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px;">Your Referral Code:</span>
+        <strong id="myReferralCode" style="font-size: 20px; color: #FF4500; letter-spacing: 2px;">LOADING...</strong>
+    </div>
+    <ion-button expand="block" fill="outline" color="warning" size="small" onclick="copyReferralMessage()" id="shareCodeBtn">
+        <ion-icon name="share-social-outline" slot="start"></ion-icon> Share Code
+    </ion-button>
+  </ion-card-content>
+</ion-card>
               <!-- CARD 4 -->
              <ion-card class="slide-card" onclick="window.location.href='/post-utme-leaderboard'" style="cursor: pointer;">
   <ion-card-header>
@@ -233,14 +238,32 @@
 
           <!-- Extra content space to push tabs down if needed -->
           <h3 style="font-weight: bold; margin-top: 30px;">Quick Actions</h3>
-          <ion-button expand="block" color="primary" style="--border-radius: 10px; margin-bottom: 12px;">
-            <ion-icon name="book-outline" slot="start"></ion-icon> View Syllabus
-          </ion-button>
+
+        <div style="background: var(--panel); border-radius: 16px; padding: 20px; border: 1px solid var(--table-border); margin-bottom: 20px;">
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+    <span style="font-weight: bold; font-size: 15px; color: var(--ion-text-color);">Referral Discount</span>
+    <span style="font-size: 13px; color: var(--muted); font-weight: bold;" id="referralCountText">0/10</span>
+  </div>
+  
+  <ion-progress-bar value="0" color="warning" id="referralProgressBar" style="height: 10px; border-radius: 5px; margin-bottom: 15px;"></ion-progress-bar>
+  
+  <p style="font-size: 13px; color: var(--muted); margin-top: 0;" id="referralMessage">
+    Invite 10 friends to unlock your premium discount!
+  </p>
+
+  <ion-button expand="block" color="warning" style="--border-radius: 10px; display: none; font-weight: bold;" id="claimDiscountBtn">
+    <ion-icon name="ticket" slot="start"></ion-icon> Claim Discount Now
+  </ion-button>
+
+</div>
+
           <ion-button expand="block" fill="outline" color="primary" style="--border-radius: 10px;" onclick="window.location.href='post-utme-history.html'">
-  <ion-icon name="bar-chart-outline" slot="start"></ion-icon> My Statistics
-</ion-button>
+        <ion-icon name="bar-chart-outline" slot="start"></ion-icon> My Statistics</ion-button>
+
+
           
-          <br><br> <!-- Space for bottom tabs -->
+          <br> <!-- Space for bottom tabs -->
         </div>
 
       </ion-content>

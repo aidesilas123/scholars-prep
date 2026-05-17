@@ -28,6 +28,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1200);
 });
 
+let userReferralCode = "";
+
+document.addEventListener('DOMContentLoaded', () => {
+    const userString = localStorage.getItem('post_utme_logged_in_user');
+    
+    if (userString) {
+        // 1. Check if we already generated a code for them on this device
+        userReferralCode = localStorage.getItem('my_referral_code');
+
+        // 2. If no code exists, generate a fresh 8-character alphanumeric string
+        if (!userReferralCode) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            userReferralCode = '';
+            for (let i = 0; i < 8; i++) {
+                userReferralCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            // 3. Save it instantly so it never changes on refresh
+            localStorage.setItem('my_referral_code', userReferralCode);
+        }
+        
+        // Display it in the UI
+        document.getElementById('myReferralCode').innerText = userReferralCode;
+    }
+    
+    fetchReferralProgress(); 
+});
+
+// Share Function (Remains exactly the same as before)
+window.copyReferralMessage = async function() {
+    const btn = document.getElementById('shareCodeBtn');
+    const shareMessage = `I'm using Scholars Prep to study for the ABU POST UTME! Join me and use my referral code: ${userReferralCode} during sign up.\n\nRegister here: https://scholars-prep.vercel.app/post-utme-login?ref=${userReferralCode}`;
+
+    try {
+        await navigator.clipboard.writeText(shareMessage);
+        
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<ion-icon name="checkmark-circle" slot="start"></ion-icon> Copied!`;
+        btn.color = "success";
+        
+        const toast = document.createElement('ion-toast');
+        toast.message = 'Invite message copied to clipboard! Paste it on WhatsApp.';
+        toast.duration = 3000;
+        toast.color = 'dark';
+        document.body.appendChild(toast);
+        await toast.present();
+
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.color = "warning";
+        }, 3000);
+    } catch (err) {
+        console.error('Failed to copy', err);
+    }
+};
+
 // --- 2. CAROUSEL SLIDER LOGIC ---
 // --- 2. CAROUSEL SLIDER LOGIC ---
 function startCarousel() {
