@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Report Issue — Scholars Prep</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+  <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --ion-color-primary: #044908;
+      --panel: #ffffff;
+      --muted: #8f96a3;
+      --page-bg: #f3f4f6;
+      --table-border: rgba(128,128,128,0.2);
+    }
+
+    body.dark, body.dark-mode {
+      --ion-background-color: #121212; 
+      --ion-text-color: #ffffff; 
+      --panel: #1e1e1e;
+      --page-bg: #121212;
+      --table-border: rgba(255,255,255,0.1);
+    }
+
+    body { background: var(--page-bg); font-family: Inter, sans-serif; }
+    ion-app:not(.hydrated) { visibility: hidden; opacity: 0; }
+    ion-app.hydrated { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
+    
+    .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19,1,1,0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); color: white;}
+    .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: var(--ion-color-primary); animation: spin 1s infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Custom Modal */
+    .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px); }
+    .custom-modal { background: var(--panel); border-radius: 14px; padding: 24px; width: min(92vw, 400px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .custom-modal h3 { margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color); }
+    .custom-modal p { margin: 0 0 24px; color: var(--muted); line-height: 1.6; font-size: 15px; }
+    .custom-modal .row { display: flex; justify-content: flex-end; gap: 12px; }
+
+    /* Linear Navigation Stack Animations */
+    .view-layer { display: none; height: 100%; width: 100%; flex-direction: column; }
+    .view-layer.active { display: flex; animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* Form Card Styling */
+    .form-card { background: var(--panel); border-radius: 16px; padding: 20px; border: 1px solid var(--table-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+    .form-header { text-align: center; margin-bottom: 20px; }
+    .form-header h2 { margin: 0 0 8px 0; font-weight: bold; color: var(--ion-text-color); }
+    .form-header p { margin: 0; color: var(--muted); font-size: 14px; }
+    
+    ion-item { --background: transparent; --border-color: var(--table-border); margin-bottom: 15px; --border-radius: 8px; }
+  </style>
+</head>
+<body class="noselect">
+  
+  <div class="loading-overlay" id="globalLoading"><div class="page-loading"><div class="loading-spinner"></div><div id="loadText">Submitting...</div></div></div>
+
+  <div class="overlay" id="overlay">
+    <div class="custom-modal">
+      <h3 id="modalTitle">Confirm</h3>
+      <p id="modalMsg">Are you sure?</p>
+      <div class="row">
+        <ion-button fill="outline" color="medium" id="modalCancel" onclick="hideModal()">Cancel</ion-button>
+        <ion-button color="primary" id="modalOk">Yes</ion-button>
+      </div>
+    </div>
+  </div>
+
+  <ion-app>
+    <div id="view-form" class="view-layer active">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button onclick="history.back()"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title>Report Issue</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding">
+        
+        <div id="formSkeleton">
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px; margin-bottom: 20px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 60px; border-radius: 8px; margin-bottom: 15px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 150px; border-radius: 8px; margin-bottom: 20px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 50px; border-radius: 10px;"></ion-skeleton-text>
+        </div>
+
+        <div class="form-card" id="formContent" style="display: none;">
+            <div class="form-header">
+                <ion-icon name="bug" style="font-size: 48px; color: var(--ion-color-primary);"></ion-icon>
+                <h2>Found a Bug?</h2>
+                <p>Let us know what's wrong so we can fix it immediately.</p>
+            </div>
+
+            <ion-item fill="outline">
+                <ion-label position="stacked">Issue Category</ion-label>
+                <ion-select id="issueCategory" placeholder="Select an option">
+                    <ion-select-option value="Question/Answer Error">Error in Past Question</ion-select-option>
+                    <ion-select-option value="App Bug">App Glitch or Freeze</ion-select-option>
+                    <ion-select-option value="Payment/Subscription">Payment Issue</ion-select-option>
+                    <ion-select-option value="Other">Other</ion-select-option>
+                </ion-select>
+            </ion-item>
+
+            <ion-item fill="outline">
+                <ion-label position="stacked">Detailed Description</ion-label>
+                <ion-textarea id="issueDescription" rows="5" placeholder="Please describe the issue in detail... (If reporting a question error, please include the Subject and Year)"></ion-textarea>
+            </ion-item>
+
+            <ion-button expand="block" color="primary" style="margin-top: 20px; --border-radius: 10px; height: 50px; font-weight: bold;" onclick="submitReport()">
+                Submit Report
+            </ion-button>
+        </div>
+
+      </ion-content>
+    </div>
+  </ion-app>
+
+  <script src="post-utme-report.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+    }
+  </script>
+</body>
+</html>

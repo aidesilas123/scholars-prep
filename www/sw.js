@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scholars-prep-cache-v8';
+const CACHE_NAME = 'scholars-prep-cache-v10';
 
 // Strictly Clean URLs (No .html allowed in this list)
 const PRECACHE_URLS = [
@@ -22,6 +22,9 @@ const PRECACHE_URLS = [
   '/exam-mode', '/exam-mode.js',
   '/post-utme-history', '/post-utme-history.js',
   '/post-utme-pastquestions', '/post-utme-pastquestions.js',
+  '/post-utme-settings', '/post-utme-settings.js',
+  '/post-utme-report', '/post-utme-report.js',
+  '/post-utme-profile', '/post-utme-profile.js',
   '/'
 ];
 
