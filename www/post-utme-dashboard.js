@@ -132,3 +132,46 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     // 3. Redirect
     window.location.replace('post-utme-login.html');
 });
+
+// --- 6. FETCH REFERRAL PROGRESS (The Missing Engine) ---
+async function fetchReferralProgress() {
+    const userString = localStorage.getItem('post_utme_logged_in_user');
+    if (!userString) return;
+    
+    const authEmail = JSON.parse(userString).email;
+    const targetReferrals = 10;
+
+    console.log("Checking database for referrer:", authEmail); // Bug Tracker 1
+
+    try {
+        // We use supabaseClient here since you defined it in Section 5
+        const { data, count, error } = await supabaseClient.from('putme_referrals')
+            .select('*', { count: 'exact' }) 
+            .eq('referrer_email', authEmail);
+
+        if (error) {
+            console.error("CRITICAL DASHBOARD ERROR:", error); // Bug Tracker 2
+            return;
+        }
+
+        console.log("Rows found by Dashboard:", data); // Bug Tracker 3
+        console.log("Total Count:", count);
+
+        const currentCount = count || 0;
+        const progressDecimal = Math.min(currentCount / targetReferrals, 1); 
+
+        // Update UI Elements
+        document.getElementById('referralCountText').innerText = `${currentCount}/${targetReferrals}`;
+        document.getElementById('referralProgressBar').value = progressDecimal;
+
+        // Trigger Success State if 10/10 is reached
+        if (currentCount >= targetReferrals) {
+            document.getElementById('referralProgressBar').color = "success";
+            document.getElementById('referralMessage').style.display = 'none';
+            document.getElementById('claimDiscountBtn').style.display = 'block';
+        }
+
+    } catch (err) {
+        console.error("JavaScript Error in fetchReferralProgress:", err);
+    }
+}
