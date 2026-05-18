@@ -123,6 +123,8 @@ window.toggleSubject = function(id) {
 };
 
 // --- 2. LOAD & RENDER PAST QUESTIONS ---
+// --- 2. LOAD & RENDER PAST QUESTIONS (With Freemium Trap) ---
+// --- 2. LOAD & RENDER PAST QUESTIONS (With Real-Time Security) ---
 window.loadPastQuestions = async function() {
     showLoading(true, "Fetching Past Questions...");
     
@@ -132,13 +134,32 @@ window.loadPastQuestions = async function() {
     document.getElementById('pqTitle').innerText = `${subName} ${yearOpt}`;
 
     try {
-        // Fetch ALL questions for that year (No Limit)
-        const { data: rawData, error } = await _sb.from('putme_questions')
-            .select('*')
-            .eq('subject_id', activeSubjectId)
-            .eq('year', yearOpt);
+        const authEmail = JSON.parse(localStorage.getItem('post_utme_logged_in_user')).email;
 
-        if (error) throw error;
+        // Fetch Questions, Master Switch, and Subscription simultaneously!
+        const [qRes, settingsRes, subRes] = await Promise.all([
+            _sb.from('putme_questions').select('*').eq('subject_id', activeSubjectId).eq('year', yearOpt),
+            _sb.from('putme_settings').select('is_payment_active').maybeSingle(),
+            _sb.from('putme_subscriptions').select('end_date').eq('user_email', authEmail).maybeSingle()
+        ]);
+
+        if (qRes.error) throw qRes.error;
+        const rawData = qRes.data;
+
+        // --- REAL-TIME SECURITY CHECK ---
+        let isSwitchActive = true; 
+        let isPremium = false;
+
+        if (settingsRes.data && settingsRes.data.is_payment_active !== undefined) {
+            isSwitchActive = settingsRes.data.is_payment_active;
+        }
+        if (subRes.data && subRes.data.end_date) {
+            const endDate = new Date(subRes.data.end_date);
+            if (endDate > new Date()) isPremium = true;
+        }
+
+        // A user is ONLY restricted if the Master Switch is ON, AND they haven't paid.
+        const isFreeUser = (isSwitchActive === true && isPremium === false);
 
         const contentArea = document.getElementById('pqContent');
         contentArea.innerHTML = '';
@@ -146,25 +167,33 @@ window.loadPastQuestions = async function() {
 
         if (rawData && rawData.length > 0) {
             let htmlBlock = '';
+            
+            let questionsToRender = rawData;
+            let showPaywallBlock = false;
+            
+            const FREE_LIMIT = 1; // The max questions free users can see
 
-            rawData.forEach((q, idx) => {
+            // Only slice if they are a free user AND there are more than 30 questions
+            if (isFreeUser && rawData.length > FREE_LIMIT) {
+                questionsToRender = rawData.slice(0, FREE_LIMIT);
+                showPaywallBlock = true;
+            }
+
+            questionsToRender.forEach((q, idx) => {
                 const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
                 const fixedQText = fixMathText(q.question_text);
                 const correctAnsIdx = parseInt(q.answer);
                 
-                // Store in memory for Nexus AI to reference
                 currentPQData.push({
                     qText: fixedQText,
                     correctText: fixMathText(parsedOpts[correctAnsIdx])
                 });
 
-                // Build Options HTML with the correct answer highlighted
                 const optsHtml = parsedOpts.map((opt, i) => {
                     const isCorrect = (i === correctAnsIdx);
                     return `<div class="pq-opt ${isCorrect ? 'correct' : ''}">${fixMathText(opt)}</div>`;
                 }).join('');
 
-                // Append Question Card + Nexus Widget
                 htmlBlock += `
                 <div class="pq-card">
                     <h3 style="margin-top: 0; font-weight: bold; line-height: 1.5;">Q${idx + 1}. ${fixedQText}</h3>
@@ -191,9 +220,22 @@ window.loadPastQuestions = async function() {
                 </div>`;
             });
 
+            // --- INJECT THE INLINE PAYWALL BLOCK ---
+            if (showPaywallBlock) {
+                const hiddenCount = rawData.length - FREE_LIMIT;
+                htmlBlock += `
+                <div style="background: var(--panel); border: 2px dashed var(--ion-color-primary); border-radius: 14px; padding: 30px 20px; text-align: center; margin-top: 20px; margin-bottom: 40px;">
+                    <ion-icon name="lock-closed" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
+                    <h3 style="margin: 0 0 10px; font-weight: bold; color: var(--ion-text-color);">You've reached the free limit</h3>
+                    <p style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">Unlock the app to view the remaining <strong>${hiddenCount} questions</strong> for this year, plus access all other years and subjects.</p>
+                    <ion-button expand="block" color="primary" style="--border-radius: 10px; font-weight: bold; height: 45px;" onclick="showAccessModal('locked_feature')">
+                        <ion-icon name="key-outline" slot="start"></ion-icon> Activate App Now
+                    </ion-button>
+                </div>`;
+            }
+
             contentArea.innerHTML = htmlBlock;
             
-            // Render Math
             if(window.MathJax) {
                 MathJax.typesetClear();
                 MathJax.typesetPromise().catch(err => console.error(err));
@@ -210,7 +252,6 @@ window.loadPastQuestions = async function() {
         showLoading(false);
     }
 };
-
 // --- 3. NEXUS INLINE AI LOGIC ---
 window.toggleNexusWidget = function(qIndex) {
     const widget = document.getElementById(`nexus-widget-${qIndex}`);
@@ -272,3 +313,75 @@ window.sendToNexus = async function(qIndex, isAutoExplain) {
         responseContainer.innerHTML = `<span style="color: var(--ion-color-danger);">Connection error. Please try again.</span>`;
     }
 };
+// --- 4. MODAL & PAYSTACK LOGIC ---
+const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
+
+window.showAccessModal = function(intent = 'locked_feature') {
+    const modal = document.getElementById('premiumModal');
+    const payBtn = document.getElementById('paystackBtnText');
+    const modalTitle = document.getElementById('premiumModalTitle');
+    const modalDesc = document.getElementById('premiumModalDesc');
+
+    if (intent === 'direct_pay') {
+        if (modalTitle) modalTitle.innerText = "Activate Scholars Prep";
+        if (modalDesc) modalDesc.innerHTML = "Before proceeding with payment, make sure you read and understand our <a href='#' style='color: var(--ion-color-primary); text-decoration: underline;'>policy, terms and conditions</a>.";
+    } else {
+        if (modalTitle) modalTitle.innerText = "Activate Full Access";
+        if (modalDesc) modalDesc.innerText = "Unlock full access to view all questions and the Nexus AI Tutor.";
+    }
+
+    const cached = JSON.parse(localStorage.getItem('putme_premium_data') || '{}');
+    const hasDiscount = (cached && cached.discountEarned === true);
+    
+    if (payBtn) {
+        payBtn.innerHTML = hasDiscount ? 
+            `<ion-icon name="card-outline" slot="start"></ion-icon> Activate Now - ₦5,000` : 
+            `<ion-icon name="card-outline" slot="start"></ion-icon> Activate Now - ₦5,500`;
+    }
+    
+    if (modal) modal.style.display = 'flex';
+}
+
+window.triggerPutmePaystack = function() {
+    const userString = localStorage.getItem('post_utme_logged_in_user');
+    if (!userString) return;
+    
+    const userObj = JSON.parse(userString);
+    const userEmail = userObj.email;
+    const userId = userObj.id || ''; 
+    
+    const cached = JSON.parse(localStorage.getItem('putme_premium_data') || '{}');
+    const finalPrice = (cached && cached.discountEarned === true) ? 5000 : 5500;
+
+    function onPaymentSuccess(response) {
+        console.log("Payment Ref:", response.reference);
+        const modal = document.getElementById('premiumModal');
+        if (modal) modal.style.display = 'none';
+        
+        // Optimistically unlock the UI
+        cached.isPremium = true;
+        localStorage.setItem('putme_premium_data', JSON.stringify(cached));
+        
+        alert("Payment successful! Your app is fully activated."); 
+        
+        // Seamlessly reload the questions so the 30-limit vanishes instantly!
+        loadPastQuestions();
+    }
+
+    PaystackPop.setup({
+        key: PAYSTACK_KEY,
+        email: userEmail,
+        amount: finalPrice * 100, 
+        currency: 'NGN', 
+        ref: 'PUTME_' + Math.floor((Math.random() * 1000000000) + 1),
+        metadata: {
+            user_id: userId,
+            user_email: userEmail,
+            plan_type: 'Pro Access' 
+        },
+        callback: onPaymentSuccess,
+        onClose: function() {
+            console.log('Payment window closed.');
+        }
+    }).openIframe();
+}

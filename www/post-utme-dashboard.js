@@ -86,7 +86,6 @@ window.copyReferralMessage = async function() {
 };
 
 // --- 2. CAROUSEL SLIDER LOGIC ---
-// --- 2. CAROUSEL SLIDER LOGIC ---
 function startCarousel() {
     const track = document.getElementById('sliderTrack');
 
@@ -142,6 +141,7 @@ document.getElementById('confirmLogoutBtn').addEventListener('click', async () =
     // Redirect
     window.location.replace('/post-utme-login');
 });
+
 // --- 6. FETCH REFERRAL PROGRESS (The Missing Engine) ---
 async function fetchReferralProgress() {
     
@@ -185,6 +185,7 @@ async function fetchReferralProgress() {
         console.error("JavaScript Error in fetchReferralProgress:", err);
     }
 }
+
 // --- NOTIFICATION BADGE LOGIC ---
 async function checkNewAlerts() {
     try {
@@ -212,6 +213,7 @@ async function checkNewAlerts() {
         console.error("Failed to load notification badge:", err);
     }
 }
+
 // --- 7. EXIT APP LOGIC (Web Swipe & Native Trap) ---
 
 // 1. Push an initial state into the browser history when the dashboard loads
@@ -255,4 +257,166 @@ if (confirmExitBtn) {
             window.location.replace('index.html');
         }
     });
+}
+
+// --- 8. PREMIUM STATUS ENGINE (Optimistic Cache) ---
+const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
+
+async function cachePremiumStatus() {
+    const userString = localStorage.getItem('post_utme_logged_in_user');
+    if (!userString) return;
+    const authEmail = JSON.parse(userString).email;
+
+    try {
+        // Fetch Master Switch, Sub Status, and Referral Count simultaneously
+        const [settingsRes, subRes, refRes] = await Promise.all([
+            supabaseClient.from('putme_settings').select('is_payment_active').maybeSingle(),
+            supabaseClient.from('putme_subscriptions').select('end_date').eq('user_email', authEmail).maybeSingle(),
+            supabaseClient.from('putme_referrals').select('*', { count: 'exact', head: true }).eq('referrer_email', authEmail)
+        ]);
+
+        let isSwitchActive = true; 
+        let isPremium = false;
+        let earnedDiscount = false;
+
+        // 1. Check Master Switch
+        if (settingsRes.data && settingsRes.data.is_payment_active !== undefined) {
+            isSwitchActive = settingsRes.data.is_payment_active;
+        }
+
+        // 2. Check Subscription Expiry
+        if (subRes.data && subRes.data.end_date) {
+            const endDate = new Date(subRes.data.end_date);
+            if (endDate > new Date()) {
+                isPremium = true;
+            }
+        }
+
+        // 3. Check Discount Eligibility (10+ referrals)
+        if (refRes.count >= 10) {
+            earnedDiscount = true;
+        }
+
+        // --- NEW: UI CLEANUP LOGIC ---
+        // Hide the Activate Card AND Referral Section if the switch is off OR if they already paid!
+        const activateCard = document.getElementById('activateAppCard');
+        const referralSection = document.getElementById('referralSection');
+        
+        if (!isSwitchActive || isPremium) {
+            if (activateCard) activateCard.style.display = 'none';
+            if (referralSection) referralSection.style.display = 'none';
+        }
+       
+        // -----------------------------
+
+        // 4. Save to Local Storage for INSTANT UI checks
+        const premiumData = {
+            switchActive: isSwitchActive,
+            isPremium: isPremium,
+            discountEarned: earnedDiscount,
+            lastChecked: Date.now()
+        };
+        
+        localStorage.setItem('putme_premium_data', JSON.stringify(premiumData));
+
+    } catch (error) {
+        console.error("Failed to cache premium status:", error);
+    }
+}
+
+// Call cache function silently on load
+document.addEventListener('DOMContentLoaded', () => {
+    cachePremiumStatus();
+});
+
+// --- MODAL & ACCESS LOGIC (With Dynamic Text) ---
+window.showAccessModal = function(intent = 'locked_feature') {
+    const modal = document.getElementById('premiumModal');
+    const payBtn = document.getElementById('paystackBtnText');
+    const modalTitle = document.getElementById('premiumModalTitle');
+    const modalDesc = document.getElementById('premiumModalDesc');
+
+    // 1. DYNAMIC TEXT: Change what the modal says based on what they clicked
+    if (intent === 'direct_pay') {
+        if (modalTitle) modalTitle.innerText = "Activate Scholars Prep";
+        if (modalDesc) modalDesc.innerHTML = "Before proceeding with payment, make sure you read and understand our <a href='#' style='color: var(--ion-color-primary); text-decoration: underline;'>policy, terms and conditions</a>.";
+    } else {
+        if (modalTitle) modalTitle.innerText = "Premium Access Required";
+        if (modalDesc) modalDesc.innerText = "Unlock full access to unlimited CBT Mock Exams, Question Banks, and the Nexus AI Tutor.";
+    }
+
+    // 2. STRICT PRICING: Check if they actually earned the discount
+    const cached = JSON.parse(localStorage.getItem('putme_premium_data') || '{}');
+    const hasDiscount = (cached && cached.discountEarned === true);
+    
+    if (payBtn) {
+        payBtn.innerHTML = hasDiscount ? 
+            `<ion-icon name="card-outline" slot="start"></ion-icon> Activate Now - ₦5,000` : 
+            `<ion-icon name="card-outline" slot="start"></ion-icon> Activate Now - ₦5,500`;
+    }
+    
+    if (modal) modal.style.display = 'flex';
+}
+
+// Check access (Only used for Nexus AI on the Dashboard)
+window.checkPremiumAccess = function(targetPage) {
+    const cached = JSON.parse(localStorage.getItem('putme_premium_data'));
+    
+    if (!cached) {
+        console.log("Waiting for premium cache...");
+        setTimeout(() => window.checkPremiumAccess(targetPage), 500);
+        return;
+    }
+
+    if (!cached.switchActive || cached.isPremium) {
+        window.location.href = targetPage;
+        return;
+    }
+    
+    // Pass 'locked_feature' so it shows the standard "Premium Access Required" text
+    showAccessModal('locked_feature');
+}
+
+// --- PAYSTACK TRIGGER (Webhook Handled) ---
+window.triggerPutmePaystack = function() {
+    const userString = localStorage.getItem('post_utme_logged_in_user');
+    if (!userString) return;
+    
+    // Grab BOTH email and ID from local storage
+    const userObj = JSON.parse(userString);
+    const userEmail = userObj.email;
+    const userId = userObj.id || ''; 
+    
+    const cached = JSON.parse(localStorage.getItem('putme_premium_data') || '{}');
+    const finalPrice = (cached && cached.discountEarned === true) ? 5000 : 5500;
+
+    function onPaymentSuccess(response) {
+        console.log("Payment Ref:", response.reference);
+        const modal = document.getElementById('premiumModal');
+        if (modal) modal.style.display = 'none';
+        
+        cached.isPremium = true;
+        localStorage.setItem('putme_premium_data', JSON.stringify(cached));
+        
+        alert("Payment successful! Your app is fully activated."); 
+    }
+
+    // Initializing and opening Paystack safely
+    const handler = PaystackPop.setup({
+        key: PAYSTACK_KEY,
+        email: userEmail,
+        amount: finalPrice * 100, 
+        currency: 'NGN', 
+        ref: 'PUTME_' + Math.floor((Math.random() * 1000000000) + 1),
+        metadata: {
+            user_id: userId,
+            user_email: userEmail,
+            plan_type: 'Pro Access' 
+        },
+        callback: onPaymentSuccess,
+        onClose: function() {
+            console.log('Payment window closed.');
+        }
+    });
+    handler.openIframe();
 }
