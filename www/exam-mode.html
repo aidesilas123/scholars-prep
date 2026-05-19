@@ -141,6 +141,13 @@
         <div style="background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 20px; color: #b45309; text-align: center; font-weight: 600;">
             <ion-icon name="information-circle-outline" style="vertical-align: middle;"></ion-icon> Select exactly 4 subjects to proceed.
         </div>
+        <ion-searchbar 
+    id="subjectSearch" 
+    placeholder="Search subjects (e.g. Mathematics)" 
+    animated="true" 
+    style="padding-inline: 0; --border-radius: 10px; margin-bottom: 10px;"
+    oninput="filterSubjects(event)">
+</ion-searchbar>
         <div id="subjectListContainer">
             <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
             <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>

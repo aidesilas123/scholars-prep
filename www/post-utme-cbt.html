@@ -128,6 +128,13 @@
             <ion-select-option value="180">3hrs</ion-select-option>
           </ion-select>
         </ion-item>
+        <ion-searchbar 
+    id="subjectSearch" 
+    placeholder="Search subjects (e.g. Mathematics)" 
+    animated="true" 
+    style="padding-inline: 0; --border-radius: 10px; margin-bottom: 10px;"
+    oninput="filterSubjects(event)">
+</ion-searchbar>
         <div id="subjectListContainer"></div>
       </ion-content>
       <div class="bottom-nav" style="justify-content: center;">

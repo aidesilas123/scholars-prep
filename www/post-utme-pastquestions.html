@@ -92,6 +92,13 @@
         <div style="color: var(--muted); margin-bottom: 20px; font-size: 15px;">
             Select a single subject to study its past questions. All answers are pre-ticked for easy reading.
         </div>
+        <ion-searchbar 
+    id="subjectSearch" 
+    placeholder="Search subjects (e.g. Mathematics)" 
+    animated="true" 
+    style="padding-inline: 0; --border-radius: 10px; margin-bottom: 10px;"
+    oninput="filterSubjects(event)">
+</ion-searchbar>
         <div id="subjectListContainer">
             <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
             <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>

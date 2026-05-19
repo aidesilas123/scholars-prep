@@ -158,6 +158,23 @@ async function loadSubjects() {
     }
     showLoading(false);
 }
+// --- LIVE SUBJECT SEARCH FILTER ---
+window.filterSubjects = function(event) {
+    const query = event.target.value.toLowerCase();
+    const cards = document.querySelectorAll('.subject-card');
+
+    cards.forEach(card => {
+        // Find the specific ion-label inside each card
+        const subjectName = card.querySelector('ion-label').innerText.toLowerCase();
+        
+        // Hide or show based on the search query
+        if (subjectName.includes(query)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+};
 
 window.toggleSubject = function(id) {
     const card = document.getElementById(`card-${id}`);
