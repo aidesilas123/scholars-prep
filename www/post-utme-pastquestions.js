@@ -203,7 +203,7 @@ window.loadPastQuestions = async function() {
                 
                 currentPQData.push({
                     qText: fixedQText,
-                    correctText: fixMathText(parsedOpts[correctAnsIdx])
+                    correctText: fixMathText(parsedOpts[correctAnsIdx]),
                     allOpts: parsedOpts.map(o => fixMathText(o))
                 });
 
