@@ -398,6 +398,11 @@ async function submitExam(auto) {
         let attempted = 0;
         reviewHtml += `<h4 style="color:var(--ion-color-primary); border-bottom:1px solid #ccc; padding-bottom:5px; margin-top:20px;">${d.name}</h4>`;
         
+        // --- NEW: FREEMIUM REVIEW LIMIT LOGIC ---
+        const FREE_REVIEW_LIMIT = 10;
+        let showPaywall = false;
+        // ----------------------------------------
+
         d.questions.forEach((q, i) => {
             totalQs++;
             const userAns = d.answers[i];
@@ -408,32 +413,54 @@ async function submitExam(auto) {
                 if (correct) subScore++;
             }
             
-            reviewHtml += `
-            <div style="background:var(--card-bg-selected); padding:10px; border-radius:8px; margin-bottom:10px; position: relative;">
-                <p><b>Q${i+1}:</b> ${q.q}</p>
-                <p style="color:${correct?'#10b981':'#ef4444'}; font-weight:bold;">Your Answer: ${userAns!==null ? q.opts[userAns] : 'None'}</p>
-                ${!correct ? `<p style="color:#10b981; font-weight:bold;">Correct: ${q.opts[q.ans]}</p>` : ''}
-                
-                <ion-button size="small" fill="outline" color="primary" style="margin-top: 8px;" onclick="toggleNexusWidget('${subId}', ${i})">
-                    Ask Nexus <img src="Logo.png" alt="Nexus" style="height: 16px; margin-left: 6px; vertical-align: middle;">
-                </ion-button>
+            // ONLY generate HTML if they are a paid user, or if it's within the free 10-question limit
+            if (!isFreeUser || i < FREE_REVIEW_LIMIT) {
+                reviewHtml += `
+                <div style="background:var(--card-bg-selected); padding:10px; border-radius:8px; margin-bottom:10px; position: relative;">
+                    <p><b>Q${i+1}:</b> ${q.q}</p>
+                    <p style="color:${correct?'#10b981':'#ef4444'}; font-weight:bold;">Your Answer: ${userAns!==null ? q.opts[userAns] : 'None'}</p>
+                    ${!correct ? `<p style="color:#10b981; font-weight:bold;">Correct: ${q.opts[q.ans]}</p>` : ''}
+                    
+                    <ion-button size="small" fill="outline" color="primary" style="margin-top: 8px;" onclick="toggleNexusWidget('${subId}', ${i})">
+                        Ask Nexus <img src="Logo.png" alt="Nexus" style="height: 16px; margin-left: 6px; vertical-align: middle;">
+                    </ion-button>
 
-                <div id="nexus-widget-${subId}-${i}" style="display: none; margin-top: 15px; background: var(--panel); border: 1px solid var(--ion-color-primary); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                    <div style="background: var(--ion-color-primary); color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: bold; font-size: 13px;">Nexus AI Tutor</span>
-                        <span onclick="toggleNexusWidget('${subId}', ${i})" style="cursor: pointer; font-size: 16px;">✖</span>
+                    <div id="nexus-widget-${subId}-${i}" style="display: none; margin-top: 15px; background: var(--panel); border: 1px solid var(--ion-color-primary); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <div style="background: var(--ion-color-primary); color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: bold; font-size: 13px;">Nexus AI Tutor</span>
+                            <span onclick="toggleNexusWidget('${subId}', ${i})" style="cursor: pointer; font-size: 16px;">✖</span>
+                        </div>
+                        <div id="nexus-chat-${subId}-${i}" style="padding: 12px; max-height: 250px; overflow-y: auto; font-size: 14px; line-height: 1.6; color: var(--ion-text-color);">
+                            <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below, or click "Explain" for a full breakdown.</div>
+                        </div>
+                        <div style="display: flex; border-top: 1px solid rgba(128,128,128,0.2);">
+                            <input type="text" id="nexus-input-${subId}-${i}" placeholder="Ask about this..." style="flex: 1; padding: 10px; border: none; outline: none; background: transparent; color: var(--ion-text-color);">
+                            <button onclick="sendToNexus('${subId}', ${i}, false)" style="background: transparent; color: var(--ion-color-primary); border: none; padding: 0 12px; font-weight: bold; cursor: pointer;">Send</button>
+                            <button onclick="sendToNexus('${subId}', ${i}, true)" style="background: var(--ion-color-primary); color: white; border: none; padding: 0 15px; font-weight: bold; cursor: pointer;">Explain</button>
+                        </div>
                     </div>
-                    <div id="nexus-chat-${subId}-${i}" style="padding: 12px; max-height: 250px; overflow-y: auto; font-size: 14px; line-height: 1.6; color: var(--ion-text-color);">
-                        <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below, or click "Explain" for a full breakdown.</div>
-                    </div>
-                    <div style="display: flex; border-top: 1px solid rgba(128,128,128,0.2);">
-                        <input type="text" id="nexus-input-${subId}-${i}" placeholder="Ask about this..." style="flex: 1; padding: 10px; border: none; outline: none; background: transparent; color: var(--ion-text-color);">
-                        <button onclick="sendToNexus('${subId}', ${i}, false)" style="background: transparent; color: var(--ion-color-primary); border: none; padding: 0 12px; font-weight: bold; cursor: pointer;">Send</button>
-                        <button onclick="sendToNexus('${subId}', ${i}, true)" style="background: var(--ion-color-primary); color: white; border: none; padding: 0 15px; font-weight: bold; cursor: pointer;">Explain</button>
-                    </div>
-                </div>
-            </div>`;
+                </div>`;
+            } else {
+                // If it goes past 10 for a free user, trigger the paywall!
+                showPaywall = true;
+            }
         });
+
+        // --- NEW: INJECT PAYWALL BANNER ---
+        if (showPaywall) {
+            const hiddenCount = d.questions.length - FREE_REVIEW_LIMIT;
+            reviewHtml += `
+            <div style="background: var(--panel); border: 2px dashed var(--ion-color-primary); border-radius: 14px; padding: 20px; text-align: center; margin-top: 15px; margin-bottom: 25px;">
+                <ion-icon name="lock-closed" color="primary" style="font-size: 36px; margin-bottom: 8px;"></ion-icon>
+                <h3 style="margin: 0 0 8px; font-weight: bold; color: var(--ion-text-color);">Free Limit Reached</h3>
+                <p style="margin: 0 0 15px; color: var(--muted); font-size: 14px;">Activate the app to view the remaining <strong>${hiddenCount} questions</strong> and Nexus explanations for ${d.name}.</p>
+                <ion-button expand="block" color="primary" style="--border-radius: 10px; font-weight: bold;" onclick="triggerPutmePaystack()">
+                    <ion-icon name="key-outline" slot="start"></ion-icon> Activate App
+                </ion-button>
+            </div>`;
+        }
+        // -----------------------------------
+
         totalScore += subScore;
 
         const scaledSubScore = Math.round((subScore / d.questions.length) * 100);
@@ -473,7 +500,6 @@ async function submitExam(auto) {
         if (auto) showModal('Time Up!', 'Your exam time has elapsed. Your answers have been submitted automatically.', null, false);
     }, 1000);
 }
-
 // --- CALCULATOR (Functional & Draggable) ---
 window.toggleCalc = () => { 
     const c = document.getElementById('calc'); 
