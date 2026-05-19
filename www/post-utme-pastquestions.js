@@ -188,7 +188,7 @@ window.loadPastQuestions = async function() {
             let questionsToRender = rawData;
             let showPaywallBlock = false;
             
-            const FREE_LIMIT = 1; // The max questions free users can see
+            const FREE_LIMIT = 5; // The max questions free users can see
 
             // Only slice if they are a free user AND there are more than 30 questions
             if (isFreeUser && rawData.length > FREE_LIMIT) {
@@ -204,6 +204,7 @@ window.loadPastQuestions = async function() {
                 currentPQData.push({
                     qText: fixedQText,
                     correctText: fixMathText(parsedOpts[correctAnsIdx])
+                    allOpts: parsedOpts.map(o => fixMathText(o))
                 });
 
                 const optsHtml = parsedOpts.map((opt, i) => {
@@ -283,15 +284,18 @@ window.sendToNexus = async function(qIndex, isAutoExplain) {
     const qData = currentPQData[qIndex];
     const questionText = qData.qText;
     const correctAnswer = qData.correctText;
+    
+    // Format options into A), B), C), D)
+    const optionsList = qData.allOpts.map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`).join('\n');
 
     let promptToAI = "";
 
     if (isAutoExplain) {
-        promptToAI = `Act as an expert tutor. Please explain step-by-step why the correct answer to this question is "${correctAnswer}". \n\nQuestion: ${questionText}`;
+        promptToAI = `Act as an expert tutor. Please explain step-by-step why the correct answer to this question is "${correctAnswer}". \n\nQuestion: ${questionText}\n\nOptions:\n${optionsList}`;
         chatArea.innerHTML = `<div style="font-weight:bold; margin-bottom:8px;">Explain this question.</div>`;
     } else {
         if (!userMessage) return;
-        promptToAI = `Regarding this question: "${questionText}" (Correct Answer: ${correctAnswer}). \n\nStudent asks: ${userMessage}`;
+        promptToAI = `Regarding this question: "${questionText}"\n\nOptions:\n${optionsList}\n\n(Correct Answer: ${correctAnswer}). \n\nStudent asks: ${userMessage}`;
         chatArea.innerHTML += `<div style="font-weight:bold; margin-bottom:8px; margin-top: 15px;">You: ${userMessage}</div>`;
         inputField.value = ''; 
     }
@@ -319,7 +323,7 @@ window.sendToNexus = async function(qIndex, isAutoExplain) {
             if (done) break;
 
             aiFullText += decoder.decode(value, { stream: true });
-            responseContainer.innerHTML = marked.parse(aiFullText);
+            responseContainer.innerHTML = window.marked ? marked.parse(aiFullText) : aiFullText;
             chatArea.scrollTop = chatArea.scrollHeight;
         }
 

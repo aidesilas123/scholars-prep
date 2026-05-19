@@ -75,7 +75,25 @@
     .qbtn.current { outline: 2px solid var(--ion-color-primary); }
     .qbtn.flag { background: rgba(234,179,8,0.2); border-color: #eab308; }
 
-    .question-card { background: var(--panel); border: 1px solid rgba(128,128,128,0.2); border-radius: 14px; padding: 20px; }
+    /* Update the question card style to this */
+    .question-card { 
+        background: var(--panel); 
+        border: 1px solid rgba(128,128,128,0.2); 
+        border-radius: 14px; 
+        padding: 20px; 
+        min-width: 0; 
+        overflow: hidden; 
+    }
+
+    /* Add this rule to force text wrapping */
+    #qText {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        margin-top: 0; 
+        font-weight: bold; 
+        line-height: 1.5;
+    }
     .opt { display: block; margin: 8px 0; padding: 12px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); cursor: pointer; }
     
     /* Subject Tabs */

@@ -585,14 +585,17 @@ window.sendToNexus = async function(subId, qIndex, isAutoExplain) {
     const questionText = qData.q;
     const correctAnswer = qData.opts[qData.ans];
 
+    // Format options into A), B), C), D)
+    const optionsList = qData.opts.map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`).join('\n');
+
     let promptToAI = "";
 
     if (isAutoExplain) {
-        promptToAI = `Act as an expert tutor. Please explain step-by-step why the correct answer to this question is "${correctAnswer}". \n\nQuestion: ${questionText}`;
+        promptToAI = `Act as an expert tutor. Please explain step-by-step why the correct answer to this question is "${correctAnswer}". \n\nQuestion: ${questionText}\n\nOptions:\n${optionsList}`;
         chatArea.innerHTML = `<div style="font-weight:bold; margin-bottom:8px;">Explain this question.</div>`;
     } else {
         if (!userMessage) return;
-        promptToAI = `Regarding this question: "${questionText}" (Correct Answer: ${correctAnswer}). \n\nStudent asks: ${userMessage}`;
+        promptToAI = `Regarding this question: "${questionText}"\n\nOptions:\n${optionsList}\n\n(Correct Answer: ${correctAnswer}). \n\nStudent asks: ${userMessage}`;
         chatArea.innerHTML += `<div style="font-weight:bold; margin-bottom:8px; margin-top: 15px;">You: ${userMessage}</div>`;
         inputField.value = ''; 
     }
