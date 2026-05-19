@@ -188,7 +188,7 @@ window.loadPastQuestions = async function() {
             let questionsToRender = rawData;
             let showPaywallBlock = false;
             
-            const FREE_LIMIT = 5; // The max questions free users can see
+            const FREE_LIMIT = 10; // The max questions free users can see
 
             // Only slice if they are a free user AND there are more than 30 questions
             if (isFreeUser && rawData.length > FREE_LIMIT) {
