@@ -52,6 +52,11 @@ let qLimitPerSubject = 50;
 let timerId = null;
 let globalSessionId = null;
 
+// --- FREEMIUM STATE ---
+let isFreeUser = false;
+let authEmail = '';
+let lastAttemptTimestamp = 0;
+
 function showLoading(show, text="Loading...") {
     document.getElementById('globalLoading').style.display = show ? 'flex' : 'none';
     document.getElementById('loadText').textContent = text;
@@ -98,17 +103,36 @@ function fixMathText(text) {
 // --- 1. ASYNC LOAD DATA ---
 async function loadExamSetup() {
     try {
-        const { data: settings, error: setErr } = await _sb.from('putme_exam_setting').select('*').limit(1).single();
-        if (settings) {
-            durationSec = (settings.duration_minutes || 120) * 60;
+        const userObj = JSON.parse(localStorage.getItem('post_utme_logged_in_user'));
+        authEmail = userObj.email;
+
+        // Fetch everything simultaneously for speed
+        const [settingsRes, switchRes, subStatusRes, attemptRes] = await Promise.all([
+            _sb.from('putme_exam_setting').select('*').limit(1).single(),
+            _sb.from('putme_settings').select('is_payment_active').maybeSingle(),
+            _sb.from('putme_subscriptions').select('end_date').eq('user_email', authEmail).maybeSingle(),
+            _sb.from('putme_free_attempts').select('last_attempt_time').eq('user_email', authEmail).maybeSingle()
+        ]);
+
+        if (settingsRes.data) {
+            durationSec = (settingsRes.data.duration_minutes || 120) * 60;
             maxDurationSec = durationSec;
-            qLimitPerSubject = settings.question_limit || 50;
+            qLimitPerSubject = settingsRes.data.question_limit || 50;
             
             document.getElementById('instQCount').innerText = qLimitPerSubject;
             document.getElementById('instTime').innerText = `${Math.round(durationSec/60)} Minutes`;
         }
 
-        const { data: subjects, error: subErr } = await _sb.from('putme_subjects').select('*');
+        let isSwitchActive = switchRes.data?.is_payment_active ?? true;
+        let isPremium = false;
+        if (subStatusRes.data?.end_date && new Date(subStatusRes.data.end_date) > new Date()) isPremium = true;
+        isFreeUser = (isSwitchActive && !isPremium);
+
+        if (attemptRes.data?.last_attempt_time) {
+            lastAttemptTimestamp = new Date(attemptRes.data.last_attempt_time).getTime();
+        }
+
+        const { data: subjects } = await _sb.from('putme_subjects').select('*');
         const { data: qYears } = await _sb.from('putme_questions').select('subject_id, year');
         
         const container = document.getElementById('subjectListContainer');
@@ -170,6 +194,19 @@ window.goToInstructions = function() {
 
 // --- 2. START EXAM ---
 window.startExam = async function() {
+
+    // --- 1-HOUR COOLDOWN GUARD ---
+    if (isFreeUser) {
+        const now = Date.now();
+        const diffSec = Math.floor((now - lastAttemptTimestamp) / 1000);
+        
+        if (lastAttemptTimestamp > 0 && diffSec < 3600) {
+            const minLeft = Math.ceil((3600 - diffSec) / 60);
+            showModal("Anti-Spam Cooldown", `Free practice limit reached. Please wait <b>${minLeft} minutes</b> before starting another session, or activate the app for unlimited Mock Exams.`, null, false);
+            return; 
+        }
+    }
+
     showLoading(true, "Generating Exam...");
     const selectedCards = document.querySelectorAll('.subject-card.selected');
     
@@ -208,13 +245,26 @@ window.startExam = async function() {
                     };
                 }),
                 answers: Array(finalQuestions.length).fill(null),
-                flags: Array(finalQuestions.length).fill(false), // Initialize flags
+                flags: Array(finalQuestions.length).fill(false), 
                 currentQ: 0
             };
             
             if(isFirst) { activeSubjectId = subId; isFirst = false; }
             tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${subId}" onclick="switchSubject(${subId})">${subName}</div>`;
         }
+    }
+    
+    if(!activeSubjectId) { 
+        showLoading(false); 
+        showModal("Error", "No questions found for the selected setup.", null, false);
+        return; 
+    }
+
+    // LOG THE FREE ATTEMPT
+    if (isFreeUser) {
+        _sb.from('putme_free_attempts').upsert({ user_email: authEmail, last_attempt_time: new Date().toISOString() })
+            .then(({error}) => { if(error) console.error(error); });
+        lastAttemptTimestamp = Date.now();
     }
     
     switchSubject(activeSubjectId);
@@ -240,7 +290,7 @@ function renderGrid() {
         const btn = document.createElement('button');
         btn.className = 'qbtn';
         if(data.answers[i] !== null) btn.classList.add('answered');
-        if(data.flags[i]) btn.classList.add('flag'); // Added flag CSS rule
+        if(data.flags[i]) btn.classList.add('flag'); 
         if(data.currentQ === i) btn.classList.add('current');
         btn.innerText = i + 1;
         btn.onclick = () => { data.currentQ = i; renderGrid(); renderQuestion(); };
@@ -271,6 +321,26 @@ function renderQuestion() {
 }
 
 window.saveAnswer = function(idx) {
+    // --- 10-QUESTION TRAP ---
+    if (isFreeUser) {
+        let totalAnswers = 0;
+        for (const subId in examData) {
+            totalAnswers += examData[subId].answers.filter(a => a !== null).length;
+        }
+        
+        const currentSub = examData[activeSubjectId];
+        const isAlreadyAnswered = currentSub.answers[currentSub.currentQ] !== null;
+        
+        if (!isAlreadyAnswered && totalAnswers >= 10) {
+            clearInterval(timerId); 
+            document.getElementById('examTrapModal').style.display = 'flex';
+            
+            const radios = document.getElementsByName('cbtopt');
+            radios.forEach(r => r.checked = false);
+            return; 
+        }
+    }
+
     examData[activeSubjectId].answers[examData[activeSubjectId].currentQ] = idx;
     renderGrid();
     renderQuestion(); 
@@ -326,8 +396,6 @@ async function submitExam(auto) {
     let timeSpentSec = maxDurationSec - Math.max(0, durationSec);
     let detailsHTML = '';
     
-    const userObj = JSON.parse(localStorage.getItem('post_utme_logged_in_user'));
-    const authEmail = userObj.email;
     const dbPayload = [];
 
     for(const subId in examData) {
@@ -365,7 +433,6 @@ async function submitExam(auto) {
         });
     }
     
-    // SUPABASE DB INSERT - TypeError Fix Applied Here!
     try {
         const { error: dbError } = await _sb.from('putme_exam_results').insert(dbPayload);
         if (dbError) console.error("Database Insert Error:", dbError);
@@ -373,19 +440,23 @@ async function submitExam(auto) {
         console.error("Network/DB Request Failed:", err);
     }
 
-    // Render Pie Charts
     const scorePercent = Math.round((totalScore / 400) * 100);
     const scoreColor = scorePercent >= 50 ? '#10b981' : '#ef4444';
     
-    document.getElementById('scoreDonutChart').style.background = `conic-gradient(${scoreColor} ${scorePercent}%, #d1d5db 0)`;
-    document.getElementById('scoreDonutText').innerText = `${scorePercent}%`;
-    document.getElementById('scoreDonutText').style.color = scoreColor;
+    const donutChart = document.getElementById('scoreDonutChart');
+    if (donutChart) {
+        donutChart.style.background = `conic-gradient(${scoreColor} ${scorePercent}%, #d1d5db 0)`;
+        document.getElementById('scoreDonutText').innerText = `${scorePercent}%`;
+        document.getElementById('scoreDonutText').style.color = scoreColor;
+    }
     
-    const timePercent = Math.round((timeSpentSec / maxDurationSec) * 100);
-    document.getElementById('timeDonutChart').style.background = `conic-gradient(#f59e0b ${timePercent}%, #d1d5db 0)`;
-    document.getElementById('timeDonutText').innerText = `${timePercent}%`;
+    const timeChart = document.getElementById('timeDonutChart');
+    if (timeChart) {
+        const timePercent = Math.round((timeSpentSec / maxDurationSec) * 100);
+        timeChart.style.background = `conic-gradient(#f59e0b ${timePercent}%, #d1d5db 0)`;
+        document.getElementById('timeDonutText').innerText = `${timePercent}%`;
+    }
 
-    // Render Summary Table
     document.getElementById('finalTotalScore').innerText = `${totalScore}/400`;
     document.getElementById('finalTimeSpent').innerText = `${Math.round(timeSpentSec/60)} min`;
     document.getElementById('detailsTableBody').innerHTML = detailsHTML;
@@ -396,7 +467,7 @@ async function submitExam(auto) {
     if (auto) showModal('Time Up!', 'Your exam time has elapsed. Your answers have been submitted automatically.', null, false);
 }
 
-// --- CALCULATOR & DRAG LOGIC ---
+// --- CALCULATOR LOGIC ---
 window.toggleCalc = () => { 
     const c = document.getElementById('calc'); 
     c.style.display = c.style.display === 'block' ? 'none' : 'block'; 
@@ -414,51 +485,105 @@ window.evalCalc = () => {
 };
 
 const calcEl = document.getElementById('calc');
-const calcHeader = document.getElementById('calcHeader');
-let isDragging = false, startX, startY, initialX, initialY;
+if(calcEl) {
+    const calcHeader = document.getElementById('calcHeader');
+    let isDragging = false, startX, startY, initialX, initialY;
 
-calcHeader.addEventListener('mousedown', dragStart);
-calcHeader.addEventListener('touchstart', dragStart, {passive: false});
+    calcHeader.addEventListener('mousedown', dragStart);
+    calcHeader.addEventListener('touchstart', dragStart, {passive: false});
 
-function dragStart(e) {
-    if(e.target.tagName === 'SPAN') return; 
-    isDragging = true;
-    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    
-    const rect = calcEl.getBoundingClientRect();
-    initialX = rect.left;
-    initialY = rect.top;
-    startX = clientX;
-    startY = clientY;
-    
-    calcEl.style.right = 'auto';
-    calcEl.style.bottom = 'auto';
-    calcEl.style.margin = '0';
-    
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('touchmove', drag, {passive: false});
-    document.addEventListener('mouseup', dragEnd);
-    document.addEventListener('touchend', dragEnd);
+    function dragStart(e) {
+        if(e.target.tagName === 'SPAN') return; 
+        isDragging = true;
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        
+        const rect = calcEl.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+        startX = clientX;
+        startY = clientY;
+        
+        calcEl.style.right = 'auto';
+        calcEl.style.bottom = 'auto';
+        calcEl.style.margin = '0';
+        
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, {passive: false});
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchend', dragEnd);
+    }
+
+    function drag(e) {
+        if (!isDragging) return;
+        e.preventDefault(); 
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        
+        calcEl.style.left = `${initialX + dx}px`;
+        calcEl.style.top = `${initialY + dy}px`;
+    }
+
+    function dragEnd() {
+        isDragging = false;
+        document.removeEventListener('mousemove', drag);
+        document.removeEventListener('touchmove', drag);
+        document.removeEventListener('mouseup', dragEnd);
+        document.removeEventListener('touchend', dragEnd);
+    }
 }
 
-function drag(e) {
-    if (!isDragging) return;
-    e.preventDefault(); 
-    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    
-    calcEl.style.left = `${initialX + dx}px`;
-    calcEl.style.top = `${initialY + dy}px`;
-}
+// --- PAYSTACK & TRAP ACTIONS ---
+const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
 
-function dragEnd() {
-    isDragging = false;
-    document.removeEventListener('mousemove', drag);
-    document.removeEventListener('touchmove', drag);
-    document.removeEventListener('mouseup', dragEnd);
-    document.removeEventListener('touchend', dragEnd);
-}
+window.forceSubmitFreeExam = function() {
+    document.getElementById('examTrapModal').style.display = 'none';
+    submitExam(false); 
+};
+
+window.triggerPutmePaystack = function() {
+    if (typeof PaystackPop === 'undefined') {
+        alert("Payment gateway blocked. Please disable your browser's adblocker or tracking prevention and refresh the page.");
+        return;
+    }
+
+    const userObj = JSON.parse(localStorage.getItem('post_utme_logged_in_user'));
+    const userEmail = userObj.email;
+    const userId = userObj.id || ''; 
+    
+    const cached = JSON.parse(localStorage.getItem('putme_premium_data') || '{}');
+    const finalPrice = (cached && cached.discountEarned === true) ? 5000 : 5500;
+
+    function onPaymentSuccess(response) {
+        console.log("Payment Ref:", response.reference);
+        document.getElementById('examTrapModal').style.display = 'none';
+        
+        isFreeUser = false; 
+        cached.isPremium = true;
+        localStorage.setItem('putme_premium_data', JSON.stringify(cached));
+        
+        alert("Payment successful! Your exam is unlocked. You may continue."); 
+        startTimer(); 
+    }
+
+    let handler = PaystackPop.setup({
+        key: PAYSTACK_KEY,
+        email: userEmail,
+        amount: finalPrice * 100, 
+        currency: 'NGN', 
+        ref: 'PUTME_' + Math.floor((Math.random() * 1000000000) + 1),
+        metadata: {
+            user_id: userId,
+            user_email: userEmail,
+            plan_type: 'Pro Access' 
+        },
+        callback: onPaymentSuccess,
+        onClose: function() {
+            console.log('Payment window closed.');
+        }
+    });
+    handler.openIframe();
+};

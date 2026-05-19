@@ -61,12 +61,13 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
-  // Always bypass external services (Supabase, CDNs)
+  // Always bypass external services (Supabase, CDNs, AND PAYSTACK)
   if (
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('jsdelivr.net') ||
     url.hostname.includes('googleapis.com') ||
-    url.hostname.includes('gstatic.com')
+    url.hostname.includes('gstatic.com') ||
+    url.hostname.includes('paystack.co') 
   ) return;
 
   // THE STRICT CLEAN URL ENFORCER

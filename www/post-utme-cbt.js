@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (!putmeUser) {
         console.warn("Unauthorized access. Redirecting to home...");
-        // Kicks them to the raw root URL to prevent Vercel redirect crashes
         window.location.replace('/'); 
     }
 })();
@@ -19,13 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- CUSTOM MODAL SYSTEM ---
 function showModal(title, msg, onOk, showCancel = true) {
     document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalMsg').textContent = msg;
+    document.getElementById('modalMsg').innerHTML = msg; // Changed to allow HTML
     const okBtn = document.getElementById('modalOk');
     const cancelBtn = document.getElementById('modalCancel');
 
     cancelBtn.style.display = showCancel ? 'block' : 'none';
 
-    // Replace button to clear old event listeners
     const newOkBtn = okBtn.cloneNode(true);
     okBtn.parentNode.replaceChild(newOkBtn, okBtn);
 
@@ -59,7 +57,14 @@ let subjectsData = [];
 let examData = {}; 
 let activeSubjectId = null;
 let durationSec = 0;
+let maxDurationSec = 0; // Added for scoring calc
 let timerId = null;
+let globalSessionId = null;
+
+// --- FREEMIUM STATE ---
+let isFreeUser = false;
+let authEmail = '';
+let lastAttemptTimestamp = 0;
 
 function showLoading(show, text="Loading...") {
     document.getElementById('globalLoading').style.display = show ? 'flex' : 'none';
@@ -74,59 +79,82 @@ function switchView(viewId) {
 async function loadSubjects() {
     showLoading(true, "Fetching Subjects...");
     
-    // Fetch subjects AND lightweight query to get available years
-    const { data: subjects } = await _sb.from('putme_subjects').select('*');
-    const { data: qYears } = await _sb.from('putme_questions').select('subject_id, year');
-    
-    const container = document.getElementById('subjectListContainer');
-    container.innerHTML = '';
-    
-    if(subjects) {
-        subjects.forEach(sub => {
-            subjectsData.push(sub);
-            
-            // Generate dynamic year options based ONLY on existing questions
-            let yearsHTML = '';
-            if (qYears) {
-                const subYears = [...new Set(qYears.filter(q => q.subject_id === sub.id).map(q => q.year))].sort((a,b)=>b-a);
-                if (subYears.length > 0) {
-                    yearsHTML = subYears.map(y => `<ion-select-option value="${y}">${y}</ion-select-option>`).join('');
-                } else {
-                    yearsHTML = `<ion-select-option value="">No Questions</ion-select-option>`;
-                }
-            }
+    try {
+        const userObj = JSON.parse(localStorage.getItem('post_utme_logged_in_user'));
+        authEmail = userObj.email;
 
-            container.innerHTML += `
-            <ion-card class="subject-card" id="card-${sub.id}" onclick="toggleSubject(${sub.id})">
-                <ion-item lines="none" style="--background: transparent; cursor: pointer;">
-                    <ion-icon name="${sub.icon}" slot="start" color="primary"></ion-icon>
-                    <ion-label style="font-weight: bold;">${sub.name}</ion-label>
-                    <ion-checkbox slot="end" id="chk-${sub.id}" style="pointer-events: none;"></ion-checkbox>
-                </ion-item>
-                <div class="config-area" onclick="event.stopPropagation()">
-                    <ion-row>
-                        <ion-col size="6">
-                            <ion-item fill="outline" style="--border-radius: 6px;">
-                                <ion-label position="stacked">Year</ion-label>
-                                <ion-select id="yr-${sub.id}" value="">${yearsHTML}</ion-select>
-                            </ion-item>
-                        </ion-col>
-                        <ion-col size="6">
-                            <ion-item fill="outline" style="--border-radius: 6px;">
-                                <ion-label position="stacked">Questions</ion-label>
-                                <ion-select id="qc-${sub.id}" value="50">
-                                <ion-select-option value="10">10</ion-select-option>
-                                <ion-select-option value="20">20</ion-select-option>
-                                <ion-select-option value="30">30</ion-select-option>
-                                <ion-select-option value="40">40</ion-select-option>
-                                <ion-select-option value="50">50</ion-select-option>
-                                </ion-select>
-                            </ion-item>
-                        </ion-col>
-                    </ion-row>
-                </div>
-            </ion-card>`;
-        });
+        // Fetch subjects + Freemium checks
+        const [subRes, qYearsRes, switchRes, subStatusRes, attemptRes] = await Promise.all([
+            _sb.from('putme_subjects').select('*'),
+            _sb.from('putme_questions').select('subject_id, year'),
+            _sb.from('putme_settings').select('is_payment_active').maybeSingle(),
+            _sb.from('putme_subscriptions').select('end_date').eq('user_email', authEmail).maybeSingle(),
+            _sb.from('putme_free_attempts').select('last_attempt_time').eq('user_email', authEmail).maybeSingle()
+        ]);
+
+        let isSwitchActive = switchRes.data?.is_payment_active ?? true;
+        let isPremium = false;
+        if (subStatusRes.data?.end_date && new Date(subStatusRes.data.end_date) > new Date()) isPremium = true;
+        isFreeUser = (isSwitchActive && !isPremium);
+
+        if (attemptRes.data?.last_attempt_time) {
+            lastAttemptTimestamp = new Date(attemptRes.data.last_attempt_time).getTime();
+        }
+
+        const subjects = subRes.data;
+        const qYears = qYearsRes.data;
+        
+        const container = document.getElementById('subjectListContainer');
+        container.innerHTML = '';
+        
+        if(subjects) {
+            subjects.forEach(sub => {
+                subjectsData.push(sub);
+                
+                let yearsHTML = '';
+                if (qYears) {
+                    const subYears = [...new Set(qYears.filter(q => q.subject_id === sub.id).map(q => q.year))].sort((a,b)=>b-a);
+                    if (subYears.length > 0) {
+                        yearsHTML = subYears.map(y => `<ion-select-option value="${y}">${y}</ion-select-option>`).join('');
+                    } else {
+                        yearsHTML = `<ion-select-option value="">No Questions</ion-select-option>`;
+                    }
+                }
+
+                container.innerHTML += `
+                <ion-card class="subject-card" id="card-${sub.id}" onclick="toggleSubject(${sub.id})">
+                    <ion-item lines="none" style="--background: transparent; cursor: pointer;">
+                        <ion-icon name="${sub.icon}" slot="start" color="primary"></ion-icon>
+                        <ion-label style="font-weight: bold;">${sub.name}</ion-label>
+                        <ion-checkbox slot="end" id="chk-${sub.id}" style="pointer-events: none;"></ion-checkbox>
+                    </ion-item>
+                    <div class="config-area" onclick="event.stopPropagation()">
+                        <ion-row>
+                            <ion-col size="6">
+                                <ion-item fill="outline" style="--border-radius: 6px;">
+                                    <ion-label position="stacked">Year</ion-label>
+                                    <ion-select id="yr-${sub.id}" value="">${yearsHTML}</ion-select>
+                                </ion-item>
+                            </ion-col>
+                            <ion-col size="6">
+                                <ion-item fill="outline" style="--border-radius: 6px;">
+                                    <ion-label position="stacked">Questions</ion-label>
+                                    <ion-select id="qc-${sub.id}" value="50">
+                                    <ion-select-option value="10">10</ion-select-option>
+                                    <ion-select-option value="20">20</ion-select-option>
+                                    <ion-select-option value="30">30</ion-select-option>
+                                    <ion-select-option value="40">40</ion-select-option>
+                                    <ion-select-option value="50">50</ion-select-option>
+                                    </ion-select>
+                                </ion-item>
+                            </ion-col>
+                        </ion-row>
+                    </div>
+                </ion-card>`;
+            });
+        }
+    } catch (err) {
+        console.error("Setup load failed:", err);
     }
     showLoading(false);
 }
@@ -145,7 +173,6 @@ function goToInstructions() {
         return;
     }
 
-    // Ensure they didn't select a subject with no questions
     for (let card of selectedCards) {
         const subId = card.id.split('-')[1];
         if(!document.getElementById(`yr-${subId}`).value) {
@@ -157,15 +184,30 @@ function goToInstructions() {
     switchView('view-instructions');
 }
 
-// --- 2. START EXAM (JSONB Fix Applied) ---
+// --- 2. START EXAM ---
 async function startExam() {
+    // --- 1-HOUR COOLDOWN GUARD ---
+    if (isFreeUser) {
+        const now = Date.now();
+        const diffSec = Math.floor((now - lastAttemptTimestamp) / 1000);
+        
+        if (lastAttemptTimestamp > 0 && diffSec < 3600) {
+            const minLeft = Math.ceil((3600 - diffSec) / 60);
+            showModal("Anti-Spam Cooldown", `Free practice limit reached. Please wait <b>${minLeft} minutes</b> before starting another session, or activate the app for unlimited CBT access.`, null, false);
+            return; 
+        }
+    }
+
     showLoading(true, "Preparing Exam...");
     durationSec = parseInt(document.getElementById('examDuration').value) * 60;
+    maxDurationSec = durationSec;
     const selectedCards = document.querySelectorAll('.subject-card.selected');
     
     examData = {};
     const tabsContainer = document.getElementById('examSubjectTabs');
     tabsContainer.innerHTML = '';
+    
+    globalSessionId = `EXAM_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
     let isFirst = true;
     for(let card of selectedCards) {
@@ -180,7 +222,6 @@ async function startExam() {
             examData[subId] = {
                 name: subName,
                 questions: qData.map(q => {
-                    // FIX: Check if Supabase already parsed the JSONB options array
                     const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
                     return { 
                         q: fixMathText(q.question_text), 
@@ -202,6 +243,13 @@ async function startExam() {
         showLoading(false); 
         showModal("Error", "No questions found for the selected setup.", null, false);
         return; 
+    }
+
+    // LOG THE FREE ATTEMPT
+    if (isFreeUser) {
+        _sb.from('putme_free_attempts').upsert({ user_email: authEmail, last_attempt_time: new Date().toISOString() })
+            .then(({error}) => { if(error) console.error(error); });
+        lastAttemptTimestamp = Date.now();
     }
     
     switchSubject(activeSubjectId);
@@ -241,7 +289,7 @@ function renderQuestion() {
     document.getElementById('qText').innerHTML = `Q${data.currentQ+1}. ${q.q}`;
     
     document.getElementById('qOptions').innerHTML = q.opts.map((opt, idx) => `
-        <label class="opt">
+        <label class="opt ${data.answers[data.currentQ] === idx ? 'selected' : ''}">
             <input type="radio" name="cbtopt" value="${idx}" ${data.answers[data.currentQ] === idx ? 'checked' : ''} onchange="saveAnswer(${idx})">
             <span>${opt}</span>
         </label>
@@ -251,9 +299,31 @@ function renderQuestion() {
 }
 
 window.saveAnswer = function(idx) {
+    // --- 10-QUESTION TRAP ---
+    if (isFreeUser) {
+        let totalAnswers = 0;
+        for (const subId in examData) {
+            totalAnswers += examData[subId].answers.filter(a => a !== null).length;
+        }
+        
+        const currentSub = examData[activeSubjectId];
+        const isAlreadyAnswered = currentSub.answers[currentSub.currentQ] !== null;
+        
+        if (!isAlreadyAnswered && totalAnswers >= 10) {
+            clearInterval(timerId); 
+            document.getElementById('examTrapModal').style.display = 'flex';
+            
+            const radios = document.getElementsByName('cbtopt');
+            radios.forEach(r => r.checked = false);
+            return; 
+        }
+    }
+
     examData[activeSubjectId].answers[examData[activeSubjectId].currentQ] = idx;
     renderGrid();
+    renderQuestion(); // Re-render to show selected style
 };
+
 window.toggleFlag = function() {
     const d = examData[activeSubjectId];
     d.flags[d.currentQ] = !d.flags[d.currentQ];
@@ -278,7 +348,6 @@ function startTimer() {
         durationSec--;
         if(durationSec <= 0) { clearInterval(timerId); submitExam(true); }
         
-        // Format as HH:MM:SS
         const h = Math.floor(Math.max(0, durationSec) / 3600).toString().padStart(2, '0');
         const m = Math.floor((Math.max(0, durationSec) % 3600) / 60).toString().padStart(2, '0');
         const s = (Math.max(0, durationSec) % 60).toString().padStart(2, '0');
@@ -297,23 +366,30 @@ window.confirmDashboardReturn = function() {
     });
 };
 
-function submitExam(auto) {
+async function submitExam(auto) {
     clearInterval(timerId);
     showLoading(true, "Calculating Score...");
     let totalScore = 0;
     let totalQs = 0;
     let reviewHtml = '';
+    let timeSpentSec = maxDurationSec - Math.max(0, durationSec);
+    const dbPayload = [];
     
     for(const subId in examData) {
         const d = examData[subId];
         let subScore = 0;
+        let attempted = 0;
         reviewHtml += `<h4 style="color:var(--ion-color-primary); border-bottom:1px solid #ccc; padding-bottom:5px; margin-top:20px;">${d.name}</h4>`;
         
         d.questions.forEach((q, i) => {
             totalQs++;
             const userAns = d.answers[i];
             const correct = userAns === q.ans;
-            if(correct) subScore++;
+            
+            if (userAns !== null) {
+                attempted++;
+                if (correct) subScore++;
+            }
             
             reviewHtml += `
             <div style="background:var(--card-bg-selected); padding:10px; border-radius:8px; margin-bottom:10px; position: relative;">
@@ -342,12 +418,36 @@ function submitExam(auto) {
             </div>`;
         });
         totalScore += subScore;
+
+        const scaledSubScore = Math.round((subScore / d.questions.length) * 100);
+        dbPayload.push({
+            user_email: authEmail,
+            session_id: globalSessionId,
+            subject_id: parseInt(subId),
+            subject_name: d.name,
+            score: scaledSubScore,
+            attempted: attempted,
+            time_spent_seconds: timeSpentSec,
+            created_at: new Date().toISOString()
+        });
     }
     
+    // Save to DB
+    try {
+        const { error: dbError } = await _sb.from('putme_exam_results').insert(dbPayload);
+        if (dbError) console.error("Database Insert Error:", dbError);
+    } catch (err) {
+        console.error("Network/DB Request Failed:", err);
+    }
+
     const finalScaled = Math.round((totalScore / totalQs) * 400);
     
     setTimeout(() => {
-        document.getElementById('finalScore').innerText = `${finalScaled}/400`;
+        const finalScoreEl = document.getElementById('finalScore');
+        if (finalScoreEl) finalScoreEl.innerText = `${finalScaled}/400`;
+        const finalTotalScore = document.getElementById('finalTotalScore');
+        if (finalTotalScore) finalTotalScore.innerText = `${finalScaled}/400`; // Updated fallback ID
+        
         document.getElementById('reviewList').innerHTML = reviewHtml;
         if(window.MathJax) MathJax.typesetPromise();
         switchView('view-review');
@@ -376,53 +476,55 @@ window.evalCalc = () => {
 
 // Drag Logic
 const calcEl = document.getElementById('calc');
-const calcHeader = document.getElementById('calcHeader');
-let isDragging = false, startX, startY, initialX, initialY;
+if (calcEl) {
+    const calcHeader = document.getElementById('calcHeader');
+    let isDragging = false, startX, startY, initialX, initialY;
 
-calcHeader.addEventListener('mousedown', dragStart);
-calcHeader.addEventListener('touchstart', dragStart, {passive: false});
+    calcHeader.addEventListener('mousedown', dragStart);
+    calcHeader.addEventListener('touchstart', dragStart, {passive: false});
 
-function dragStart(e) {
-    if(e.target.tagName === 'SPAN') return; 
-    isDragging = true;
-    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    
-    const rect = calcEl.getBoundingClientRect();
-    initialX = rect.left;
-    initialY = rect.top;
-    startX = clientX;
-    startY = clientY;
-    
-    calcEl.style.right = 'auto';
-    calcEl.style.bottom = 'auto';
-    calcEl.style.margin = '0';
-    
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('touchmove', drag, {passive: false});
-    document.addEventListener('mouseup', dragEnd);
-    document.addEventListener('touchend', dragEnd);
-}
+    function dragStart(e) {
+        if(e.target.tagName === 'SPAN') return; 
+        isDragging = true;
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        
+        const rect = calcEl.getBoundingClientRect();
+        initialX = rect.left;
+        initialY = rect.top;
+        startX = clientX;
+        startY = clientY;
+        
+        calcEl.style.right = 'auto';
+        calcEl.style.bottom = 'auto';
+        calcEl.style.margin = '0';
+        
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, {passive: false});
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchend', dragEnd);
+    }
 
-function drag(e) {
-    if (!isDragging) return;
-    e.preventDefault(); 
-    const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-    
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    
-    calcEl.style.left = `${initialX + dx}px`;
-    calcEl.style.top = `${initialY + dy}px`;
-}
+    function drag(e) {
+        if (!isDragging) return;
+        e.preventDefault(); 
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        
+        calcEl.style.left = `${initialX + dx}px`;
+        calcEl.style.top = `${initialY + dy}px`;
+    }
 
-function dragEnd() {
-    isDragging = false;
-    document.removeEventListener('mousemove', drag);
-    document.removeEventListener('touchmove', drag);
-    document.removeEventListener('mouseup', dragEnd);
-    document.removeEventListener('touchend', dragEnd);
+    function dragEnd() {
+        isDragging = false;
+        document.removeEventListener('mousemove', drag);
+        document.removeEventListener('touchmove', drag);
+        document.removeEventListener('mouseup', dragEnd);
+        document.removeEventListener('touchend', dragEnd);
+    }
 }
 
 // --- MINI NEXUS WIDGET LOGIC ---
@@ -475,7 +577,7 @@ window.sendToNexus = async function(subId, qIndex, isAutoExplain) {
             if (done) break;
 
             aiFullText += decoder.decode(value, { stream: true });
-            responseContainer.innerHTML = marked.parse(aiFullText);
+            responseContainer.innerHTML = window.marked ? marked.parse(aiFullText) : aiFullText;
             chatArea.scrollTop = chatArea.scrollHeight;
         }
 
@@ -486,4 +588,56 @@ window.sendToNexus = async function(subId, qIndex, isAutoExplain) {
         responseContainer.innerHTML = `<span style="color: var(--ion-color-danger);">Connection error. Please try again.</span>`;
         console.error("Nexus Widget Error:", error);
     }
+};
+
+// --- PAYSTACK & TRAP ACTIONS ---
+const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
+
+window.forceSubmitFreeExam = function() {
+    document.getElementById('examTrapModal').style.display = 'none';
+    submitExam(false); // Instantly score their 10 questions and show summary
+};
+
+window.triggerPutmePaystack = function() {
+    if (typeof PaystackPop === 'undefined') {
+        alert("Payment gateway blocked. Please disable your browser's adblocker or tracking prevention and refresh the page.");
+        return;
+    }
+
+    const userObj = JSON.parse(localStorage.getItem('post_utme_logged_in_user'));
+    const userEmail = userObj.email;
+    const userId = userObj.id || ''; 
+    
+    const cached = JSON.parse(localStorage.getItem('putme_premium_data') || '{}');
+    const finalPrice = (cached && cached.discountEarned === true) ? 5000 : 5500;
+
+    function onPaymentSuccess(response) {
+        console.log("Payment Ref:", response.reference);
+        document.getElementById('examTrapModal').style.display = 'none';
+        
+        isFreeUser = false; // Turn off the trap!
+        cached.isPremium = true;
+        localStorage.setItem('putme_premium_data', JSON.stringify(cached));
+        
+        alert("Payment successful! Your exam is unlocked. You may continue."); 
+        startTimer(); // Resume the clock!
+    }
+
+    let handler = PaystackPop.setup({
+        key: PAYSTACK_KEY,
+        email: userEmail,
+        amount: finalPrice * 100, 
+        currency: 'NGN', 
+        ref: 'PUTME_' + Math.floor((Math.random() * 1000000000) + 1),
+        metadata: {
+            user_id: userId,
+            user_email: userEmail,
+            plan_type: 'Pro Access' 
+        },
+        callback: onPaymentSuccess,
+        onClose: function() {
+            console.log('Payment window closed.');
+        }
+    });
+    handler.openIframe();
 };

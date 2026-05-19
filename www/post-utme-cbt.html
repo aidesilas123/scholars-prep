@@ -210,6 +210,23 @@
       </ion-content>
     </div>
 
+    <div class="overlay" id="examTrapModal" style="display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); z-index: 10000; backdrop-filter: blur(5px);">
+    <div class="custom-modal" style="background: var(--panel); border-radius: 16px; padding: 24px; width: min(92vw, 380px); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      <ion-icon name="warning" color="warning" style="font-size: 54px; margin-bottom: 10px;"></ion-icon>
+      
+      <h3 style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Free Limit Reached</h3>
+      <p style="margin: 0 0 20px; color: var(--muted); line-height: 1.5; font-size: 14px;">You have answered 10 questions. Activate Scholars Prep to complete the full exam, or submit your current score.</p>
+      
+      <ion-button expand="block" color="primary" style="--border-radius: 10px; height: 50px; font-weight: bold; margin-bottom: 12px;" onclick="triggerPutmePaystack()">
+          <span id="examPaystackBtnText"><ion-icon name="card-outline" slot="start"></ion-icon> Activate Full Access</span>
+      </ion-button>
+
+      <ion-button expand="block" fill="outline" color="danger" style="--border-radius: 10px; height: 50px; font-weight: bold;" onclick="forceSubmitFreeExam()">
+          <ion-icon name="checkmark-done-outline" slot="start"></ion-icon> Submit 10 Questions
+      </ion-button>
+    </div>
+  </div>
+
   </ion-app>
 
   <div class="calc" id="calc">
