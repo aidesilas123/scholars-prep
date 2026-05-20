@@ -158,6 +158,7 @@ async function loadSubjects() {
     }
     showLoading(false);
 }
+
 // --- LIVE SUBJECT SEARCH FILTER ---
 window.filterSubjects = function(event) {
     const query = event.target.value.toLowerCase();
@@ -295,7 +296,18 @@ function renderGrid() {
         if(data.flags[i]) btn.classList.add('flag');
         if(data.currentQ === i) btn.classList.add('current');
         btn.innerText = i + 1;
-        btn.onclick = () => { data.currentQ = i; renderGrid(); renderQuestion(); };
+        
+        btn.onclick = () => { 
+            // --- NEW: NAVIGATION BLOCK TRAP ---
+            if (isFreeUser && i >= 10) {
+                clearInterval(timerId); 
+                document.getElementById('examTrapModal').style.display = 'flex';
+                return;
+            }
+            data.currentQ = i; 
+            renderGrid(); 
+            renderQuestion(); 
+        };
         grid.appendChild(btn);
     }
 }
@@ -346,13 +358,29 @@ window.toggleFlag = function() {
     d.flags[d.currentQ] = !d.flags[d.currentQ];
     renderGrid();
 };
+
 window.nextQuestion = function() {
+    // --- NEW: NAVIGATION BLOCK TRAP ---
+    if (isFreeUser && examData[activeSubjectId].currentQ + 1 >= 10) {
+        clearInterval(timerId); 
+        document.getElementById('examTrapModal').style.display = 'flex';
+        return;
+    }
+
     if(examData[activeSubjectId].currentQ < examData[activeSubjectId].questions.length - 1) {
         examData[activeSubjectId].currentQ++;
         renderGrid(); renderQuestion();
     }
 };
+
 window.prevQuestion = function() {
+    // --- NEW: NAVIGATION BLOCK TRAP ---
+    if (isFreeUser && examData[activeSubjectId].currentQ - 1 >= 10) {
+        clearInterval(timerId); 
+        document.getElementById('examTrapModal').style.display = 'flex';
+        return;
+    }
+
     if(examData[activeSubjectId].currentQ > 0) {
         examData[activeSubjectId].currentQ--;
         renderGrid(); renderQuestion();
@@ -431,12 +459,12 @@ async function submitExam(auto) {
                             <span onclick="toggleNexusWidget('${subId}', ${i})" style="cursor: pointer; font-size: 16px;">✖</span>
                         </div>
                         <div id="nexus-chat-${subId}-${i}" style="padding: 12px; max-height: 250px; overflow-y: auto; font-size: 14px; line-height: 1.6; color: var(--ion-text-color);">
-                            <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below, or click "Explain" for a full breakdown.</div>
+                            <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below.</div>
                         </div>
                         <div style="display: flex; border-top: 1px solid rgba(128,128,128,0.2);">
                             <input type="text" id="nexus-input-${subId}-${i}" placeholder="Ask about this..." style="flex: 1; padding: 10px; border: none; outline: none; background: transparent; color: var(--ion-text-color);">
                             <button onclick="sendToNexus('${subId}', ${i}, false)" style="background: transparent; color: var(--ion-color-primary); border: none; padding: 0 12px; font-weight: bold; cursor: pointer;">Send</button>
-                            <button onclick="sendToNexus('${subId}', ${i}, true)" style="background: var(--ion-color-primary); color: white; border: none; padding: 0 15px; font-weight: bold; cursor: pointer;">Explain</button>
+                            
                         </div>
                     </div>
                 </div>`;
@@ -500,6 +528,7 @@ async function submitExam(auto) {
         if (auto) showModal('Time Up!', 'Your exam time has elapsed. Your answers have been submitted automatically.', null, false);
     }, 1000);
 }
+
 // --- CALCULATOR (Functional & Draggable) ---
 window.toggleCalc = () => { 
     const c = document.getElementById('calc'); 
@@ -584,20 +613,17 @@ window.sendToNexus = async function(subId, qIndex, isAutoExplain) {
     const qData = examData[subId].questions[qIndex];
     const questionText = qData.q;
     const correctAnswer = qData.opts[qData.ans];
-
-    // Format options into A), B), C), D)
     const optionsList = qData.opts.map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`).join('\n');
 
     let promptToAI = "";
-
     if (isAutoExplain) {
-        promptToAI = `Act as an expert tutor. Please explain step-by-step why the correct answer to this question is "${correctAnswer}". \n\nQuestion: ${questionText}\n\nOptions:\n${optionsList}`;
+        promptToAI = `Act as an expert tutor. Please explain step-by-step why the correct answer to this question is "${correctAnswer}".\n\nQuestion: ${questionText}\n\nOptions:\n${optionsList}`;
         chatArea.innerHTML = `<div style="font-weight:bold; margin-bottom:8px;">Explain this question.</div>`;
     } else {
         if (!userMessage) return;
-        promptToAI = `Regarding this question: "${questionText}"\n\nOptions:\n${optionsList}\n\n(Correct Answer: ${correctAnswer}). \n\nStudent asks: ${userMessage}`;
+        promptToAI = `Regarding this question: "${questionText}"\n\nOptions:\n${optionsList}\n\n(Correct Answer: ${correctAnswer}).\n\nStudent asks: ${userMessage}`;
         chatArea.innerHTML += `<div style="font-weight:bold; margin-bottom:8px; margin-top: 15px;">You: ${userMessage}</div>`;
-        inputField.value = ''; 
+        inputField.value = '';
     }
 
     const responseContainer = document.createElement('div');
@@ -611,25 +637,18 @@ window.sendToNexus = async function(subId, qIndex, isAutoExplain) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: [{ role: 'user', content: promptToAI }] })
         });
-
         if (!response.ok) throw new Error("Network Error");
-
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let aiFullText = "";
-
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-
             aiFullText += decoder.decode(value, { stream: true });
             responseContainer.innerHTML = window.marked ? marked.parse(aiFullText) : aiFullText;
             chatArea.scrollTop = chatArea.scrollHeight;
         }
-
-        if (window.MathJax) {
-            MathJax.typesetPromise([responseContainer]).catch(err => console.error(err));
-        }
+        if (window.MathJax) MathJax.typesetPromise([responseContainer]).catch(err => console.error(err));
     } catch (error) {
         responseContainer.innerHTML = `<span style="color: var(--ion-color-danger);">Connection error. Please try again.</span>`;
         console.error("Nexus Widget Error:", error);
