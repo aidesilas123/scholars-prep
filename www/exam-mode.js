@@ -1,3 +1,48 @@
+// --- GLOBAL CONTENT PROTECTION ---
+(function initContentProtection() {
+    // 1. Disable Right-Click (Context Menu)
+    document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
+    // 2. Disable Text Selection & Highlighting
+    document.addEventListener('selectstart', (e) => {
+        e.preventDefault();
+    });
+
+    // 3. Disable Dragging (prevents dragging text/images to search bars)
+    document.addEventListener('dragstart', (e) => {
+        e.preventDefault();
+    });
+
+    // 4. Disable Specific Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Block F12 (Dev Tools)
+        if (e.key === 'F12' || e.keyCode === 123) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Check for Ctrl (Windows) or Cmd (Mac) modifier keys
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
+        if (isCtrlOrCmd) {
+            const key = e.key.toLowerCase();
+            
+            // Block Copy (C), Paste (V), Cut (X), Select All (A), Print (P), Save (S), View Source (U)
+            if (['c', 'v', 'x', 'a', 'p', 's', 'u'].includes(key)) {
+                e.preventDefault();
+                return false;
+            }
+
+            // Block DevTools shortcuts: Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+            if (e.shiftKey && ['i', 'j', 'c'].includes(key)) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    }, { capture: true }); // Use capture phase to intercept before other scripts
+})();
 // --- AUTH GUARD & INIT ---
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
@@ -84,9 +129,16 @@ window.addEventListener('popstate', (e) => {
     }
 });
 
+
 // --- MATH FIXER ---
 function fixMathText(text) {
     if (!text) return "";
+
+    // DO NOT process or mangle HTML tags (allows <u>, <b>, <sup>, etc., to pass through)
+    if (/<\/?[a-z][\s\S]*>/i.test(text)) {
+        return text;
+    }
+
     let fixed = text;
     const mathWords = ["frac", "sqrt", "int", "lim", "sum", "infty", "times", "div", "pm", "sin", "cos", "tan", "theta", "pi", "alpha"];
     mathWords.forEach(word => {
@@ -94,9 +146,12 @@ function fixMathText(text) {
         fixed = fixed.replace(regex, `\\${word}`);
     });
     fixed = fixed.replace(/\\\\/g, "\\");
+    
     const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
     const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
+    
     if (isMathSymbol && !hasDelimiters && fixed.length < 50) return `\\( ${fixed} \\)`;
+    
     return fixed;
 }
 

@@ -136,6 +136,20 @@
     .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--panel); border-radius: 12px; overflow: hidden; border: 1px solid rgba(128,128,128,0.2); }
     .summary-table th { background: rgba(4,73,8,0.1); padding: 12px; font-weight: bold; text-align: center; border-bottom: 2px solid rgba(128,128,128,0.2); color: var(--ion-color-primary); }
     .summary-table td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(128,128,128,0.1); }
+    /* Force underlines to show up inside all question and option areas */
+    .question-card u {
+        text-decoration: underline !important;
+        text-decoration-thickness: 2px; 
+        color: inherit; 
+    }
+
+    /* Tell MathJax to leave underline tags alone */
+    .mjx-chtml u, 
+    .mjx-math u, 
+    .mjx-n u, 
+    span.mjx-char u {
+        text-decoration: underline !important;
+    }
 
     /* MOBILE LAYOUT FIX */
     @media (max-width: 900px) { 

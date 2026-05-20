@@ -1,3 +1,10 @@
+// --- AUTH GUARD & INIT ---
+(function protectPage() {
+    const putmeUser = localStorage.getItem('post_utme_logged_in_user');
+    if (!putmeUser) {
+        window.location.replace('/'); 
+    }
+})();
 // --- 1. SECURITY & DATA LOADING (The Skeleton Shimmer) ---
 document.addEventListener('DOMContentLoaded', () => {
     const skeletonUI = document.getElementById('skeleton-ui');
