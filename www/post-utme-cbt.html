@@ -99,6 +99,16 @@
         cursor: pointer; 
         font-size: 15px; 
     }
+    /* Force underlines to show up inside your question area */
+#qText u {
+    text-decoration: underline !important;
+    text-decoration-thickness: 2px; /* Makes it more visible */
+    color: inherit; /* Keeps the color the same as the text */
+}
+/* Tell MathJax to leave underline tags alone */
+.mjx-chtml u, .mjx-n u {
+    text-decoration: underline !important;
+}
     
     /* MOBILE LAYOUT FIX: Stops the grid from shrinking */
     @media (max-width:900px) { 

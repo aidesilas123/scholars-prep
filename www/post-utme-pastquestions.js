@@ -44,19 +44,43 @@ window.addEventListener('popstate', (e) => {
     }
 });
 
-// --- MATH FIXER ---
 function fixMathText(text) {
     if (!text) return "";
+
+    // DO NOT process HTML tags
+    if (/<\/?[a-z][\s\S]*>/i.test(text)) {
+        return text;
+    }
+
     let fixed = text;
-    const mathWords = ["frac", "sqrt", "int", "lim", "sum", "infty", "times", "div", "pm", "sin", "cos", "tan", "theta", "pi", "alpha"];
+
+    const mathWords = [
+        "frac", "sqrt", "int", "lim", "sum",
+        "infty", "times", "div", "pm",
+        "sin", "cos", "tan", "theta",
+        "pi", "alpha"
+    ];
+
     mathWords.forEach(word => {
         const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'g');
         fixed = fixed.replace(regex, `\\${word}`);
     });
+
     fixed = fixed.replace(/\\\\/g, "\\");
-    const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
-    const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
-    if (isMathSymbol && !hasDelimiters && fixed.length < 50) return `\\( ${fixed} \\)`;
+
+    const isMathSymbol =
+        /[\\][a-zA-Z]+/.test(fixed) ||
+        /[=^_{}]/.test(fixed);
+
+    const hasDelimiters =
+        fixed.includes("$") ||
+        fixed.includes("\\(") ||
+        fixed.includes("\\[");
+
+    if (isMathSymbol && !hasDelimiters && fixed.length < 50) {
+        return `\\( ${fixed} \\)`;
+    }
+
     return fixed;
 }
 
@@ -197,19 +221,33 @@ window.loadPastQuestions = async function() {
             }
 
             questionsToRender.forEach((q, idx) => {
-                const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
-                const fixedQText = fixMathText(q.question_text);
+                
+               let parsedOpts = [];
+
+try {
+    parsedOpts = Array.isArray(q.options)
+        ? q.options
+        : JSON.parse(q.options);
+
+    
+
+} catch (e) {
+    console.error("OPTIONS PARSE FAILED:", q.options);
+    console.error(e);
+    return;
+}
+               const fixedQText = q.question_text;
                 const correctAnsIdx = parseInt(q.answer);
                 
                 currentPQData.push({
                     qText: fixedQText,
-                    correctText: fixMathText(parsedOpts[correctAnsIdx]),
-                    allOpts: parsedOpts.map(o => fixMathText(o))
+                   correctText: parsedOpts[correctAnsIdx],
+                    allOpts: parsedOpts
                 });
 
                 const optsHtml = parsedOpts.map((opt, i) => {
                     const isCorrect = (i === correctAnsIdx);
-                    return `<div class="pq-opt ${isCorrect ? 'correct' : ''}">${fixMathText(opt)}</div>`;
+                    return `<div class="pq-opt ${isCorrect ? 'correct' : ''}">${opt}</div>`;
                 }).join('');
 
                 htmlBlock += `
