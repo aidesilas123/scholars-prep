@@ -24,7 +24,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
 
-  <style>
+ <style>
     :root {
       --ion-color-primary: #044908;
       --ion-color-primary-rgb: 4,73,8;
@@ -67,7 +67,6 @@
 
     /* CBT Grid Layout */
     .qwrap { display: grid; grid-template-columns: 260px 1fr; gap: 14px; height: 100%; }
-    @media (max-width:900px){ .qwrap { grid-template-columns: 1fr; } }
     .qnav { background: var(--panel); border: 1px solid rgba(128,128,128,0.2); border-radius: 14px; padding: 10px; max-height: 60vh; overflow-y: auto; }
     .qgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
     .qbtn { border: 1px solid rgba(128,128,128,0.3); background: transparent; color: inherit; border-radius: 8px; padding: 10px 0; font-weight: bold; cursor: pointer; }
@@ -75,8 +74,38 @@
     .qbtn.current { outline: 2px solid var(--ion-color-primary); }
     .qbtn.flag { background: rgba(234,179,8,0.2); border-color: #eab308; }
 
-    .question-card { background: var(--panel); border: 1px solid rgba(128,128,128,0.2); border-radius: 14px; padding: 20px; }
-    .opt { display: block; margin: 8px 0; padding: 12px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); cursor: pointer; }
+    /* Updated question-card to prevent crushing and allow internal scroll */
+    .question-card { 
+        background: var(--panel); 
+        border: 1px solid rgba(128,128,128,0.2); 
+        border-radius: 14px; 
+        padding: 20px; 
+        display: flex; 
+        flex-direction: column; 
+        overflow-y: auto; 
+    }
+    
+    #qText {
+        font-size: 15px; 
+        word-wrap: break-word; /* Prevents long words/math from breaking the box */
+    }
+    
+    .opt { 
+        display: block; 
+        margin: 8px 0; 
+        padding: 12px; 
+        border-radius: 10px; 
+        border: 1px solid rgba(128,128,128,0.3); 
+        cursor: pointer; 
+        font-size: 15px; 
+    }
+    
+    /* MOBILE LAYOUT FIX: Stops the grid from shrinking */
+    @media (max-width:900px) { 
+        .qwrap { display: flex; flex-direction: column; height: calc(100vh - 180px); }
+        .qnav { flex-shrink: 0; max-height: 140px; overflow-y: auto; }
+        .question-card { flex: 1; min-height: 0; height: 100%; max-height: none; }
+    }
     
     /* Subject Tabs */
     .subject-tabs { display: flex; overflow-x: auto; padding: 10px; background: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(128,128,128,0.1); scroll-snap-type: x mandatory; }

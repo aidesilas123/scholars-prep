@@ -20,7 +20,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
 
-  <style>
+ <style>
     :root {
       --ion-color-primary: #044908;
       --ion-color-primary-rgb: 4,73,8;
@@ -39,7 +39,7 @@
       --card-bg-selected: rgba(4, 73, 8, 0.2);
     }
 
-    body { background: var(--page-bg); }
+    body { background: var(--page-bg); margin: 0; padding: 0; }
     ion-app:not(.hydrated) { visibility: hidden; opacity: 0; }
     ion-app.hydrated { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
     
@@ -49,14 +49,14 @@
     .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: var(--ion-color-primary); animation: spin 1s infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Custom Modal (From your CBT design) */
+    /* Custom Modal */
     .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px); }
     .custom-modal { background: var(--panel); border-radius: 14px; padding: 24px; width: min(92vw, 400px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .custom-modal h3 { margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color); }
     .custom-modal p { margin: 0 0 24px; color: var(--muted); line-height: 1.6; font-size: 15px; }
     .custom-modal .row { display: flex; justify-content: flex-end; gap: 12px; }
 
-    /* Linear Navigation Stack Animations */
+    /* Linear Navigation Stack */
     .cbt-view { display: none; height: 100%; width: 100%; flex-direction: column; }
     .cbt-view.active { display: flex; animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
     @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
@@ -70,7 +70,6 @@
 
     /* Exam Grid */
     .qwrap { display: grid; grid-template-columns: 260px 1fr; gap: 14px; height: 100%; }
-    @media (max-width:900px){ .qwrap { grid-template-columns: 1fr; } }
     .qnav { background: var(--panel); border: 1px solid rgba(128,128,128,0.2); border-radius: 14px; padding: 10px; max-height: 60vh; overflow-y: auto; }
     .qgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
     .qbtn { border: 1px solid rgba(128,128,128,0.3); background: transparent; color: inherit; border-radius: 8px; padding: 10px 0; font-weight: bold; cursor: pointer; }
@@ -78,8 +77,35 @@
     .qbtn.current { outline: 2px solid var(--ion-color-primary); }
     .qbtn.flag { background: rgba(234,179,8,0.2); border-color: #eab308; }
 
-    .question-card { background: var(--panel); border: 1px solid rgba(128,128,128,0.2); border-radius: 14px; padding: 20px; }
-    .opt { display: block; margin: 8px 0; padding: 12px; border-radius: 10px; border: 1px solid rgba(128,128,128,0.3); cursor: pointer; transition: 0.2s; }
+    /* Internal scrolling question card */
+    .question-card { 
+        background: var(--panel); 
+        border: 1px solid rgba(128,128,128,0.2); 
+        border-radius: 14px; 
+        padding: 16px; 
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    #qText {
+        font-size: 15px; 
+        line-height: 1.4;
+        margin-top: 0;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: var(--ion-text-color);
+        word-wrap: break-word;
+    }
+    .opt { 
+        display: block; 
+        margin: 6px 0; 
+        padding: 10px; 
+        border-radius: 8px; 
+        border: 1px solid rgba(128,128,128,0.3); 
+        font-size: 15px; 
+        cursor: pointer; 
+        transition: 0.2s; 
+    }
     .opt.selected { background: var(--card-bg-selected); border-color: var(--ion-color-primary); }
     
     .subject-tabs { display: flex; overflow-x: auto; padding: 10px; background: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(128,128,128,0.1); scroll-snap-type: x mandatory; }
@@ -95,7 +121,7 @@
     .calc .pad { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding: 10px; }
     .calc .pad button { padding: 12px 0; border-radius: 8px; border: 1px solid #ccc; background: transparent; font-weight: bold; color: inherit;}
 
-    /* Pie Chart CSS */
+    /* Pie Charts */
     .summary-charts { display: flex; justify-content: space-evenly; flex-wrap: wrap; margin-top: 20px; }
     .chart-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .donut { 
@@ -110,6 +136,13 @@
     .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--panel); border-radius: 12px; overflow: hidden; border: 1px solid rgba(128,128,128,0.2); }
     .summary-table th { background: rgba(4,73,8,0.1); padding: 12px; font-weight: bold; text-align: center; border-bottom: 2px solid rgba(128,128,128,0.2); color: var(--ion-color-primary); }
     .summary-table td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(128,128,128,0.1); }
+
+    /* MOBILE LAYOUT FIX */
+    @media (max-width: 900px) { 
+        .qwrap { display: flex; flex-direction: column; height: calc(100vh - 180px); }
+        .qnav { flex-shrink: 0; max-height: 140px; overflow-y: auto; }
+        .question-card { flex: 1; min-height: 0; height: 100%; max-height: none; }
+    }
   </style>
 </head>
 <body class="noselect">

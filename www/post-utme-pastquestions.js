@@ -227,12 +227,12 @@ window.loadPastQuestions = async function() {
                             <span onclick="toggleNexusWidget(${idx})" style="cursor: pointer; font-size: 16px;">✖</span>
                         </div>
                         <div id="nexus-chat-${idx}" class="nexus-chat-area">
-                            <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below, or click "Explain" for a full breakdown.</div>
+                            <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below.</div>
                         </div>
                         <div class="nexus-input-area">
                             <input type="text" id="nexus-input-${idx}" placeholder="Ask about this..." autocomplete="off">
                             <button onclick="sendToNexus(${idx}, false)">Send</button>
-                            <button class="explain-btn" onclick="sendToNexus(${idx}, true)">Explain</button>
+                            
                         </div>
                     </div>
                 </div>`;
