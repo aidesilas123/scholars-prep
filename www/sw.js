@@ -89,53 +89,50 @@ async function handleFetch(request) {
   const url = new URL(request.url);
   let pathname = url.pathname;
 
-  // Normalise root
   if (pathname === '/index' || pathname === '/index.html') {
     pathname = '/';
   }
 
-  // ─── BUG 1 & 3 FIX: Try both clean URL AND .html version ─────────────────
-  // We cache as .html filenames, but the browser requests clean URLs.
-  // So we build a list of keys to try, in order.
   const keysToTry = [];
-
   if (pathname === '/') {
     keysToTry.push('/');
   } else if (pathname.endsWith('.html')) {
-    // Request already has .html → try as-is, then strip
     keysToTry.push(pathname);
     keysToTry.push(pathname.replace('.html', ''));
-  } else if (pathname.endsWith('.js') || pathname.endsWith('.css') ||
-             pathname.endsWith('.jpg') || pathname.endsWith('.png') ||
-             pathname.endsWith('.ico') || pathname.endsWith('.webp')) {
-    // Static assets → try as-is only
+  } else if (
+    pathname.endsWith('.js') || pathname.endsWith('.css') ||
+    pathname.endsWith('.jpg') || pathname.endsWith('.png') ||
+    pathname.endsWith('.ico') || pathname.endsWith('.webp')
+  ) {
     keysToTry.push(pathname);
   } else {
-    // Clean URL navigation (e.g. /post-utme-dashboard)
-    // Try clean URL first, then .html version (which is what we precached)
-    keysToTry.push(pathname);
     keysToTry.push(pathname + '.html');
+    keysToTry.push(pathname);
   }
 
-  // Try each cache key in order
   const cache = await caches.open(CACHE_NAME);
   for (const key of keysToTry) {
     const cached = await caches.match(key, { ignoreSearch: true });
     if (cached) {
-      // Cache hit — serve instantly, update in background (stale-while-revalidate)
-      refreshInBackground(cache, request, key);
+      refreshInBackground(cache, request.url, key);
       return cached;
     }
   }
 
-  // Not in cache — go to network and cache the result for next time
   try {
-    const networkResponse = await fetch(request);
+   
+    const networkResponse = await fetch(request.url, {
+      redirect: 'follow',
+      headers: request.headers,        // preserve original headers
+      credentials: 'same-origin',
+    });
+
     if (networkResponse.ok) {
-      // Cache successful responses dynamically
-      const cacheKey = keysToTry[keysToTry.length - 1]; // use .html key if available
-      cache.put(cacheKey, networkResponse.clone());
+      // Use the FINAL URL after redirect as cache key (handles redirect chains)
+      const finalUrl = networkResponse.url || request.url;
+      cache.put(finalUrl, networkResponse.clone());
     }
+
     return networkResponse;
   } catch {
     return new Response(
@@ -149,10 +146,11 @@ async function handleFetch(request) {
   }
 }
 
-// Background cache refresh (stale-while-revalidate pattern)
-// Keeps cached pages up to date without slowing down the user
-function refreshInBackground(cache, request, cacheKey) {
-  fetch(request).then(response => {
-    if (response.ok) cache.put(cacheKey, response);
-  }).catch(() => {});
+function refreshInBackground(cache, requestUrl, cacheKey) {
+  
+  fetch(requestUrl, { redirect: 'follow', credentials: 'same-origin' })
+    .then(response => {
+      if (response.ok) cache.put(cacheKey, response);
+    })
+    .catch(() => {});
 }
