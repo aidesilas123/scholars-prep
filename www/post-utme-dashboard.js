@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (!savedUser) {
         // Kick out instantly if not logged in
-        window.location.replace('post-utme-login.html');
+        window.location.replace('post-utme-login');
         return;
     }
 
@@ -249,7 +249,7 @@ document.addEventListener('backbutton', (e) => {
     }
 }, false);
 
-// 4. Modal Action: YES Button (Redirects to index.html)
+// 4. Modal Action: YES Button (Redirects to index)
 const confirmExitBtn = document.getElementById('confirmExitBtn');
 if (confirmExitBtn) {
     confirmExitBtn.addEventListener('click', () => {
@@ -260,8 +260,8 @@ if (confirmExitBtn) {
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
             window.Capacitor.Plugins.App.exitApp();
         } else {
-            // If on the web, kick them to index.html
-            window.location.replace('index.html');
+            // If on the web, kick them to index
+            window.location.replace('index');
         }
     });
 }

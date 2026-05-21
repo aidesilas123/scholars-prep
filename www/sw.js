@@ -1,120 +1,160 @@
-const CACHE_NAME = 'scholars-prep-cache-v11';
+const CACHE_NAME = 'scholars-prep-cache-v12'; // bump version on every deploy
 
-// Strictly Clean URLs (No .html allowed in this list)
+// ─── BUG 1 & 3 FIX ───────────────────────────────────────────────────────────
+// Use the ACTUAL filenames (.html) the server can respond to with 200.
+// The fetch handler below will map clean URL requests → .html cache entries.
 const PRECACHE_URLS = [
   '/',
   '/favicon1.png',
   '/supabase-config.js',
-  '/login', '/login.js',
-  '/dashboard', '/dashboard.js',
-  '/cbt', '/cbt.js',
-  '/leaderboard', '/leaderboard.js',
-  '/mock-exam', '/mock-exam.js',
-  '/pastquestions', '/past-questions.js',
-  '/chat', '/nexus.js',
-  '/messages', '/messages.js',
-  '/notifications', '/notifications.js',
-  '/feedback', '/feedback.js',
-  '/post-utme-login', '/post-utme-login.js',
-  '/post-utme-dashboard', '/post-utme-dashboard.js',
-  '/post-utme-cbt', '/post-utme-cbt.js',
-  '/post-utme-alerts', '/post-utme-alerts.js',
-  '/exam-mode', '/exam-mode.js',
-  '/post-utme-history', '/post-utme-history.js',
-  '/post-utme-pastquestions', '/post-utme-pastquestions.js',
-  '/post-utme-settings', '/post-utme-settings.js',
-  '/post-utme-report', '/post-utme-report.js',
-  '/post-utme-profile', '/post-utme-profile.js',
-  '/post-utme-leaderboard', '/post-utme-leaderboard.js'
+  '/styles.css',                       // BUG 2 FIX: was completely missing!
+
+  // HTML pages — use real .html filenames so cache.add() gets a 200 response
+  '/post-utme-login.html',
+  '/post-utme-dashboard.html',
+  '/post-utme-history.html',
+  '/post-utme-leaderboard.html',
+  '/post-utme-pastquestions.html',
+  '/post-utme-settings.html',
+  '/post-utme-report.html',
+  '/post-utme-profile.html',
+  '/update-password.html',
+  '/signup.html',
+  '/exam-mode.html',
+
+  // JS files (these are fetched by filename, no issue here)
+  '/post-utme-login.js',
+  '/post-utme-dashboard.js',
+  '/post-utme-history.js',
+  '/post-utme-leaderboard.js',
+  '/post-utme-pastquestions.js',
+  '/post-utme-settings.js',
+  '/post-utme-report.js',
+  '/post-utme-profile.js',
+  '/exam-mode.js',
+
+  // Images
+  '/slide8.jpg',
+  '/slider7.jpg',
+  '/slider5.jpg',
+  '/slider9.jpg',
+  '/slider6.jpg',
 ];
 
-// 1. INSTALL
+// ─── 1. INSTALL ───────────────────────────────────────────────────────────────
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
       Promise.allSettled(
         PRECACHE_URLS.map(url =>
-          cache.add(url).catch(() => console.warn('Skipped (not found on server):', url))
+          cache.add(url).catch(err => console.warn('Precache skipped:', url, err))
         )
       )
     )
   );
 });
 
-// 2. ACTIVATE
+// ─── 2. ACTIVATE ─────────────────────────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    // BUG 4 FIX: clients.claim() is now INSIDE the waitUntil chain,
+    // so it runs only after old caches are fully deleted.
+    caches.keys()
+      .then(keys =>
+        Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// 3. FETCH
+// ─── 3. FETCH ────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
 
   const url = new URL(event.request.url);
 
-  // Always bypass external services (Supabase, CDNs, AND PAYSTACK)
+  // Always bypass external services
   if (
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('jsdelivr.net') ||
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('gstatic.com') ||
-    url.hostname.includes('paystack.co') 
+    url.hostname.includes('paystack.co')
   ) return;
 
-  // THE STRICT CLEAN URL ENFORCER (FIXED)
-  // We manipulate the 'pathname' only, ignoring query strings.
-  let cleanPathname = url.pathname;
-  if (cleanPathname.endsWith('.html')) {
-    if (cleanPathname.endsWith('index.html')) {
-      cleanPathname = cleanPathname.replace('index.html', ''); // map index.html to root '/'
-    } else {
-      cleanPathname = cleanPathname.replace('.html', ''); // strip .html from everything else
+  event.respondWith(handleFetch(event.request));
+});
+
+async function handleFetch(request) {
+  const url = new URL(request.url);
+  let pathname = url.pathname;
+
+  // Normalise root
+  if (pathname === '/index' || pathname === '/index.html') {
+    pathname = '/';
+  }
+
+  // ─── BUG 1 & 3 FIX: Try both clean URL AND .html version ─────────────────
+  // We cache as .html filenames, but the browser requests clean URLs.
+  // So we build a list of keys to try, in order.
+  const keysToTry = [];
+
+  if (pathname === '/') {
+    keysToTry.push('/');
+  } else if (pathname.endsWith('.html')) {
+    // Request already has .html → try as-is, then strip
+    keysToTry.push(pathname);
+    keysToTry.push(pathname.replace('.html', ''));
+  } else if (pathname.endsWith('.js') || pathname.endsWith('.css') ||
+             pathname.endsWith('.jpg') || pathname.endsWith('.png') ||
+             pathname.endsWith('.ico') || pathname.endsWith('.webp')) {
+    // Static assets → try as-is only
+    keysToTry.push(pathname);
+  } else {
+    // Clean URL navigation (e.g. /post-utme-dashboard)
+    // Try clean URL first, then .html version (which is what we precached)
+    keysToTry.push(pathname);
+    keysToTry.push(pathname + '.html');
+  }
+
+  // Try each cache key in order
+  const cache = await caches.open(CACHE_NAME);
+  for (const key of keysToTry) {
+    const cached = await caches.match(key, { ignoreSearch: true });
+    if (cached) {
+      // Cache hit — serve instantly, update in background (stale-while-revalidate)
+      refreshInBackground(cache, request, key);
+      return cached;
     }
   }
 
-  // Reconstruct the clean URL without query parameters
-  const targetUrl = url.origin + cleanPathname;
-
-  event.respondWith(
-    // ADDED: { ignoreSearch: true } so ?capacitor=1 or ?v=2 won't break the cache match
-    caches.match(targetUrl, { ignoreSearch: true }).then(cachedResponse => {
-
-      // Cache hit — serve instantly, update quietly in background
-      if (cachedResponse) {
-        fetch(targetUrl, { redirect: 'follow' })
-          .then(res => {
-            if (res && res.status === 200 && res.type === 'basic') {
-              caches.open(CACHE_NAME).then(cache => cache.put(targetUrl, res.clone()));
-            }
-          })
-          .catch(() => {}); // Fails silently if offline
-
-        return cachedResponse;
+  // Not in cache — go to network and cache the result for next time
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      // Cache successful responses dynamically
+      const cacheKey = keysToTry[keysToTry.length - 1]; // use .html key if available
+      cache.put(cacheKey, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch {
+    return new Response(
+      '<h1>You are offline</h1><p>Please check your connection and try again.</p>',
+      {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: new Headers({ 'Content-Type': 'text/html' })
       }
+    );
+  }
+}
 
-      // Cache miss — fetch from live Vercel, cache it, return it
-      return fetch(targetUrl, { redirect: 'follow' })
-        .then(res => {
-          if (res && res.status === 200 && res.type === 'basic') {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(targetUrl, clone));
-          }
-          return res;
-        })
-        .catch(() =>
-          new Response('You are offline. Please check your connection.', {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: new Headers({ 'Content-Type': 'text/plain' })
-          })
-        );
-    })
-  );
-});
+// Background cache refresh (stale-while-revalidate pattern)
+// Keeps cached pages up to date without slowing down the user
+function refreshInBackground(cache, request, cacheKey) {
+  fetch(request).then(response => {
+    if (response.ok) cache.put(cacheKey, response);
+  }).catch(() => {});
+}

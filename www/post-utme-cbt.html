@@ -9,6 +9,7 @@
   <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
   <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
+  <link rel="preload" href="post-utme-cbt.js" as="script">
 
   <script>
     window.MathJax = {
@@ -156,7 +157,7 @@
     <div id="view-selection" class="cbt-view active">
       <ion-header class="ion-no-border">
         <ion-toolbar>
-          <ion-buttons slot="start"><ion-button onclick="window.location.href='post-utme-dashboard.html'"><ion-icon name="chevron-back-outline"></ion-icon></ion-button></ion-buttons>
+          <ion-buttons slot="start"><ion-button onclick="window.location.href='post-utme-dashboard'"><ion-icon name="chevron-back-outline"></ion-icon></ion-button></ion-buttons>
           <ion-title>Select Subjects</ion-title>
         </ion-toolbar>
       </ion-header>
@@ -248,7 +249,7 @@
         <ion-toolbar>
           <ion-title>Exam Summary</ion-title>
           <ion-buttons slot="end">
-            <ion-button color="primary" style="font-weight: bold;" onclick="window.location.href='post-utme-dashboard.html'">Finish</ion-button>
+            <ion-button color="primary" style="font-weight: bold;" onclick="window.location.href='post-utme-dashboard'">Finish</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>

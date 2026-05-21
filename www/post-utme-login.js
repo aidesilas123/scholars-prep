@@ -10,7 +10,7 @@ function hideLoading() {
 (function checkLogin() {
   const savedUser = localStorage.getItem('post_utme_logged_in_user');
   if (savedUser) {
-      window.location.href = 'post-utme-dashboard.html';
+      window.location.href = 'post-utme-dashboard';
   }
 })();
 
@@ -227,7 +227,7 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
 
   showLoading();
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/update-password.html',
+      redirectTo: window.location.origin + '/update-password',
   });
   hideLoading();
 
