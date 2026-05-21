@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scholars-prep-cache-v10';
+const CACHE_NAME = 'scholars-prep-cache-v11';
 
 // Strictly Clean URLs (No .html allowed in this list)
 const PRECACHE_URLS = [
@@ -25,9 +25,7 @@ const PRECACHE_URLS = [
   '/post-utme-settings', '/post-utme-settings.js',
   '/post-utme-report', '/post-utme-report.js',
   '/post-utme-profile', '/post-utme-profile.js',
-  '/post-utme-leaderboard', '/post-utme-leaderboard.js',
-  
-  '/'
+  '/post-utme-leaderboard', '/post-utme-leaderboard.js'
 ];
 
 // 1. INSTALL
@@ -70,26 +68,28 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('paystack.co') 
   ) return;
 
-  // THE STRICT CLEAN URL ENFORCER
-  // If the browser asks for a .html file, strip it internally.
-  // E.g., if a stray code says window.location.href = 'login.html', we fetch '/login' instead.
-  let targetUrl = event.request.url;
-  if (targetUrl.endsWith('.html')) {
-    if (targetUrl.endsWith('index.html')) {
-      targetUrl = targetUrl.replace('index.html', ''); // map index.html to root '/'
+  // THE STRICT CLEAN URL ENFORCER (FIXED)
+  // We manipulate the 'pathname' only, ignoring query strings.
+  let cleanPathname = url.pathname;
+  if (cleanPathname.endsWith('.html')) {
+    if (cleanPathname.endsWith('index.html')) {
+      cleanPathname = cleanPathname.replace('index.html', ''); // map index.html to root '/'
     } else {
-      targetUrl = targetUrl.replace('.html', ''); // strip .html from everything else
+      cleanPathname = cleanPathname.replace('.html', ''); // strip .html from everything else
     }
   }
 
+  // Reconstruct the clean URL without query parameters
+  const targetUrl = url.origin + cleanPathname;
+
   event.respondWith(
-    caches.match(targetUrl).then(cachedResponse => {
+    // ADDED: { ignoreSearch: true } so ?capacitor=1 or ?v=2 won't break the cache match
+    caches.match(targetUrl, { ignoreSearch: true }).then(cachedResponse => {
 
       // Cache hit — serve instantly, update quietly in background
       if (cachedResponse) {
         fetch(targetUrl, { redirect: 'follow' })
           .then(res => {
-            // REMOVED !res.redirected so Vercel fetches actually cache
             if (res && res.status === 200 && res.type === 'basic') {
               caches.open(CACHE_NAME).then(cache => cache.put(targetUrl, res.clone()));
             }
