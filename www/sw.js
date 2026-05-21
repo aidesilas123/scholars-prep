@@ -20,7 +20,6 @@ const PRECACHE_URLS = [
   '/post-utme-profile.html',
   '/update-password.html',
   '/signup.html',
-  '/exam-mode.html',
 
   // JS files (these are fetched by filename, no issue here)
   '/post-utme-login.js',
@@ -31,7 +30,6 @@ const PRECACHE_URLS = [
   '/post-utme-settings.js',
   '/post-utme-report.js',
   '/post-utme-profile.js',
-  '/exam-mode.js',
 
   // Images
   '/slide8.jpg',
@@ -114,9 +112,9 @@ async function handleFetch(request) {
     keysToTry.push(pathname);
   } else {
     // Clean URL navigation (e.g. /post-utme-dashboard)
-    // Try .html version first (which is what we precached), then clean URL
-    keysToTry.push(pathname + '.html');
+    // Try clean URL first, then .html version (which is what we precached)
     keysToTry.push(pathname);
+    keysToTry.push(pathname + '.html');
   }
 
   // Try each cache key in order
@@ -132,11 +130,11 @@ async function handleFetch(request) {
 
   // Not in cache — go to network and cache the result for next time
   try {
-    // ─── FIX: Create new Request with redirect: 'follow' ───────────────────
-    const networkResponse = await fetch(new Request(request, { redirect: 'follow' }));
+    const networkResponse = await fetch(request);
     if (networkResponse.ok) {
-      // Cache successful responses dynamically using the full request URL
-      cache.put(request.url, networkResponse.clone());
+      // Cache successful responses dynamically
+      const cacheKey = keysToTry[keysToTry.length - 1]; // use .html key if available
+      cache.put(cacheKey, networkResponse.clone());
     }
     return networkResponse;
   } catch {
@@ -154,8 +152,7 @@ async function handleFetch(request) {
 // Background cache refresh (stale-while-revalidate pattern)
 // Keeps cached pages up to date without slowing down the user
 function refreshInBackground(cache, request, cacheKey) {
-  // ─── FIX: Create new Request with redirect: 'follow' ─────────────────────
-  fetch(new Request(request, { redirect: 'follow' })).then(response => {
-    if (response.ok) cache.put(request.url, response);
+  fetch(request).then(response => {
+    if (response.ok) cache.put(cacheKey, response);
   }).catch(() => {});
 }
