@@ -132,8 +132,8 @@ async function handleFetch(request) {
 
   // Not in cache — go to network and cache the result for next time
   try {
-    // ─── FIX: explicitly follow redirects ───────────────────────────────────
-    const networkResponse = await fetch(request, { redirect: 'follow' });
+    // ─── FIX: Create new Request with redirect: 'follow' ───────────────────
+    const networkResponse = await fetch(new Request(request, { redirect: 'follow' }));
     if (networkResponse.ok) {
       // Cache successful responses dynamically using the full request URL
       cache.put(request.url, networkResponse.clone());
@@ -154,8 +154,8 @@ async function handleFetch(request) {
 // Background cache refresh (stale-while-revalidate pattern)
 // Keeps cached pages up to date without slowing down the user
 function refreshInBackground(cache, request, cacheKey) {
-  // ─── FIX: explicitly follow redirects ─────────────────────────────────────
-  fetch(request, { redirect: 'follow' }).then(response => {
+  // ─── FIX: Create new Request with redirect: 'follow' ─────────────────────
+  fetch(new Request(request, { redirect: 'follow' })).then(response => {
     if (response.ok) cache.put(request.url, response);
   }).catch(() => {});
 }
