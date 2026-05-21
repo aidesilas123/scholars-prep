@@ -114,9 +114,9 @@ async function handleFetch(request) {
     keysToTry.push(pathname);
   } else {
     // Clean URL navigation (e.g. /post-utme-dashboard)
-    // Try clean URL first, then .html version (which is what we precached)
-    keysToTry.push(pathname);
+    // Try .html version first (which is what we precached), then clean URL
     keysToTry.push(pathname + '.html');
+    keysToTry.push(pathname);
   }
 
   // Try each cache key in order
@@ -134,9 +134,8 @@ async function handleFetch(request) {
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
-      // Cache successful responses dynamically
-      const cacheKey = keysToTry[keysToTry.length - 1]; // use .html key if available
-      cache.put(cacheKey, networkResponse.clone());
+      // Cache successful responses dynamically using the full request URL
+      cache.put(request.url, networkResponse.clone());
     }
     return networkResponse;
   } catch {
@@ -155,6 +154,6 @@ async function handleFetch(request) {
 // Keeps cached pages up to date without slowing down the user
 function refreshInBackground(cache, request, cacheKey) {
   fetch(request).then(response => {
-    if (response.ok) cache.put(cacheKey, response);
+    if (response.ok) cache.put(request.url, response);
   }).catch(() => {});
 }
