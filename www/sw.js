@@ -1,15 +1,12 @@
-const CACHE_NAME = 'scholars-prep-cache-v12'; // bump version on every deploy
+const CACHE_NAME = 'scholars-prep-cache-v14'; 
 
-// ─── BUG 1 & 3 FIX ───────────────────────────────────────────────────────────
-// Use the ACTUAL filenames (.html) the server can respond to with 200.
-// The fetch handler below will map clean URL requests → .html cache entries.
 const PRECACHE_URLS = [
   '/',
   '/favicon1.png',
   '/supabase-config.js',
-  '/styles.css',                       // BUG 2 FIX: was completely missing!
+  '/styles.css',                       
 
-  // HTML pages — use real .html filenames so cache.add() gets a 200 response
+  // HTML pages
   '/post-utme-login.html',
   '/post-utme-dashboard.html',
   '/post-utme-history.html',
@@ -20,8 +17,9 @@ const PRECACHE_URLS = [
   '/post-utme-profile.html',
   '/update-password.html',
   '/signup.html',
+  '/exam-mode.html',
 
-  // JS files (these are fetched by filename, no issue here)
+  // JS files 
   '/post-utme-login.js',
   '/post-utme-dashboard.js',
   '/post-utme-history.js',
@@ -30,6 +28,7 @@ const PRECACHE_URLS = [
   '/post-utme-settings.js',
   '/post-utme-report.js',
   '/post-utme-profile.js',
+  '/exam-mode.js',
 
   // Images
   '/slide8.jpg',
@@ -56,8 +55,6 @@ self.addEventListener('install', event => {
 // ─── 2. ACTIVATE ─────────────────────────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
-    // BUG 4 FIX: clients.claim() is now INSIDE the waitUntil chain,
-    // so it runs only after old caches are fully deleted.
     caches.keys()
       .then(keys =>
         Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
@@ -66,14 +63,14 @@ self.addEventListener('activate', event => {
   );
 });
 
-// ─── 3. FETCH ────────────────────────────────────────────────────────────────
+// ─── 3. FETCH (STALE-WHILE-REVALIDATE) ───────────────────────────────────────
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
 
   const url = new URL(event.request.url);
 
-  // Always bypass external services
+  // Bypass external services
   if (
     url.hostname.includes('supabase.co') ||
     url.hostname.includes('jsdelivr.net') ||
@@ -82,75 +79,41 @@ self.addEventListener('fetch', event => {
     url.hostname.includes('paystack.co')
   ) return;
 
-  event.respondWith(handleFetch(event.request));
-});
-
-async function handleFetch(request) {
-  const url = new URL(request.url);
-  let pathname = url.pathname;
-
-  if (pathname === '/index' || pathname === '/index.html') {
-    pathname = '/';
+  // 1. Normalize the Cache Key
+  // Maps clean URLs (like '/exam-mode') to their physical files ('/exam-mode.html')
+  let cacheKey = url.pathname;
+  if (cacheKey === '/index' || cacheKey === '/index.html') {
+    cacheKey = '/';
+  } else if (!cacheKey.includes('.') && cacheKey !== '/') {
+    cacheKey += '.html';
   }
 
-  const keysToTry = [];
-  if (pathname === '/') {
-    keysToTry.push('/');
-  } else if (pathname.endsWith('.html')) {
-    keysToTry.push(pathname);
-    keysToTry.push(pathname.replace('.html', ''));
-  } else if (
-    pathname.endsWith('.js') || pathname.endsWith('.css') ||
-    pathname.endsWith('.jpg') || pathname.endsWith('.png') ||
-    pathname.endsWith('.ico') || pathname.endsWith('.webp')
-  ) {
-    keysToTry.push(pathname);
-  } else {
-    keysToTry.push(pathname + '.html');
-    keysToTry.push(pathname);
-  }
+  // 2. The Stale-While-Revalidate Engine
+  event.respondWith(
+    caches.match(cacheKey, { ignoreSearch: true }).then(cachedResponse => {
+      
+      // Define the background network fetch using the unmutated, raw event.request
+      const fetchPromise = fetch(event.request).then(networkResponse => {
+        // Silently update the cache with the fresh network version for next time
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(cacheKey, clone));
+        }
+        return networkResponse;
+      }).catch(() => {
+        // Fail silently in the background if network drops
+      });
 
-  const cache = await caches.open(CACHE_NAME);
-  for (const key of keysToTry) {
-    const cached = await caches.match(key, { ignoreSearch: true });
-    if (cached) {
-      refreshInBackground(cache, request.url, key);
-      return cached;
-    }
-  }
-
-  try {
-   
-    const networkResponse = await fetch(request.url, {
-      redirect: 'follow',
-      headers: request.headers,        // preserve original headers
-      credentials: 'same-origin',
-    });
-
-    if (networkResponse.ok) {
-      // Use the FINAL URL after redirect as cache key (handles redirect chains)
-      const finalUrl = networkResponse.url || request.url;
-      cache.put(finalUrl, networkResponse.clone());
-    }
-
-    return networkResponse;
-  } catch {
-    return new Response(
-      '<h1>You are offline</h1><p>Please check your connection and try again.</p>',
-      {
-        status: 503,
-        statusText: 'Service Unavailable',
-        headers: new Headers({ 'Content-Type': 'text/html' })
-      }
-    );
-  }
-}
-
-function refreshInBackground(cache, requestUrl, cacheKey) {
-  
-  fetch(requestUrl, { redirect: 'follow', credentials: 'same-origin' })
-    .then(response => {
-      if (response.ok) cache.put(cacheKey, response);
+      // KEY LOGIC: 
+      // If we have a cached version, return it INSTANTLY (do not wait for fetchPromise).
+      // If we don't have it, wait for the fetchPromise.
+      // If fetchPromise fails, show the offline page.
+      return cachedResponse || fetchPromise.catch(() => {
+        return new Response(
+          '<div style="text-align:center; margin-top:50px; font-family:sans-serif;"><h2>You are offline</h2><p>Please check your internet connection.</p></div>',
+          { status: 503, headers: new Headers({ 'Content-Type': 'text/html' }) }
+        );
+      });
     })
-    .catch(() => {});
-}
+  );
+});
