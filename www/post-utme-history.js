@@ -2,7 +2,7 @@
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
     if (!putmeUser) {
-        window.location.replace('/'); 
+        window.location.replace('index.html'); 
     }
 })();
 
@@ -40,7 +40,7 @@ window.addEventListener('popstate', (e) => {
     if (e.state && e.state.view) {
         switchView(e.state.view, false);
     } else {
-        window.location.replace('/post-utme-dashboard');
+        window.location.replace('post-utme-dashboard.html');
     }
 });
 

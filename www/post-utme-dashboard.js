@@ -2,7 +2,7 @@
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
     if (!putmeUser) {
-        window.location.replace('/'); 
+        window.location.replace('index.html'); 
     }
 })();
 // --- 1. SECURITY & DATA LOADING (The Skeleton Shimmer) ---
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (!savedUser) {
         // Kick out instantly if not logged in
-        window.location.replace('post-utme-login');
+        window.location.replace('post-utme-login.html');
         return;
     }
 
@@ -146,7 +146,7 @@ document.getElementById('confirmLogoutBtn').addEventListener('click', async () =
     localStorage.removeItem('post_utme_logged_in_user');
     
     // Redirect
-    window.location.replace('/post-utme-login');
+    window.location.replace('post-utme-login.html');
 });
 
 // --- 6. FETCH REFERRAL PROGRESS (The Missing Engine) ---
@@ -225,13 +225,13 @@ async function checkNewAlerts() {
 
 // 1. Push an initial state into the browser history when the dashboard loads
 window.addEventListener('DOMContentLoaded', () => {
-    history.pushState({ page: 'post-utme-dashboard' }, document.title, window.location.href);
+    history.pushState({ page: 'post-utme-dashboard.html' }, document.title, window.location.href);
 });
 
 // 2. Intercept the web browser back button (Swipe navigation)
 window.addEventListener('popstate', function(event) {
     // Push the state back immediately so the app doesn't actually close
-    history.pushState({ page: 'post-utme-dashboard' }, document.title, window.location.href);
+    history.pushState({ page: 'post-utme-dashboard.html' }, document.title, window.location.href);
     
     // Show the exit confirmation modal
     const exitModal = document.getElementById('exitOverlay');
@@ -261,7 +261,7 @@ if (confirmExitBtn) {
             window.Capacitor.Plugins.App.exitApp();
         } else {
             // If on the web, kick them to index
-            window.location.replace('index');
+            window.location.replace('index.html');
         }
     });
 }

@@ -10,7 +10,7 @@ function hideLoading() {
 (function checkLogin() {
   const savedUser = localStorage.getItem('post_utme_logged_in_user');
   if (savedUser) {
-      window.location.href = 'post-utme-dashboard';
+      window.location.href = 'post-utme-dashboard.html';
   }
 })();
 
@@ -213,11 +213,11 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     }
     
     showModal('Success', 'Redirecting to dashboard...', {autoClose: 1000});
-    setTimeout(() => { window.location.href = '/post-utme-dashboard'; }, 1000);
+    setTimeout(() => { window.location.href = 'post-utme-dashboard.html'; }, 1000);
 
   } catch (err) {
     console.error(err);
-    window.location.href = '/post-utme-dashboard';
+    window.location.href = 'post-utme-dashboard.html';
   }
 });
 // 3. RESET PASSWORD
@@ -227,7 +227,7 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
 
   showLoading();
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/update-password',
+      redirectTo: window.location.origin + 'update-password.html',
   });
   hideLoading();
 

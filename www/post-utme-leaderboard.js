@@ -1,7 +1,7 @@
 // --- AUTH GUARD ---
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
-    if (!putmeUser) window.location.replace('/post-utme-login'); 
+    if (!putmeUser) window.location.replace('post-utme-login.html'); 
 })();
 
 const _sb = window.supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- LINEAR NAVIGATION ENGINE ---
 window.addEventListener('popstate', (e) => {
-    window.location.replace('/post-utme-dashboard');
+    window.location.replace('post-utme-dashboard.html');
 });
 
 // --- DATA CRUNCHING LOGIC ---

@@ -131,7 +131,7 @@
     <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
        
         <ion-button fill="clear" style="--color: #063b08; font-weight: bold;" href="login.html" class="loading-trigger auth-hide">Login</ion-button>
-        <ion-button fill="solid" style="--background: #053006; --color: white; font-weight: bold; --border-radius: 8px;" href="post-utme-login" class="loading-trigger auth-hide">PUTME</ion-button>
+        <ion-button fill="solid" style="--background: #053006; --color: white; font-weight: bold; --border-radius: 8px;" href="post-utme-login.html" class="loading-trigger auth-hide">PUTME</ion-button>
     </div>
 </header>
 
@@ -152,7 +152,7 @@
     <div class="btn-group locked-blur" id="mainAuthGroup">
       <ion-button id="center-download-btn" fill="solid" style="--background: var(--accent); --color: #13421d; font-weight: bold; --border-radius: 50px; --padding-start: 24px; --padding-end: 24px;" href="https://github.com/aidesilas123/scholars-prep/releases/download/v6.1/app-debug.apk">
         <ion-icon name="logo-android" slot="start" style="font-size: 20px;"></ion-icon>
-        Download App
+        Download App To Get Started
       </ion-button>
     </div> 
 
@@ -248,16 +248,8 @@
       if(loader) loader.style.display = 'none';
     }
   });
-  
-  // SERVICE WORKER REGISTRATION
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(registration => console.log('Service Worker activated.'))
-        .catch(error => console.log('Service Worker failed:', error));
-    });
-  }
 
+ 
   // 5. CAPGO OTA UPDATER: SAFE BOOT LOGIC
   // This tells the native app that the HTML successfully loaded without crashing
   window.addEventListener('DOMContentLoaded', async () => {

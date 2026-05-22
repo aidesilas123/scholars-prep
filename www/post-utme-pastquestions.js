@@ -47,7 +47,7 @@
 // --- AUTH GUARD & INIT ---
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
-    if (!putmeUser) window.location.replace('/'); 
+    if (!putmeUser) window.location.replace('index.html'); 
 })();
 
 const _sb = window.supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
@@ -86,7 +86,7 @@ window.addEventListener('popstate', (e) => {
     if (e.state && e.state.view) {
         switchView(e.state.view, false);
     } else {
-        window.location.replace('/post-utme-dashboard');
+        window.location.replace('post-utme-dashboard.html');
     }
 });
 

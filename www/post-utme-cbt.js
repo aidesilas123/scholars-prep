@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (!putmeUser) {
         console.warn("Unauthorized access. Redirecting to home...");
-        window.location.replace('/'); 
+        window.location.replace('index.html'); 
     }
 })();
 
@@ -468,7 +468,7 @@ window.confirmSubmit = function() {
 
 window.confirmDashboardReturn = function() {
     showModal('Quit Exam?', 'Are you sure you want to quit? Your progress will be lost.', () => {
-        window.location.href = 'post-utme-dashboard';
+        window.location.href = 'post-utme-dashboard.html';
     });
 };
 

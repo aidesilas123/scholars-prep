@@ -47,7 +47,7 @@
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
     if (!putmeUser) {
-        window.location.replace('/'); 
+        window.location.replace('index.html'); 
     }
 })();
 
@@ -125,7 +125,7 @@ window.addEventListener('popstate', (e) => {
             switchView(e.state.view, false);
         }
     } else {
-        window.location.replace('/post-utme-dashboard');
+        window.location.replace('post-utme-dashboard.html');
     }
 });
 
@@ -456,7 +456,7 @@ window.confirmSubmit = function() {
 };
 
 window.confirmDashboardReturn = function() {
-    showModal('Quit Exam?', 'Are you sure you want to quit? Your progress will be lost.', () => { window.location.replace('/post-utme-dashboard'); });
+    showModal('Quit Exam?', 'Are you sure you want to quit? Your progress will be lost.', () => { window.location.replace('post-utme-dashboard.html'); });
 };
 
 async function submitExam(auto) {

@@ -158,7 +158,7 @@
         .qnav { flex-shrink: 0; max-height: 140px; overflow-y: auto; }
         .question-card { flex: 1; min-height: 0; height: 100%; max-height: none; }
     }
-  </style>
+ </style>
 </head>
 <body class="noselect">
   
@@ -180,7 +180,7 @@
       <ion-header class="ion-no-border">
         <ion-toolbar>
           <ion-buttons slot="start">
-            <ion-button onclick="window.location.replace('/post-utme-dashboard')"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
+            <ion-button onclick="window.location.replace('post-utme-dashboard.html')"><ion-icon name="arrow-back-outline"></ion-icon></ion-button>
           </ion-buttons>
           <ion-title>Full Exam Mode</ion-title>
         </ion-toolbar>
@@ -266,7 +266,7 @@
         <ion-toolbar>
           <ion-title>Exam Summary</ion-title>
           <ion-buttons slot="end">
-            <ion-button color="primary" style="font-weight: bold;" onclick="window.location.replace('/post-utme-dashboard')">Finish</ion-button>
+            <ion-button color="primary" style="font-weight: bold;" onclick="window.location.replace('post-utme-dashboard.html')">Finish</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
@@ -312,7 +312,7 @@
                 </tr>
             </thead>
             <tbody id="detailsTableBody">
-                </tbody>
+            </tbody>
         </table>
 
       </ion-content>
@@ -332,10 +332,6 @@
   </div>
 
   <script src="exam-mode.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
-    }
-  </script>
+  
 </body>
 </html>

@@ -157,7 +157,7 @@
     <div id="view-selection" class="cbt-view active">
       <ion-header class="ion-no-border">
         <ion-toolbar>
-          <ion-buttons slot="start"><ion-button onclick="window.location.href='post-utme-dashboard'"><ion-icon name="chevron-back-outline"></ion-icon></ion-button></ion-buttons>
+          <ion-buttons slot="start"><ion-button onclick="window.location.href='post-utme-dashboard.html'"><ion-icon name="chevron-back-outline"></ion-icon></ion-button></ion-buttons>
           <ion-title>Select Subjects</ion-title>
         </ion-toolbar>
       </ion-header>
@@ -249,7 +249,7 @@
         <ion-toolbar>
           <ion-title>Exam Summary</ion-title>
           <ion-buttons slot="end">
-            <ion-button color="primary" style="font-weight: bold;" onclick="window.location.href='post-utme-dashboard'">Finish</ion-button>
+            <ion-button color="primary" style="font-weight: bold;" onclick="window.location.href='post-utme-dashboard.html'">Finish</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
@@ -295,12 +295,6 @@
   </div>
 
   <script src="post-utme-cbt.js"></script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
-    });
-  }
-</script>
+  
 </body>
 </html>
