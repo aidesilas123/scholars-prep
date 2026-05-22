@@ -184,7 +184,7 @@
 
     if (isCapacitor || isWebView) {
         // We are inside the Android App -> Hide the download button
-        downloadBtn.style.display = 'none';
+        if(downloadBtn) downloadBtn.style.display = 'none';
     }
   }
 
@@ -205,35 +205,33 @@
       if (percent < 90) {
         percent += Math.floor(Math.random() * 10) + 1;
         if (percent > 90) percent = 90;
-        fill.style.width = percent + '%';
-        text.innerText = percent;
+        if(fill) fill.style.width = percent + '%';
+        if(text) text.innerText = percent;
       }
     }, 150);
 
     window.addEventListener('load', () => {
       clearInterval(interval);
-      fill.style.width = '100%';
-      text.innerText = '100';
+      if(fill) fill.style.width = '100%';
+      if(text) text.innerText = '100';
       
       setTimeout(() => {
-        progressContainer.style.opacity = '0';
+        if(progressContainer) progressContainer.style.opacity = '0';
         blurredElements.forEach(el => el.classList.remove('locked-blur'));
-        setTimeout(() => progressContainer.style.display = 'none', 500);
+        setTimeout(() => { if(progressContainer) progressContainer.style.display = 'none'; }, 500);
       }, 400); 
     });
   }
 
   // 3. PREMIUM LOADING UI (On Click)
   function setupClickLoading() {
-    // Note: Ionic buttons intercept clicks differently, we use their native routing later,
-    // but this works for standard href transitions.
     const triggers = document.querySelectorAll('.loading-trigger');
     const loader = document.getElementById('globalLoading');
 
     triggers.forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.preventDefault(); 
-        loader.style.display = 'flex'; 
+        if(loader) loader.style.display = 'flex'; 
         const target = this.getAttribute('href');
         
         setTimeout(() => {
@@ -242,12 +240,12 @@
       });
     });
   }
+
   // 4. BFCache Fix (Fixes endless loading on back button)
   window.addEventListener('pageshow', function(event) {
-    // 'event.persisted' is true if the page is being restored from the back button cache
     if (event.persisted) {
-      // Force the global loader to hide
-      document.getElementById('globalLoading').style.display = 'none';
+      const loader = document.getElementById('globalLoading');
+      if(loader) loader.style.display = 'none';
     }
   });
   
@@ -255,18 +253,27 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
-        .then(registration => {
-          console.log('Service Worker activated successfully with scope:', registration.scope);
-        })
-        .catch(error => {
-          console.log('Service Worker registration failed:', error);
-        });
+        .then(registration => console.log('Service Worker activated.'))
+        .catch(error => console.log('Service Worker failed:', error));
     });
   }
 
+  // 5. CAPGO OTA UPDATER: SAFE BOOT LOGIC
+  // This tells the native app that the HTML successfully loaded without crashing
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorUpdater) {
+      try {
+        await window.Capacitor.Plugins.CapacitorUpdater.notifyAppReady();
+        console.log("Capgo Updater: App marked as stable and ready.");
+      } catch (err) {
+        console.error("Capgo Updater failed to notify:", err);
+      }
+    }
+  });
+
   // INITIATE ALL SYSTEMS
   checkDevice();
-  detectAppEnvironment(); // Call the new detection function
+  detectAppEnvironment(); 
   simulateLoading();
   setupClickLoading();
   </script>

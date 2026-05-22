@@ -1,12 +1,12 @@
 {
-  "appId": "com.scholarsprep.app",
+  "appId": "com.scholarsprep.app.app",
   "appName": "Scholars Prep",
   "webDir": "www",
-  "server": {
-    "url": "https://scholars-prep.vercel.app",
-    "androidScheme": "https",
-    "allowNavigation": [
-      "scholars-prep.vercel.app"
-    ]
+  "bundledWebRuntime": false,
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": true,
+      "resetWhenUpdate": false
+    }
   }
 }
