@@ -283,13 +283,16 @@ async function handleSend() {
 
     } catch (error) {
         thinkingIndicator.style.display = 'none';
-        contentDiv.textContent = "Connection error. Please try again.";
+        
+        // This will print the EXACT reason it failed into the chat box
+        contentDiv.innerHTML = `<span style="color: #ff4b5c;">Error: ${error.message}</span>`;
+        console.error("AI Fetch Error:", error);
     }
 }
 
 async function generateAndSaveTitle(firstPrompt, sessionId) {
     try {
-        const response = await fetch('/api/title', {
+        const response = await fetch('https://scholars-prep.vercel.app/api/title', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: firstPrompt })
         });
         const data = await response.json();
