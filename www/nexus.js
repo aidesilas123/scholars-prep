@@ -76,7 +76,7 @@ function initializeNexus() {
         currentUserEmail = (mainObj && mainObj.email) || fallbackEmail || (putmeObj && putmeObj.email);
 
         if (!currentUserEmail) {
-            window.location.replace('/');
+            window.location.replace('index.html');
             return;
         }
 
@@ -93,7 +93,7 @@ function initializeNexus() {
         loadSidebarSessions();
 
     } catch (err) { 
-        window.location.replace('/');
+        window.location.replace('index.html');
     }
 }
 
