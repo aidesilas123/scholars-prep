@@ -14,13 +14,15 @@
   <script>
     window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, startup: { typeset: false } };
   </script>
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://unpkg.com/smiles-drawer@2.0.1/dist/smiles-drawer.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://js.paystack.co/v1/inline.js"></script>
-
+  <script id="MathJax-script" defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <script defer src="https://unpkg.com/smiles-drawer@2.0.1/dist/smiles-drawer.min.js"></script>
+  
+  <script defer src="https://js.paystack.co/v1/inline.js"></script>
  <style>
     :root {
       --ion-color-primary: #044908;
@@ -199,6 +201,10 @@
         <div id="subjectListContainer">
             <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
             <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 60px; border-radius: 12px; margin-bottom: 16px;"></ion-skeleton-text>
         </div>
       </ion-content>
       <div class="bottom-nav" style="justify-content: center;">
@@ -331,7 +337,7 @@
     <div style="padding:10px; font-weight:bold;">Result: <span id="calcOut">—</span></div>
   </div>
 
-  <script src="exam-mode.js"></script>
+  <script defer src="exam-mode.js"></script>
   
 </body>
 </html>

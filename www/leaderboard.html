@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leaderboard - Scholars Prep</title>
   <link rel="icon" type="image" href="favicon1.png">
- <style id="iron-cloak">
-    html, body { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-</style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -50,13 +47,7 @@
             }
         }
 
-        function unlock() {
-            const cloak = document.getElementById('iron-cloak');
-            if (cloak) cloak.remove();
-            document.documentElement.style.display = 'block';
-        }
-
-        strictGuard();
+        
     })();
 </script>
   
