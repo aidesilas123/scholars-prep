@@ -1,6 +1,6 @@
 {
   "name": "scholars-prep",
-  "version": "1.0.0",
+  "version": "1.2.3",
   "description": "",
   "main": "cbt-app.js",
   "scripts": {
@@ -24,7 +24,7 @@
     "@capacitor/android": "^8.0.2",
     "@capacitor/cli": "^8.0.2",
     "@capacitor/core": "^8.0.2",
-    "@capgo/capacitor-updater": "^8.47.1",
+    "@capgo/capacitor-updater": "^8.47.3",
     "@google/generative-ai": "^0.24.1"
   },
   "devDependencies": {
