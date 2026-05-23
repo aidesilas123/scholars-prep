@@ -6,10 +6,10 @@
   <title>Report Issue — Scholars Prep</title>
   <link rel="icon" type="image" href="favicon1.png">
   
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
-  <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+  <script defer type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     :root {
@@ -29,7 +29,7 @@
     }
 
     body { background: var(--page-bg); font-family: Inter, sans-serif; }
-    ion-app:not(.hydrated) { visibility: hidden; opacity: 0; }
+    
     ion-app.hydrated { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
     
     .loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
