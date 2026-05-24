@@ -293,14 +293,21 @@ async function startExam() {
         const subId = card.id.split('-')[1];
         const subName = subjectsData.find(s => s.id == subId).name;
         const year = document.getElementById(`yr-${subId}`).value;
-        const limit = document.getElementById(`qc-${subId}`).value;
+        const limit = parseInt(document.getElementById(`qc-${subId}`).value);
 
-        const { data: qData } = await _sb.from('putme_questions').select('*').eq('subject_id', subId).eq('year', year).limit(limit);
+        // THE FIX: Call the secure backend function
+        const { data: finalQuestions, error } = await _sb.rpc('get_random_questions', {
+            p_subject_id: parseInt(subId),
+            p_year: year || 'random', // Fallback to random if year is empty
+            p_limit: limit
+        });
         
-        if(qData && qData.length > 0) {
+        if (error) console.error("Database fetch error:", error);
+
+        if (finalQuestions && finalQuestions.length > 0) {
             examData[subId] = {
                 name: subName,
-                questions: qData.map(q => {
+                questions: finalQuestions.map(q => {
                     const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
                     return { 
                         q: fixMathText(q.question_text), 
@@ -308,13 +315,13 @@ async function startExam() {
                         ans: parseInt(q.answer) 
                     };
                 }),
-                answers: Array(qData.length).fill(null),
-                flags: Array(qData.length).fill(false),
+                answers: Array(finalQuestions.length).fill(null),
+                flags: Array(finalQuestions.length).fill(false),
                 currentQ: 0
             };
             
             if(isFirst) { activeSubjectId = subId; isFirst = false; }
-            tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${subId}" onclick="switchSubject(${subId})">${subName}</div>`;
+            tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${subId}" onclick="switchSubject('${subId}')">${subName}</div>`;
         }
     }
     

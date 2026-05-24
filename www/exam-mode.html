@@ -219,7 +219,7 @@
         <ul style="line-height: 1.8; color: var(--muted); background: var(--panel); padding: 20px 40px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.2);">
           <li>You are about to take a full mock examination consisting of 4 subjects.</li>
           <li>Each subject contains <b id="instQCount">50</b> questions.</li>
-          <li>Your total exam duration is <b id="instTime">2 Hours</b>.</li>
+          <li>Your total exam duration is <b id="instTime">2hrs</b>.</li>
           <li>The final score is graded out of 400 (100 marks per subject).</li>
           <li>Do not refresh your browser during the exam.</li>
         </ul>
@@ -336,6 +336,20 @@
     </div>
     <div style="padding:10px; font-weight:bold;">Result: <span id="calcOut">—</span></div>
   </div>
+  <div id="examTrapModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+    <div style="background: var(--panel); padding: 30px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center;">
+        <ion-icon name="warning" style="font-size: 48px; color: #ffb703; margin-bottom: 10px;"></ion-icon>
+        <h2 style="margin: 0 0 10px; font-weight: bold;">Free Limit Reached</h2>
+        <p style="color: var(--muted); margin-bottom: 25px; line-height: 1.5;">You have answered 10 questions. Activate Scholars Prep to complete the full exam, or submit your current score.</p>
+        
+        <ion-button expand="block" color="success" style="font-weight: bold; margin-bottom: 10px;" onclick="triggerPutmePaystack()">
+            <ion-icon name="card-outline" slot="start"></ion-icon> ACTIVATE FULL ACCESS
+        </ion-button>
+        <ion-button expand="block" fill="outline" color="danger" style="font-weight: bold;" onclick="forceSubmitFreeExam()">
+            <ion-icon name="checkmark-done-outline" slot="start"></ion-icon> SUBMIT 10 QUESTIONS
+        </ion-button>
+    </div>
+</div>
 
   <script defer src="exam-mode.js"></script>
   

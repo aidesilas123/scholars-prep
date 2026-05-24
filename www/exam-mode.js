@@ -1,45 +1,15 @@
 // --- GLOBAL CONTENT PROTECTION ---
 (function initContentProtection() {
-    // 1. Disable Right-Click (Context Menu)
-    document.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-    });
-
-    // 2. Disable Text Selection & Highlighting
-    document.addEventListener('selectstart', (e) => {
-        e.preventDefault();
-    });
-
-    // 3. Disable Dragging (prevents dragging text/images to search bars)
-    document.addEventListener('dragstart', (e) => {
-        e.preventDefault();
-    });
-
-    // 4. Disable Specific Keyboard Shortcuts
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('selectstart', (e) => e.preventDefault());
+    document.addEventListener('dragstart', (e) => e.preventDefault());
     document.addEventListener('keydown', (e) => {
-        // Block F12 (Dev Tools)
-        if (e.key === 'F12' || e.keyCode === 123) {
-            e.preventDefault();
-            return false;
-        }
-
-        // Check for Ctrl (Windows) or Cmd (Mac) modifier keys
+        if (e.key === 'F12' || e.keyCode === 123) { e.preventDefault(); return false; }
         const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-
         if (isCtrlOrCmd) {
             const key = e.key.toLowerCase();
-            
-            // Block Copy (C), Paste (V), Cut (X), Select All (A), Print (P), Save (S), View Source (U)
-            if (['c', 'v', 'x', 'a', 'p', 's', 'u'].includes(key)) {
-                e.preventDefault();
-                return false;
-            }
-
-            // Block DevTools shortcuts: Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
-            if (e.shiftKey && ['i', 'j', 'c'].includes(key)) {
-                e.preventDefault();
-                return false;
-            }
+            if (['c', 'v', 'x', 'a', 'p', 's', 'u'].includes(key)) { e.preventDefault(); return false; }
+            if (e.shiftKey && ['i', 'j', 'c'].includes(key)) { e.preventDefault(); return false; }
         }
     }, { capture: true }); 
 })();
@@ -47,24 +17,17 @@
 // --- AUTH GUARD & INIT ---
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
-    if (!putmeUser) {
-        window.location.replace('index.html'); 
-    }
+    if (!putmeUser) window.location.replace('index.html'); 
 })();
 
 const _sb = window.supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
 
 document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('post_utme_theme') === 'dark') document.body.classList.add('dark');
-    
-    // Setup Linear Navigation Stack
     history.replaceState({ view: 'view-selection' }, '', '');
-    
-    // Load config in the background without freezing the UI
     loadExamSetup();
 });
 
-// --- OFFLINE DROPPED NETWORK DETECTOR ---
 window.addEventListener('offline', function() {
     showModal('Network Error', '⚠️ You have lost internet connection. Please check your network to ensure your results save properly.', hideModal, false);
 });
@@ -88,6 +51,19 @@ function showModal(title, msg, onOk, showCancel = true) {
 }
 window.hideModal = () => document.getElementById('overlay').style.display = 'none';
 
+// --- ROBUST RANDOMIZATION (Fisher-Yates Shuffle) ---
+function shuffleArray(array) {
+    let curId = array.length;
+    while (0 !== curId) {
+        let randId = Math.floor(Math.random() * curId);
+        curId -= 1;
+        let tmp = array[curId];
+        array[curId] = array[randId];
+        array[randId] = tmp;
+    }
+    return array;
+}
+
 // --- STATE ---
 let subjectsData = [];
 let examData = {}; 
@@ -108,13 +84,10 @@ function showLoading(show, text="Loading...") {
     document.getElementById('loadText').textContent = text;
 }
 
-// --- LINEAR NAVIGATION ENGINE ---
 function switchView(viewId, pushToHistory = true) {
     document.querySelectorAll('.cbt-view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
-    if (pushToHistory) {
-        history.pushState({ view: viewId }, '', '');
-    }
+    if (pushToHistory) history.pushState({ view: viewId }, '', '');
 }
 
 window.addEventListener('popstate', (e) => {
@@ -130,14 +103,9 @@ window.addEventListener('popstate', (e) => {
     }
 });
 
-
-// --- MATH FIXER ---
 function fixMathText(text) {
     if (!text) return "";
-
-    if (/<\/?[a-z][\s\S]*>/i.test(text)) {
-        return text;
-    }
+    if (/<\/?[a-z][\s\S]*>/i.test(text)) return text;
 
     let fixed = text;
     const mathWords = ["frac", "sqrt", "int", "lim", "sum", "infty", "times", "div", "pm", "sin", "cos", "tan", "theta", "pi", "alpha"];
@@ -151,7 +119,6 @@ function fixMathText(text) {
     const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
     
     if (isMathSymbol && !hasDelimiters && fixed.length < 50) return `\\( ${fixed} \\)`;
-    
     return fixed;
 }
 
@@ -217,31 +184,22 @@ async function loadExamSetup() {
                 </ion-card>`;
             });
         }
-    } catch (err) {
-        console.error("Setup load failed:", err);
-    }
+    } catch (err) { console.error("Setup load failed:", err); }
 }
 
-// --- LIVE SUBJECT SEARCH FILTER ---
 window.filterSubjects = function(event) {
     const query = event.target.value.toLowerCase();
-    const cards = document.querySelectorAll('.subject-card');
-
-    cards.forEach(card => {
+    document.querySelectorAll('.subject-card').forEach(card => {
         const subjectName = card.querySelector('ion-label').innerText.toLowerCase();
-        if (subjectName.includes(query)) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
-        }
+        card.style.display = subjectName.includes(query) ? 'block' : 'none';
     });
 };
 
 window.toggleSubject = function(id) {
     const card = document.getElementById(`card-${id}`);
     const chk = document.getElementById(`chk-${id}`);
-    
     const currentSelected = document.querySelectorAll('.subject-card.selected').length;
+    
     if (!card.classList.contains('selected') && currentSelected >= 4) {
         showModal("Limit Reached", "You can only select exactly 4 subjects for a full exam.", null, false);
         return;
@@ -263,11 +221,9 @@ window.goToInstructions = function() {
 
 // --- 2. START EXAM ---
 window.startExam = async function() {
-    // --- 1-HOUR COOLDOWN GUARD ---
     if (isFreeUser) {
         const now = Date.now();
         const diffSec = Math.floor((now - lastAttemptTimestamp) / 1000);
-        
         if (lastAttemptTimestamp > 0 && diffSec < 3600) {
             const minLeft = Math.ceil((3600 - diffSec) / 60);
             showModal("Anti-Spam Cooldown", `Free practice limit reached. Please wait <b>${minLeft} minutes</b> before starting another session, or activate the app for unlimited Mock Exams.`, null, false);
@@ -281,7 +237,6 @@ window.startExam = async function() {
     examData = {};
     const tabsContainer = document.getElementById('examSubjectTabs');
     tabsContainer.innerHTML = '';
-    
     globalSessionId = `EXAM_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     
     let isFirst = true;
@@ -290,18 +245,16 @@ window.startExam = async function() {
         const subName = subjectsData.find(s => s.id == subId).name;
         const yearOpt = document.getElementById(`yr-${subId}`).value;
 
-        let query = _sb.from('putme_questions').select('*').eq('subject_id', subId);
-        if (yearOpt !== 'random') {
-            query = query.eq('year', yearOpt);
-        }
+        // THE FIX: Call the secure backend function
+        const { data: finalQuestions, error } = await _sb.rpc('get_random_questions', {
+            p_subject_id: parseInt(subId),
+            p_year: yearOpt,
+            p_limit: qLimitPerSubject
+        });
         
-        const fetchLimit = yearOpt === 'random' ? 200 : qLimitPerSubject;
-        const { data: rawData } = await query.limit(fetchLimit);
-        
-        let finalQuestions = [];
-        if (rawData && rawData.length > 0) {
-            finalQuestions = rawData.sort(() => 0.5 - Math.random()).slice(0, qLimitPerSubject);
-            
+        if (error) console.error("Database fetch error:", error);
+
+        if (finalQuestions && finalQuestions.length > 0) {
             examData[subId] = {
                 name: subName,
                 questions: finalQuestions.map(q => {
@@ -318,7 +271,6 @@ window.startExam = async function() {
             };
             
             if(isFirst) { activeSubjectId = subId; isFirst = false; }
-            // Added quotes around subId to guarantee strict object key matching
             tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${subId}" onclick="switchSubject('${subId}')">${subName}</div>`;
         }
     }
@@ -330,8 +282,7 @@ window.startExam = async function() {
     }
 
     if (isFreeUser) {
-        _sb.from('putme_free_attempts').upsert({ user_email: authEmail, last_attempt_time: new Date().toISOString() })
-            .then(({error}) => { if(error) console.error(error); });
+        _sb.from('putme_free_attempts').upsert({ user_email: authEmail, last_attempt_time: new Date().toISOString() }).then();
         lastAttemptTimestamp = Date.now();
     }
     
@@ -350,6 +301,15 @@ window.switchSubject = function(subId) {
     renderQuestion();
 };
 
+function triggerTrapModal() {
+    const trapModal = document.getElementById('examTrapModal');
+    if(trapModal) {
+        trapModal.style.display = 'flex';
+    } else {
+        alert("Free Limit Reached! Please activate the app to continue.");
+    }
+}
+
 function renderGrid() {
     const data = examData[activeSubjectId];
     const grid = document.getElementById('questionGrid');
@@ -362,10 +322,9 @@ function renderGrid() {
         if(data.currentQ === i) btn.classList.add('current');
         btn.innerText = i + 1;
         btn.onclick = () => { 
-            // --- NEW: NAVIGATION BLOCK TRAP ---
+            // PREVENT VIEWING 11TH QUESTION IF FREE USER
             if (isFreeUser && i >= 10) {
-                clearInterval(timerId); 
-                document.getElementById('examTrapModal').style.display = 'flex';
+                triggerTrapModal();
                 return;
             }
             data.currentQ = i; 
@@ -399,7 +358,6 @@ function renderQuestion() {
 }
 
 window.saveAnswer = function(idx) {
-    // --- 10-QUESTION TRAP ---
     if (isFreeUser) {
         let totalAnswers = 0;
         for (const subId in examData) {
@@ -409,10 +367,9 @@ window.saveAnswer = function(idx) {
         const currentSub = examData[activeSubjectId];
         const isAlreadyAnswered = currentSub.answers[currentSub.currentQ] !== null;
         
+        // Block answering if global total is 10
         if (!isAlreadyAnswered && totalAnswers >= 10) {
-            clearInterval(timerId); 
-            document.getElementById('examTrapModal').style.display = 'flex';
-            
+            triggerTrapModal();
             const radios = document.getElementsByName('cbtopt');
             radios.forEach(r => r.checked = false);
             return; 
@@ -431,10 +388,9 @@ window.toggleFlag = function() {
 };
 
 window.nextQuestion = function() {
-    // --- NEW: NAVIGATION BLOCK TRAP ---
+    // PREVENT VIEWING 11TH QUESTION VIA NEXT BUTTON
     if (isFreeUser && examData[activeSubjectId].currentQ + 1 >= 10) {
-        clearInterval(timerId); 
-        document.getElementById('examTrapModal').style.display = 'flex';
+        triggerTrapModal();
         return;
     }
 
@@ -445,13 +401,6 @@ window.nextQuestion = function() {
 };
 
 window.prevQuestion = function() {
-    // --- NEW: NAVIGATION BLOCK TRAP ---
-    if (isFreeUser && examData[activeSubjectId].currentQ - 1 >= 10) {
-        clearInterval(timerId); 
-        document.getElementById('examTrapModal').style.display = 'flex';
-        return;
-    }
-
     if(examData[activeSubjectId].currentQ > 0) {
         examData[activeSubjectId].currentQ--;
         renderGrid(); renderQuestion();
@@ -487,7 +436,6 @@ async function submitExam(auto) {
     let totalScore = 0;
     let timeSpentSec = maxDurationSec - Math.max(0, durationSec);
     let detailsHTML = '';
-    
     const dbPayload = [];
 
     for(const subId in examData) {
@@ -528,9 +476,7 @@ async function submitExam(auto) {
     try {
         const { error: dbError } = await _sb.from('putme_exam_results').insert(dbPayload);
         if (dbError) console.error("Database Insert Error:", dbError);
-    } catch (err) {
-        console.error("Network/DB Request Failed:", err);
-    }
+    } catch (err) { console.error("Network/DB Request Failed:", err); }
 
     const scorePercent = Math.round((totalScore / 400) * 100);
     const scoreColor = scorePercent >= 50 ? '#10b981' : '#ef4444';
@@ -612,11 +558,8 @@ if(calcEl) {
         const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
         const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
         
-        const dx = clientX - startX;
-        const dy = clientY - startY;
-        
-        calcEl.style.left = `${initialX + dx}px`;
-        calcEl.style.top = `${initialY + dy}px`;
+        calcEl.style.left = `${initialX + (clientX - startX)}px`;
+        calcEl.style.top = `${initialY + (clientY - startY)}px`;
     }
 
     function dragEnd() {
@@ -658,7 +601,6 @@ window.triggerPutmePaystack = function() {
         localStorage.setItem('putme_premium_data', JSON.stringify(cached));
         
         alert("Payment successful! Your exam is unlocked. You may continue."); 
-        startTimer(); 
     }
 
     let handler = PaystackPop.setup({
@@ -673,9 +615,7 @@ window.triggerPutmePaystack = function() {
             plan_type: 'Pro Access' 
         },
         callback: onPaymentSuccess,
-        onClose: function() {
-            console.log('Payment window closed.');
-        }
+        onClose: function() { console.log('Payment window closed.'); }
     });
     handler.openIframe();
 };
