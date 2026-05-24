@@ -41,8 +41,9 @@
                 return false;
             }
         }
-    }, { capture: true }); // Use capture phase to intercept before other scripts
+    }, { capture: true }); 
 })();
+
 // --- AUTH GUARD & INIT ---
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
@@ -71,7 +72,7 @@ window.addEventListener('offline', function() {
 // --- CUSTOM MODAL SYSTEM ---
 function showModal(title, msg, onOk, showCancel = true) {
     document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalMsg').innerHTML = msg; // Allows HTML inside modal
+    document.getElementById('modalMsg').innerHTML = msg; 
     const cancelBtn = document.getElementById('modalCancel');
     cancelBtn.style.display = showCancel ? 'block' : 'none';
 
@@ -91,7 +92,7 @@ window.hideModal = () => document.getElementById('overlay').style.display = 'non
 let subjectsData = [];
 let examData = {}; 
 let activeSubjectId = null;
-let durationSec = 7200; // 2 Hours default
+let durationSec = 7200; 
 let maxDurationSec = 7200;
 let qLimitPerSubject = 50;
 let timerId = null;
@@ -134,7 +135,6 @@ window.addEventListener('popstate', (e) => {
 function fixMathText(text) {
     if (!text) return "";
 
-    // DO NOT process or mangle HTML tags (allows <u>, <b>, <sup>, etc., to pass through)
     if (/<\/?[a-z][\s\S]*>/i.test(text)) {
         return text;
     }
@@ -161,7 +161,6 @@ async function loadExamSetup() {
         const userObj = JSON.parse(localStorage.getItem('post_utme_logged_in_user'));
         authEmail = userObj.email;
 
-        // Fetch everything simultaneously for speed
         const [settingsRes, switchRes, subStatusRes, attemptRes] = await Promise.all([
             _sb.from('putme_exam_setting').select('*').limit(1).single(),
             _sb.from('putme_settings').select('is_payment_active').maybeSingle(),
@@ -222,16 +221,14 @@ async function loadExamSetup() {
         console.error("Setup load failed:", err);
     }
 }
+
 // --- LIVE SUBJECT SEARCH FILTER ---
 window.filterSubjects = function(event) {
     const query = event.target.value.toLowerCase();
     const cards = document.querySelectorAll('.subject-card');
 
     cards.forEach(card => {
-        // Find the specific ion-label inside each card
         const subjectName = card.querySelector('ion-label').innerText.toLowerCase();
-        
-        // Hide or show based on the search query
         if (subjectName.includes(query)) {
             card.style.display = 'block';
         } else {
@@ -239,6 +236,7 @@ window.filterSubjects = function(event) {
         }
     });
 };
+
 window.toggleSubject = function(id) {
     const card = document.getElementById(`card-${id}`);
     const chk = document.getElementById(`chk-${id}`);
@@ -265,7 +263,6 @@ window.goToInstructions = function() {
 
 // --- 2. START EXAM ---
 window.startExam = async function() {
-
     // --- 1-HOUR COOLDOWN GUARD ---
     if (isFreeUser) {
         const now = Date.now();
@@ -321,7 +318,8 @@ window.startExam = async function() {
             };
             
             if(isFirst) { activeSubjectId = subId; isFirst = false; }
-            tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${subId}" onclick="switchSubject(${subId})">${subName}</div>`;
+            // Added quotes around subId to guarantee strict object key matching
+            tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${subId}" onclick="switchSubject('${subId}')">${subName}</div>`;
         }
     }
     
@@ -331,7 +329,6 @@ window.startExam = async function() {
         return; 
     }
 
-    // LOG THE FREE ATTEMPT
     if (isFreeUser) {
         _sb.from('putme_free_attempts').upsert({ user_email: authEmail, last_attempt_time: new Date().toISOString() })
             .then(({error}) => { if(error) console.error(error); });
@@ -364,7 +361,17 @@ function renderGrid() {
         if(data.flags[i]) btn.classList.add('flag'); 
         if(data.currentQ === i) btn.classList.add('current');
         btn.innerText = i + 1;
-        btn.onclick = () => { data.currentQ = i; renderGrid(); renderQuestion(); };
+        btn.onclick = () => { 
+            // --- NEW: NAVIGATION BLOCK TRAP ---
+            if (isFreeUser && i >= 10) {
+                clearInterval(timerId); 
+                document.getElementById('examTrapModal').style.display = 'flex';
+                return;
+            }
+            data.currentQ = i; 
+            renderGrid(); 
+            renderQuestion(); 
+        };
         grid.appendChild(btn);
     }
 }
@@ -424,6 +431,13 @@ window.toggleFlag = function() {
 };
 
 window.nextQuestion = function() {
+    // --- NEW: NAVIGATION BLOCK TRAP ---
+    if (isFreeUser && examData[activeSubjectId].currentQ + 1 >= 10) {
+        clearInterval(timerId); 
+        document.getElementById('examTrapModal').style.display = 'flex';
+        return;
+    }
+
     if(examData[activeSubjectId].currentQ < examData[activeSubjectId].questions.length - 1) {
         examData[activeSubjectId].currentQ++;
         renderGrid(); renderQuestion();
@@ -431,6 +445,13 @@ window.nextQuestion = function() {
 };
 
 window.prevQuestion = function() {
+    // --- NEW: NAVIGATION BLOCK TRAP ---
+    if (isFreeUser && examData[activeSubjectId].currentQ - 1 >= 10) {
+        clearInterval(timerId); 
+        document.getElementById('examTrapModal').style.display = 'flex';
+        return;
+    }
+
     if(examData[activeSubjectId].currentQ > 0) {
         examData[activeSubjectId].currentQ--;
         renderGrid(); renderQuestion();

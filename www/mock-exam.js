@@ -2527,5 +2527,5 @@
     //Login Protection
     const logged = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
     if (!logged || !logged.email) {
-      window.location.replace('/');
+      window.location.replace('index.html');
     }
