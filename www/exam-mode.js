@@ -28,9 +28,34 @@ document.addEventListener('DOMContentLoaded', () => {
     loadExamSetup();
 });
 
-window.addEventListener('offline', function() {
-    showModal('Network Error', '⚠️ You have lost internet connection. Please check your network to ensure your results save properly.', hideModal, false);
-});
+// --- ADVANCED NETWORK & SPEED MONITOR ---
+(function initNetworkMonitor() {
+    function checkNetworkQuality() {
+        if (!navigator.onLine) {
+            // Your exact original modal for offline states
+            showModal('Network Error', '⚠️ You have lost internet connection. Please check your network to ensure your results save properly.', hideModal, false);
+            return;
+        }
+
+        if (navigator.connection) {
+            const networkType = navigator.connection.effectiveType; 
+            
+            // If the connection drops to 2G speeds
+            if (networkType === 'slow-2g' || networkType === '2g') {
+                showModal('Slow Connection', '🐢 Your network is currently very slow. The app might take a moment to load elements or submit your exam.', hideModal, false);
+            }
+        }
+    }
+
+    // Trigger when connection is completely lost
+    window.addEventListener('offline', checkNetworkQuality);
+
+    // Trigger when connection is restored
+    window.addEventListener('online', () => {
+        hideModal(); // Clear the error modal
+        setTimeout(checkNetworkQuality, 1500); // Verify the new connection is actually fast
+    });
+})();
 
 // --- CUSTOM MODAL SYSTEM ---
 function showModal(title, msg, onOk, showCancel = true) {
