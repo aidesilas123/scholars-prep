@@ -1,6 +1,7 @@
 // api/chat.js
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+
 // Initialize the Google AI SDK with your environment variable
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
