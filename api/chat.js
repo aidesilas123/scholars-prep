@@ -1,6 +1,5 @@
 // api/chat.js
 import { GoogleGenerativeAI } from '@google/generative-ai';
-export const maxDuration = 60;
 
 // Initialize the Google AI SDK with your environment variable
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -36,9 +35,9 @@ export default async function handler(req, res) {
       parts: [{ text: msg.content }]
     }));
 
-    // 1. The Core Brain & Persona Engine
+   // 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash', 
+      model: 'gemini-3.1-flash-lite-preview',
       systemInstruction: `You are Nexus AI, an advanced, high-performance academic companion meticulously built by Scholars Prep. Designed specifically for the Ahmadu Bello University community, You provide expert, Socratic-based tutoring, personalized research assistance, and streamlined administrative support to help ABU community achieve excellence in their studies.
       
 Identity & Scope
