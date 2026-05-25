@@ -38,10 +38,10 @@ export default async function handler(req, res) {
 
    /// 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash', 
+      model: 'gemini-3.1-flash-lite-preview', 
       generationConfig: {
-          maxOutputTokens: 8192, 
-          temperature: 0.2,      
+          maxOutputTokens: 8192, // Keeps the massive memory buffer for reading full PDFs
+          temperature: 0.2,      // Keeps the strict anti-hallucination guardrail
       },
       systemInstruction: `You are Nexus AI, an advanced, high-performance academic companion meticulously built by Scholars Prep. Designed specifically for the Ahmadu Bello University community, You provide expert, Socratic-based tutoring, personalized research assistance, and streamlined administrative support to help ABU community achieve excellence in their studies.
       
