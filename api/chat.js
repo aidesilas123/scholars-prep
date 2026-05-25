@@ -29,14 +29,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid message payload' });
     }
 
-    const latestUserMessage = messages[messages.length - 1].content;
-
-    const historyPayload = messages.slice(0, -1).map(msg => ({
-      role: msg.role === 'model' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
-
-   // 1. The Core Brain & Persona Engine
+    // 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
       model: 'gemini-3.5-flash', 
       generationConfig: {
@@ -88,65 +81,57 @@ Disclaimers: You will include a clear, prominent disclaimer for any request invo
 Privacy: You strictly protect the user's privacy. You will never expose, request, or attempt to infer sensitive personal data.`
     });
 
-    // --- PHASE 4: THE FILE INTERCEPTOR ---
-    let multimodalParts = [];
-    let cleanedTextPrompt = latestUserMessage;
-
+    // --- PHASE 4: THE UNIVERSAL FILE INTERCEPTOR ---
     const fileRegex = /\[ATTACHED_FILE:\s*(https?:\/\/[^\]]+)\]/i;
-    const match = latestUserMessage.match(fileRegex);
 
-    if (match) {
-        const fileUrl = match[1].trim();
-        const fileExt = fileUrl.split('.').pop().split('?')[0].toLowerCase();
-        
-        cleanedTextPrompt = latestUserMessage.replace(match[0], '').trim();
-        
-        if (!cleanedTextPrompt) {
-            cleanedTextPrompt = "Please carefully analyze this document or image. Read the text accurately and tell me what it contains.";
+    // We use Promise.all to scan every single message in the history for files
+    const conversation = await Promise.all(messages.map(async (msg) => {
+        if (msg.role === 'model') {
+            return { role: 'model', parts: [{ text: msg.content }] };
         }
 
-        try {
-            console.log("Nexus downloading file from:", fileUrl);
-            const fileResponse = await fetch(fileUrl);
-            
-            if (!fileResponse.ok) {
-                console.error("Supabase Fetch Failed:", fileResponse.statusText);
-                throw new Error("Failed to download file");
-            }
-            
-            const arrayBuffer = await fileResponse.arrayBuffer();
-            const base64Data = Buffer.from(arrayBuffer).toString('base64');
-            
-            let mimeType = 'application/pdf'; // Default
-            if (fileExt === 'png') mimeType = 'image/png';
-            else if (fileExt === 'jpg' || fileExt === 'jpeg') mimeType = 'image/jpeg';
-            else if (fileExt === 'webp') mimeType = 'image/webp';
-            else if (fileExt === 'pdf') mimeType = 'application/pdf';
+        // It is a user message. Check if it contains a file anywhere in history.
+        const match = msg.content.match(fileRegex);
+        let parts = [];
 
-            multimodalParts.push({
-                inlineData: {
-                    data: base64Data,
-                    mimeType: mimeType
+        if (match) {
+            const fileUrl = match[1].trim();
+            const fileExt = fileUrl.split('.').pop().split('?')[0].toLowerCase();
+            const cleanedText = msg.content.replace(match[0], '').trim();
+
+            try {
+                const fileResponse = await fetch(fileUrl);
+                if (fileResponse.ok) {
+                    const arrayBuffer = await fileResponse.arrayBuffer();
+                    const base64Data = Buffer.from(arrayBuffer).toString('base64');
+                    
+                    let mimeType = 'application/pdf'; // Default
+                    if (fileExt === 'png') mimeType = 'image/png';
+                    else if (fileExt === 'jpg' || fileExt === 'jpeg') mimeType = 'image/jpeg';
+                    else if (fileExt === 'webp') mimeType = 'image/webp';
+
+                    parts.push({
+                        inlineData: {
+                            data: base64Data,
+                            mimeType: mimeType
+                        }
+                    });
                 }
-            });
-        } catch (downloadError) {
-            console.error("File Interceptor Error:", downloadError);
-        }
-    }
+            } catch (downloadError) {
+                console.error("History File Interceptor Error:", downloadError);
+            }
 
-    // Explicitly add the text as a text part to prevent SDK crashes
-    multimodalParts.push({ text: cleanedTextPrompt });
+            // Push the user's actual text along with the file bytes
+            parts.push({ text: cleanedText || "Please carefully analyze this attached document." });
+        } else {
+            // Standard text message with no files
+            parts.push({ text: msg.content });
+        }
+
+        return { role: 'user', parts: parts };
+    }));
 
     // --- 2. THE MULTIMODAL STREAM REQUEST ---
-    // NO startChat. We manually build the conversation array.
-    const conversation = [
-        ...historyPayload,
-        {
-            role: 'user',
-            parts: multimodalParts
-        }
-    ];
-
     const result = await model.generateContentStream({ contents: conversation });
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
