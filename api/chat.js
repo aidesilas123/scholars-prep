@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
     // 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash', // Using 1.5 Flash as it is the standard engine for multimodal (files/images)
+      model: 'gemini-1.5-flash', 
       systemInstruction: `You are Nexus AI, an advanced, high-performance academic companion meticulously built by Scholars Prep. Designed specifically for the Ahmadu Bello University community, You provide expert, Socratic-based tutoring, personalized research assistance, and streamlined administrative support to help ABU community achieve excellence in their studies.
       
 Identity & Scope
@@ -67,7 +67,7 @@ Integrity: You are strictly truthful. If you are unsure about a fact or lack the
 
 Formatting: * You use Markdown to ensure high scannability (bolding for emphasis, bullet points for lists).
 
-Inline Code & Commands: You must use Markdown backticks to format technical mentions, code snippets, and LaTeX commands inline (e.g., \toprule, \begin{tabular}).
+Inline Code & Commands: You must use Markdown backticks to format technical mentions, code snippets, and LaTeX commands inline (e.g., \\toprule, \\begin{tabular}).
 
 All mathematical expressions must be rendered in LaTeX using $inline$ or $$display$$ format.
 
@@ -83,21 +83,16 @@ Disclaimers: You will include a clear, prominent disclaimer for any request invo
 Privacy: You strictly protect the user's privacy. You will never expose, request, or attempt to infer sensitive personal data.`
     });
 
-    const chatSession = model.startChat({
-        history: historyPayload
-    });
-
     // --- PHASE 4: THE FILE INTERCEPTOR ---
     let multimodalParts = [];
     let cleanedTextPrompt = latestUserMessage;
 
-    // Use a slightly more robust regex to catch potential whitespace
     const fileRegex = /\[ATTACHED_FILE:\s*(https?:\/\/[^\]]+)\]/i;
     const match = latestUserMessage.match(fileRegex);
 
     if (match) {
         const fileUrl = match[1].trim();
-        const fileExt = fileUrl.split('.').pop().split('?')[0].toLowerCase(); // Strip query params just in case
+        const fileExt = fileUrl.split('.').pop().split('?')[0].toLowerCase();
         
         cleanedTextPrompt = latestUserMessage.replace(match[0], '').trim();
         
@@ -106,7 +101,6 @@ Privacy: You strictly protect the user's privacy. You will never expose, request
         }
 
         try {
-            // 1. Download the file
             console.log("Nexus downloading file from:", fileUrl);
             const fileResponse = await fetch(fileUrl);
             
@@ -115,20 +109,15 @@ Privacy: You strictly protect the user's privacy. You will never expose, request
                 throw new Error("Failed to download file");
             }
             
-            // 2. Convert to Base64 (More robust method for Node/Vercel)
             const arrayBuffer = await fileResponse.arrayBuffer();
             const base64Data = Buffer.from(arrayBuffer).toString('base64');
             
-            // 3. Strict MIME Type Enforcement
             let mimeType = 'application/pdf'; // Default
             if (fileExt === 'png') mimeType = 'image/png';
             else if (fileExt === 'jpg' || fileExt === 'jpeg') mimeType = 'image/jpeg';
             else if (fileExt === 'webp') mimeType = 'image/webp';
             else if (fileExt === 'pdf') mimeType = 'application/pdf';
 
-            console.log("Pushing multimodal part. MimeType:", mimeType);
-
-            // 4. Package it for Nexus
             multimodalParts.push({
                 inlineData: {
                     data: base64Data,
@@ -137,17 +126,23 @@ Privacy: You strictly protect the user's privacy. You will never expose, request
             });
         } catch (downloadError) {
             console.error("File Interceptor Error:", downloadError);
-            // If download fails, we fallback to just text so the app doesn't completely crash
         }
-    } else {
-        console.log("No ATTACHED_FILE tag found in message.");
     }
 
-    // Add the text prompt
-    multimodalParts.push(cleanedTextPrompt);
+    // Explicitly add the text as a text part to prevent SDK crashes
+    multimodalParts.push({ text: cleanedTextPrompt });
 
-    // 2. The Live-Typing Stream Request (Sending the Array instead of just text)
-    const result = await chatSession.sendMessageStream(multimodalParts);
+    // --- 2. THE MULTIMODAL STREAM REQUEST ---
+    // NO startChat. We manually build the conversation array.
+    const conversation = [
+        ...historyPayload,
+        {
+            role: 'user',
+            parts: multimodalParts
+        }
+    ];
+
+    const result = await model.generateContentStream({ contents: conversation });
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
