@@ -109,32 +109,53 @@
                 <div class="chat-conversation-area" id="chat-messages" style="display: none;">
                     <div class="messages-wrapper" id="messages-wrapper"></div>
                     
-                    <div id="ai-thinking-indicator" class="thinking-container" style="display: none;">
-                        <div class="multi-color-ring"></div>
-                        <img src="Logo.png" alt="Nexus AI" class="center-logo"> 
-                    </div>
+                    <div id="ai-thinking-indicator" style="display: none; align-items: center; gap: 15px; padding: 10px;">
+    
+    <div class="thinking-container">
+        <div class="multi-color-ring"></div>
+        <img src="Logo.png" alt="Nexus AI" class="center-logo"> 
+    </div>
+
+    <span id="thinking-text" style="color: #a0a0a0; font-size: 14px; font-weight: 500;">Thinking...</span>
+
+</div>
                 </div>
             </ion-content>
 
             <ion-footer class="ion-no-border">
                 <ion-toolbar style="padding: 8px;">
                     <div class="input-wrapper" style="margin: 0; position: relative;">
-                        <div class="input-box-container">
-                            <textarea id="chat-input" rows="1" placeholder="Ask Nexus AI..." autocomplete="off"></textarea>
-                            <div class="input-controls">
-                                <div class="left-controls">
-                                    <button class="icon-btn"><ion-icon name="attach-outline" style="font-size: 20px;"></ion-icon></button>
-                                </div>
-                                <div class="right-controls">
-                                    <button class="icon-btn" id="mic-btn"><ion-icon name="mic-outline" style="font-size: 20px;"></ion-icon></button>
-                                    <button class="icon-btn send-btn" id="send-btn" style="display: none;">
-                                        <ion-icon name="send" style="font-size: 18px;"></ion-icon>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <p class="disclaimer" style="text-align: center; font-size: 11px; margin-top: 6px; color: var(--muted);">Nexus AI is built by Scholars Prep.</p>
-                    </div>
+    
+    <div id="file-preview-badge" style="display: none; align-items: center; background: rgba(0,123,255,0.1); color: #007bff; padding: 6px 10px; border-radius: 12px; font-size: 12px; margin-bottom: 8px; width: fit-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+        <ion-icon name="document-text-outline" style="margin-right: 4px;"></ion-icon>
+        <span id="file-name-display">file.pdf</span>
+        <ion-icon name="close-circle" id="remove-file-btn" style="margin-left: 6px; cursor: pointer; font-size: 16px;"></ion-icon>
+    </div>
+
+    <div class="input-box-container">
+        <input type="file" id="file-upload-input" accept="image/*,application/pdf" style="display: none;">
+
+        <textarea id="chat-input" rows="1" placeholder="Ask Nexus AI..." autocomplete="off"></textarea>
+        
+        <div class="input-controls">
+            <div class="left-controls">
+                <button class="icon-btn" id="attach-btn">
+                    <ion-icon name="attach-outline" style="font-size: 20px;"></ion-icon>
+                </button>
+            </div>
+            <div class="right-controls">
+                <button class="icon-btn" id="mic-btn">
+                    <ion-icon name="mic-outline" style="font-size: 20px;"></ion-icon>
+                </button>
+                <button class="icon-btn send-btn" id="send-btn" style="display: none;">
+                    <ion-icon name="send" style="font-size: 18px;"></ion-icon>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <p class="disclaimer" style="text-align: center; font-size: 11px; margin-top: 6px; color: var(--muted);">Nexus AI is built by Scholars Prep.</p>
+</div>
                 </ion-toolbar>
             </ion-footer>
         </div>
