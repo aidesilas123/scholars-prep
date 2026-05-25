@@ -1,6 +1,6 @@
 // api/chat.js
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
+export const maxDuration = 60;
 
 // Initialize the Google AI SDK with your environment variable
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -36,9 +36,9 @@ export default async function handler(req, res) {
       parts: [{ text: msg.content }]
     }));
 
-   // 1. The Core Brain & Persona Engine
+   /// 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-latest', // <-- Added '-latest' to make it bulletproof
+      model: 'gemini-1.5-flash', 
       generationConfig: {
           maxOutputTokens: 8192, 
           temperature: 0.2,      
