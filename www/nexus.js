@@ -3,7 +3,9 @@ let currentUserEmail = null;
 let currentSessionId = null;
 let slidingWindowHistory = []; 
 
-let uploadedFiles = []; // Upgraded to array for multi-file support
+let uploadedFiles = [];
+let isGenerating = false;
+let currentAbortController = null;
 const fileInput = document.getElementById('file-upload-input');
 const attachBtn = document.getElementById('attach-btn');
 const filePreviewBadge = document.getElementById('file-preview-badge');
@@ -417,6 +419,7 @@ function appendMessage(role, text) {
 }
 
 async function handleSend() {
+    if (isGenerating) return;
     const userText = chatInput.value.trim();
     if (!userText && uploadedFiles.length === 0) return;
 
@@ -425,7 +428,12 @@ async function handleSend() {
     
     chatInput.value = '';
     chatInput.style.height = 'auto';
-    sendBtn.style.display = 'none';
+    
+    // Morph button to STOP mode
+    isGenerating = true;
+    currentAbortController = new AbortController();
+    sendBtn.innerHTML = '<ion-icon name="stop" style="font-size: 18px; color: #ff4b5c;"></ion-icon>';
+    sendBtn.style.display = 'flex'; // Keep it visible!
 
     thinkingIndicator.style.display = 'flex';
     scrollToBottom(); 
@@ -478,13 +486,17 @@ async function handleSend() {
         const response = await fetch('https://scholars-prep.vercel.app/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: protectedPayload })
+            body: JSON.stringify({ messages: protectedPayload }),
+            signal: currentAbortController.signal,
         });
 
         thinkingIndicator.style.display = 'none'; 
         stopThinkingAnimation(); 
 
-        if (!response.ok) throw new Error("Network response was not ok");
+        if (!response.ok) {
+            if (response.status === 429) throw new Error("429: Rate Limit Exceeded");
+            throw new Error(`Server Error: ${response.status}`);
+        }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -516,8 +528,41 @@ async function handleSend() {
     } catch (error) {
         thinkingIndicator.style.display = 'none';
         stopThinkingAnimation(); 
-        contentDiv.innerHTML = `<span style="color: #ff4b5c;">Error: ${error.message}</span>`;
-        console.error("AI Fetch Error:", error);
+        
+        // --- Phase 6: Graceful Rate Limit Handling ---
+        if (error.message.includes("429")) {
+            contentDiv.innerHTML = `
+                <div style="background: rgba(255, 183, 3, 0.1); border-left: 4px solid #ffb703; padding: 12px; border-radius: 4px; font-size: 14px;">
+                    <span style="color: #ffb703; font-weight: bold;">Nexus is taking a quick breath.</span><br><br>
+                    <span style="color: var(--text-secondary);">We are currently helping a lot of Scholars Prep students right now! Please wait about 30 to 60 seconds and try sending your question again.</span>
+                </div>
+            `;
+        } else {
+            contentDiv.innerHTML = `<span style="color: #ff4b5c;">Error: Unable to connect to Nexus Engine. Please check your network and try again.</span>`;
+            console.error("AI Fetch Error:", error);
+        }
+        if (error.name === 'AbortError') {
+            console.log("Generation manually stopped by user.");
+            contentDiv.innerHTML += `<br><br><span style="color: #ff4b5c; font-size: 12px; font-weight: bold;">[Generation Stopped]</span>`;
+        } else {
+            contentDiv.innerHTML = `<span style="color: #ff4b5c;">Error: ${error.message}</span>`;
+            console.error("AI Fetch Error:", error);
+        }
+        
+    }
+    finally {
+        // Reset the button back to send mode
+        isGenerating = false;
+        currentAbortController = null;
+        sendBtn.innerHTML = '<ion-icon name="send" style="font-size: 18px;"></ion-icon>';
+        
+        // Hide button if input is empty
+        if (chatInput.value.trim().length === 0 && uploadedFiles.length === 0) {
+            sendBtn.style.display = 'none';
+        }
+        
+        thinkingIndicator.style.display = 'none';
+        stopThinkingAnimation(); 
     }
 }
 
@@ -728,7 +773,13 @@ function renderFilePreviews() {
 }
 
 
-sendBtn.addEventListener('click', handleSend);
+sendBtn.addEventListener('click', () => {
+    if (isGenerating && currentAbortController) {
+        currentAbortController.abort(); // Severs the network connection!
+    } else {
+        handleSend();
+    }
+});
 
 chatInput.addEventListener('input', function() {
     sendBtn.style.display = (this.value.trim().length > 0 || uploadedFiles.length > 0) ? 'flex' : 'none';
@@ -747,7 +798,7 @@ chatInput.addEventListener('keydown', function(e) {
         } else {
             // On desktop, prevent the new line and send the message
             e.preventDefault(); 
-            handleSend();
+            if (!isGenerating) handleSend(); 
         }
     }
 });
