@@ -1,5 +1,6 @@
 // --- DATABASE & DOM STATE VARIABLES ---
 let currentUserEmail = null;
+let userMemoryText = "";
 let currentSessionId = null;
 let slidingWindowHistory = []; 
 
@@ -131,9 +132,22 @@ function initializeNexus() {
         }, 600);
 
         loadSidebarSessions();
+        fetchUserMemory();
 
     } catch (err) { 
         window.location.replace('index.html');
+    }
+}
+async function fetchUserMemory() {
+    if (!currentUserEmail) return;
+    const { data, error } = await supabaseClient
+        .from('nexus_memories')
+        .select('memory_text')
+        .eq('user_email', currentUserEmail)
+        .maybeSingle();
+    
+    if (data && !error) {
+        userMemoryText = data.memory_text;
     }
 }
 
@@ -282,28 +296,42 @@ window.handlePopoverAction = async function(action, sessionId) {
 
         if (messages && messages.length > 0) {
             let shareText = "🎓 Scholars Prep | Nexus AI Study Session\n\n";
+            const fileRegex = /\[ATTACHED_FILE:\s*([^\]]+)\](?:\[FILE_NAME:\s*([^\]]+)\])?/gi;
+
             messages.forEach(m => {
                 const sender = m.role === 'user' ? 'You' : 'Nexus AI';
-                shareText += `**${sender}:**\n${m.content}\n\n`;
+                
+                // Clean the text before sharing so ugly URLs don't break the native share sheet
+                let cleanText = m.content.replace(fileRegex, (match, url, name) => {
+                    const fileName = name ? name.trim() : "Attached Document";
+                    return `📎 [${fileName}] `;
+                }).trim();
+
+                shareText += `**${sender}:**\n${cleanText}\n\n`;
             });
 
-            // Try to use the native mobile share sheet, fallback to clipboard on desktop
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Nexus AI Session',
-                    text: shareText
-                }).catch(err => console.log('Share canceled', err));
-            } else {
+            try {
+                // Try to use the native mobile share sheet
+                if (navigator.share) {
+                    await navigator.share({
+                        title: 'Nexus AI Session',
+                        text: shareText
+                    });
+                } else {
+                    throw new Error('Web Share API not supported on this device.');
+                }
+            } catch (err) {
+                // Fallback: Copy to clipboard if the share sheet fails or is closed
                 navigator.clipboard.writeText(shareText);
                 const toast = document.createElement('ion-toast');
-                toast.message = 'Chat transcript copied to clipboard!';
+                toast.message = 'Chat copied to clipboard!';
                 toast.duration = 2000;
+                toast.color = 'dark';
                 document.body.appendChild(toast);
                 toast.present();
             }
         }
     }
-
    else if (action === 'pin') {
         // Find out if it's currently pinned or not
         const { data } = await supabaseClient.from('nexus_sessions').select('is_pinned').eq('id', sessionId).single();
@@ -502,7 +530,7 @@ async function handleSend() {
         const response = await fetch('https://scholars-prep.vercel.app/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: protectedPayload }),
+            body: JSON.stringify({ messages: protectedPayload, userMemory: userMemoryText }),
             signal: currentAbortController.signal,
         });
 
@@ -545,28 +573,26 @@ async function handleSend() {
         thinkingIndicator.style.display = 'none';
         stopThinkingAnimation(); 
         
-        // --- Phase 6: Graceful Rate Limit Handling ---
-        if (error.message.includes("429")) {
+        if (error.name === 'AbortError') {
+            // Clean Stop: No double error text!
+            console.log("Generation manually stopped by user.");
+            contentDiv.innerHTML = `<span style="color: #ff4b5c; font-weight: bold;">[Generation Stopped]</span>`;
+        } 
+        else if (error.message && error.message.includes("429")) {
+            // Graceful Rate Limit
             contentDiv.innerHTML = `
                 <div style="background: rgba(255, 183, 3, 0.1); border-left: 4px solid #ffb703; padding: 12px; border-radius: 4px; font-size: 14px;">
                     <span style="color: #ffb703; font-weight: bold;">Nexus is taking a quick breath.</span><br><br>
                     <span style="color: var(--text-secondary);">We are currently helping a lot of Scholars Prep students right now! Please wait about 30 to 60 seconds and try sending your question again.</span>
                 </div>
             `;
-        } else {
+        } 
+        else {
+            // Standard Error
             contentDiv.innerHTML = `<span style="color: #ff4b5c;">Error: Unable to connect to Nexus Engine. Please check your network and try again.</span>`;
             console.error("AI Fetch Error:", error);
         }
-        if (error.name === 'AbortError') {
-            console.log("Generation manually stopped by user.");
-            contentDiv.innerHTML += `<br><br><span style="color: #ff4b5c; font-size: 12px; font-weight: bold;">[Generation Stopped]</span>`;
-        } else {
-            contentDiv.innerHTML = `<span style="color: #ff4b5c;">Error: ${error.message}</span>`;
-            console.error("AI Fetch Error:", error);
-        }
-        
-    }
-    finally {
+    } finally {
         // Reset the button back to send mode
         isGenerating = false;
         currentAbortController = null;
@@ -849,5 +875,73 @@ document.getElementById('new-chat-btn').addEventListener('click', () => {
     const menu = document.querySelector('ion-menu');
     if (menu) menu.close();
 });  
+// --- Phase 9: Cross-Session Memory Modal ---
+document.getElementById('memory-btn').addEventListener('click', async () => {
+    // 1. Close the sidebar
+    const menu = document.querySelector('ion-menu');
+    if (menu) menu.close();
+
+    // 2. Create the Modal
+    const modal = document.createElement('ion-modal');
+    modal.innerHTML = `
+        <ion-header class="ion-no-border">
+            <ion-toolbar style="--background: var(--bg-sidebar); color: var(--text-primary);">
+                <ion-title>Nexus Memory</ion-title>
+                <ion-buttons slot="end">
+                    <ion-button onclick="document.querySelector('ion-modal').dismiss()"><ion-icon name="close"></ion-icon></ion-button>
+                </ion-buttons>
+            </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding" style="--background: var(--bg-main);">
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 15px;">
+                What should Nexus remember about you across all chats? (e.g., your department, current level, or how you like to learn).
+            </p>
+            
+            <textarea id="memory-textarea" rows="8" maxlength="500" placeholder="I am a 200-level Engineering student..." style="width: 100%; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); outline: none; resize: none;">${userMemoryText}</textarea>
+            
+            <div id="memory-counter" style="text-align: right; font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                ${userMemoryText.length} / 500
+            </div>
+
+            <button id="save-memory-btn" style="width: 100%; padding: 12px; margin-top: 15px; border-radius: 8px; background: #043112; color: white; font-weight: bold; border: none; cursor: pointer;">Save Memory</button>
+        </ion-content>
+    `;
+    
+    document.body.appendChild(modal);
+    await modal.present();
+
+    // 3. Real-Time Character Counter Logic
+    const textArea = document.getElementById('memory-textarea');
+    const counterDisplay = document.getElementById('memory-counter');
+    
+    textArea.addEventListener('input', () => {
+        counterDisplay.innerText = `${textArea.value.length} / 500`;
+    });
+
+    // 4. Save to Supabase
+    document.getElementById('save-memory-btn').addEventListener('click', async () => {
+        const saveBtn = document.getElementById('save-memory-btn');
+        saveBtn.innerText = 'Saving...';
+        const newMemory = textArea.value.trim();
+        
+        // Upsert creates it if it doesn't exist, or updates it if it does
+        const { error } = await supabaseClient
+            .from('nexus_memories')
+            .upsert({ user_email: currentUserEmail, memory_text: newMemory }, { onConflict: 'user_email' });
+
+        if (!error) {
+            userMemoryText = newMemory;
+            saveBtn.innerText = 'Saved!';
+            saveBtn.style.background = '#032705';
+            setTimeout(() => modal.dismiss(), 1000);
+        } else {
+            saveBtn.innerText = 'Error Saving';
+            saveBtn.style.background = '#ff4b5c';
+            console.error(error);
+        }
+    });
+
+    modal.addEventListener('didDismiss', () => modal.remove());
+});
 
 initializeNexus();

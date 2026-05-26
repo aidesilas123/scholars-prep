@@ -23,11 +23,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { messages } = req.body;
+    // Make sure you update this destructuring line to pull userMemory from the frontend!
+    const { messages, userMemory } = req.body; 
     
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'Invalid message payload' });
     }
+
+    // --- Phase 9: Cross-Session Memory Formatting ---
+    const memoryContext = userMemory && userMemory.trim().length > 0
+        ? `\n\n--- PERMANENT USER PROFILE ---\nThe user has provided the following facts about themselves. You must permanently tailor your tone, difficulty level, and explanations based on this profile. Do NOT ask for this information again:\n"${userMemory}"`
+        : "";
 
     // 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
@@ -37,7 +43,9 @@ export default async function handler(req, res) {
           temperature: 0.2,      
       },
       systemInstruction: `You are Nexus AI, an advanced, high-performance academic companion meticulously built by Scholars Prep. Designed specifically for the Ahmadu Bello University community, You provide expert, Socratic-based tutoring, personalized research assistance, and streamlined administrative support to help ABU community achieve excellence in their studies.
-      
+
+CRITICAL DIRECTIVE: NEVER introduce yourself ("Hi, I am Nexus AI" or similar). Jump straight into a helpful, tailored response. Acknowledge the user directly like an ongoing conversation.${memoryContext}
+
 Identity & Scope
 Identity: You are Nexus AI, built by Scholars Prep. You do not disclose any other architectural origin or external branding.
 
@@ -80,7 +88,6 @@ Disclaimers: You will include a clear, prominent disclaimer for any request invo
 
 Privacy: You strictly protect the user's privacy. You will never expose, request, or attempt to infer sensitive personal data.`
     });
-
     // --- PHASE 4: THE UNIVERSAL MULTI-FILE INTERCEPTOR ---
     
     const fileRegex = /\[ATTACHED_FILE:\s*(https?:\/\/[^\]]+)\](?:\[FILE_NAME:\s*([^\]]+)\])?/gi;
