@@ -81,48 +81,50 @@ Disclaimers: You will include a clear, prominent disclaimer for any request invo
 Privacy: You strictly protect the user's privacy. You will never expose, request, or attempt to infer sensitive personal data.`
     });
 
-    // --- PHASE 4: THE UNIVERSAL FILE INTERCEPTOR ---
-    const fileRegex = /\[ATTACHED_FILE:\s*(https?:\/\/[^\]]+)\]/i;
+    // --- PHASE 4: THE UNIVERSAL MULTI-FILE INTERCEPTOR ---
+    
+    const fileRegex = /\[ATTACHED_FILE:\s*(https?:\/\/[^\]]+)\](?:\[FILE_NAME:\s*([^\]]+)\])?/gi;
 
-    // We use Promise.all to scan every single message in the history for files
     const conversation = await Promise.all(messages.map(async (msg) => {
         if (msg.role === 'model') {
             return { role: 'model', parts: [{ text: msg.content }] };
         }
 
-        // It is a user message. Check if it contains a file anywhere in history.
-        const match = msg.content.match(fileRegex);
         let parts = [];
+        let cleanedText = msg.content;
+        const matches = [...msg.content.matchAll(fileRegex)];
 
-        if (match) {
-            const fileUrl = match[1].trim();
-            const fileExt = fileUrl.split('.').pop().split('?')[0].toLowerCase();
-            const cleanedText = msg.content.replace(match[0], '').trim();
+        if (matches.length > 0) {
+            // Loop through all attached files in this message (up to 4)
+            for (const match of matches) {
+                const fileUrl = match[1].trim();
+                const fileExt = fileUrl.split('.').pop().split('?')[0].toLowerCase();
+                
+                // Strip the exact tag out of the text so the AI doesn't see the ugly code
+                cleanedText = cleanedText.replace(match[0], ''); 
 
-            try {
-                const fileResponse = await fetch(fileUrl);
-                if (fileResponse.ok) {
-                    const arrayBuffer = await fileResponse.arrayBuffer();
-                    const base64Data = Buffer.from(arrayBuffer).toString('base64');
-                    
-                    let mimeType = 'application/pdf'; // Default
-                    if (fileExt === 'png') mimeType = 'image/png';
-                    else if (fileExt === 'jpg' || fileExt === 'jpeg') mimeType = 'image/jpeg';
-                    else if (fileExt === 'webp') mimeType = 'image/webp';
+                try {
+                    const fileResponse = await fetch(fileUrl);
+                    if (fileResponse.ok) {
+                        const arrayBuffer = await fileResponse.arrayBuffer();
+                        const base64Data = Buffer.from(arrayBuffer).toString('base64');
+                        
+                        let mimeType = 'application/pdf'; 
+                        if (fileExt === 'png') mimeType = 'image/png';
+                        else if (fileExt === 'jpg' || fileExt === 'jpeg') mimeType = 'image/jpeg';
+                        else if (fileExt === 'webp') mimeType = 'image/webp';
 
-                    parts.push({
-                        inlineData: {
-                            data: base64Data,
-                            mimeType: mimeType
-                        }
-                    });
+                        parts.push({
+                            inlineData: { data: base64Data, mimeType: mimeType }
+                        });
+                    }
+                } catch (err) {
+                    console.error("Multi-File Interceptor Error:", err);
                 }
-            } catch (downloadError) {
-                console.error("History File Interceptor Error:", downloadError);
             }
-
-            // Push the user's actual text along with the file bytes
-            parts.push({ text: cleanedText || "Please carefully analyze this attached document." });
+            
+            // Push the user's actual text after pushing all the file bytes
+            parts.push({ text: cleanedText.trim() || "Please analyze these attached documents." });
         } else {
             // Standard text message with no files
             parts.push({ text: msg.content });
@@ -146,6 +148,6 @@ Privacy: You strictly protect the user's privacy. You will never expose, request
 
   } catch (error) {
     console.error("Nexus Engine Error:", error);
-    res.status(503).send("Nexus AI encountered an error processing your document or request. Please try again.");
+    res.status(503).send("Nexus AI encountered an error processing your documents or request. Please try again.");
   }
 }

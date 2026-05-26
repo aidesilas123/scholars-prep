@@ -1,28 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-:root {
-    --bg-main: #131314;
+/* --- 1. UNIFIED THEME & NATIVE VARIABLES --- */
+:root, body.dark-mode {
+    --ion-background-color: #131314;
+    --ion-text-color: #e3e3e3;
     --bg-sidebar: #1e1e20;
     --bg-input: #1e1e20;
-    --bg-user-bubble: #1e1f20; /* Darker to match Gemini user bubble */
-    --text-primary: #e3e3e3;
-    --text-secondary: #c4c7c5;
+    --bg-user-bubble: #1e1f20;
     --hover-bg: #282a2c;
+    --text-secondary: #c4c7c5;
 }
 
 body.light-mode {
-    --bg-main: #ffffff;
+    --ion-background-color: #ffffff;
+    --ion-text-color: #1f1f1f;
     --bg-sidebar: #f0f4f9;
     --bg-input: #f0f4f9;
     --bg-user-bubble: #e1e5ea;
-    --text-primary: #1f1f1f;
-    --text-secondary: #444746;
     --hover-bg: #e1e5ea;
+    --text-secondary: #444746;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-body { background-color: var(--bg-main); color: var(--text-primary); height: 100dvh; overflow: hidden; transition: background-color 0.3s; }
-.app-container { display: flex; height: 100%; }
+/* Force the entire canvas to use ONE unified background, overriding Ionic's stubborn toolbars */
+ion-content, ion-header, ion-toolbar, ion-footer { 
+    --background: var(--ion-background-color) !important; 
+    background: var(--ion-background-color) !important;
+    --border-width: 0 !important;
+    box-shadow: none !important;
+    color: var(--ion-text-color) !important;
+}
+
+/* Keep the sidebar menu slightly lighter so it stands out when swiped open */
+ion-menu, ion-menu ion-toolbar { 
+    --background: var(--bg-sidebar) !important; 
+    background: var(--bg-sidebar) !important;
+    color: var(--ion-text-color) !important; 
+}
 
 /* SIDEBAR & HEADER */
 .sidebar { 
@@ -191,4 +204,123 @@ body { background-color: var(--bg-main); color: var(--text-primary); height: 100
 @media (max-width: 768px) {
     .input-wrapper, .chat-conversation-area { padding: 10px 5% 15px 5%; }
     .message-bubble.user { max-width: 90%; }
+}
+/* --- SIDEBAR HISTORY MENU (Phase 7) --- */
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--ion-text-color);
+    transition: background-color 0.2s;
+}
+
+.history-item:hover { background-color: var(--hover-bg); }
+
+.history-options-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 18px;
+    display: flex; /* Always display so mobile users can tap it */
+    opacity: 0.2;  /* Almost invisible by default */
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    position: relative;
+    z-index: 10; 
+    transition: opacity 0.2s, color 0.2s, background-color 0.2s;
+}
+
+/* Full visibility on mouse hover OR mobile touch */
+.history-item:hover .history-options-btn, 
+.history-options-btn:active {
+    opacity: 1; 
+    color: var(--ion-text-color);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.history-options-btn:hover {
+    color: var(--ion-text-color);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Show on hover for desktop */
+.history-item:hover .history-options-btn { display: flex; }
+/* --- HISTORY POPOVER MENU --- */
+ion-popover.history-popover {
+    --background: var(--bg-sidebar);
+    --color: var(--text-primary);
+    --box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --border-radius: 12px;
+}
+
+ion-popover.history-popover ion-list {
+    background: transparent;
+}
+
+ion-popover.history-popover ion-item {
+    --background: transparent;
+    --color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+ion-popover.history-popover ion-item:hover {
+    --background: var(--hover-bg);
+}
+/* --- ATTACHMENT POPOVER MENU --- */
+ion-popover.attachment-popover {
+    --background: var(--bg-sidebar);
+    --color: var(--text-primary);
+    --box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5); /* Negative Y shadow so it casts upward */
+    --border-radius: 12px;
+    --min-width: 220px;
+}
+
+ion-popover.attachment-popover ion-list { background: transparent; }
+
+ion-popover.attachment-popover ion-item {
+    --background: transparent;
+    --color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+ion-popover.attachment-popover ion-item:hover {
+    --background: var(--hover-bg);
+}
+/* --- PHASE 3: SHIMMER LOADER & CHAT FILE PILL --- */
+.skeleton-shimmer {
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.chat-file-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 10px 14px;
+    border-radius: 12px;
+    width: fit-content;
+    max-width: 100%;
+    font-size: 13px;
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 10px;
+}
+
+.chat-file-pill ion-icon {
+    font-size: 20px;
+    color: #a8c7fa; /* Nexus AI Accent Blue */
 }
