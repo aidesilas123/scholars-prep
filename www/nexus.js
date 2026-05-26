@@ -480,8 +480,24 @@ async function handleSend() {
     const { contentDiv, actionBar } = appendMessage('model', '');
 
     try {
-        let protectedPayload = slidingWindowHistory.slice(-8); 
-        if (protectedPayload.length > 0 && protectedPayload[0].role !== 'user') protectedPayload.shift(); 
+        // --- PHASE 8: THE STICKY FILE CONTEXT ---
+        
+        // 1. The Anchor: Grab EVERY message in history that contains an attachment so they are never forgotten
+        const fileMessages = slidingWindowHistory.filter(msg => msg.content.includes('[ATTACHED_FILE:'));
+        
+        // 2. The Flow: Grab the most recent 12 messages (6 back-and-forths) for normal conversation context
+        const recentMessages = slidingWindowHistory.slice(-12); 
+        
+        // 3. The Merger: Combine them, naturally removing duplicates if a file was uploaded recently
+        const combinedPayload = new Set([...fileMessages, ...recentMessages]);
+        
+        // 4. The Sorter: Re-sort them chronologically so the AI doesn't get confused by time-traveling messages
+        let protectedPayload = Array.from(combinedPayload).sort((a, b) => slidingWindowHistory.indexOf(a) - slidingWindowHistory.indexOf(b));
+
+        // 5. The Gemini Rule: The very first message sent to the API MUST be from a 'user'
+        if (protectedPayload.length > 0 && protectedPayload[0].role !== 'user') {
+            protectedPayload.shift(); 
+        } 
 
         const response = await fetch('https://scholars-prep.vercel.app/api/chat', {
             method: 'POST',
