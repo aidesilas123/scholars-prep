@@ -22,7 +22,7 @@ export default async function handler(req, res) {
         const { prompt } = req.body;
         
         const model = genAI.getGenerativeModel({
-            model: 'gemini-3.5-flash',
+            model: 'gemini-3.1-flash-lite',
             systemInstruction: 'You are an auto-titler for an academic platform. Read the user prompt and return a concise, 3-to-4 word title summarizing the topic. Do not use quotes, punctuation, or conversational text. Just the title.'
         });;
 

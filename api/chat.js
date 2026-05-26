@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
     // 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash', 
+      model: 'gemini-3.1-flash-lite', 
       generationConfig: {
           maxOutputTokens: 8192, 
           temperature: 0.2,      
