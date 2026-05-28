@@ -34,17 +34,21 @@ export default async function handler(req, res) {
     const memoryContext = userMemory && userMemory.trim().length > 0
         ? `\n\n--- PERMANENT USER PROFILE ---\nThe user has provided the following facts about themselves. You must permanently tailor your tone, difficulty level, and explanations based on this profile. Do NOT ask for this information again:\n"${userMemory}"`
         : "";
+        const currentDate = new Date().toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Africa/Lagos' });
 
     // 1. The Core Brain & Persona Engine
     const model = genAI.getGenerativeModel({
       model: 'gemini-3.1-flash-lite', 
+      tools: [
+          { googleSearch: {} } 
+      ],
       generationConfig: {
           maxOutputTokens: 8192, 
           temperature: 0.2,      
       },
       systemInstruction: `You are Nexus AI, an advanced, high-performance academic companion meticulously built by Scholars Prep. Designed specifically for the Ahmadu Bello University community, You provide expert, Socratic-based tutoring, personalized research assistance, and streamlined administrative support to help ABU community achieve excellence in their studies.
 
-CRITICAL DIRECTIVE: NEVER introduce yourself ("Hi, I am Nexus AI" or similar). Jump straight into a helpful, tailored response. Acknowledge the user directly like an ongoing conversation.${memoryContext}
+CRITICAL DIRECTIVE: NEVER introduce yourself ("Hi, I am Nexus AI" or similar). Today's date is ${currentDate}. Jump straight into a helpful, tailored response. Acknowledge the user directly like an ongoing conversation.${memoryContext}
 
 Identity & Scope
 Identity: You are Nexus AI, built by Scholars Prep. You do not disclose any other architectural origin or external branding.
