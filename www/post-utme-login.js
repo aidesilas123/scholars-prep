@@ -96,6 +96,20 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// --- NEW: AUTO-LOGIN LISTENER FOR EMAIL LINKS ---
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+        const userObj = {
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.user_metadata?.full_name || 'Candidate',
+            loggedAt: Date.now()
+        };
+        localStorage.setItem('post_utme_logged_in_user', JSON.stringify(userObj));
+        window.location.href = 'post-utme-dashboard.html';
+    }
+});
+
 // 1. SIGNUP & REFERRAL TRACKING
 document.getElementById('signupBtn').addEventListener('click', async () => {
   const name = document.getElementById('signupName').value.trim();
@@ -139,6 +153,13 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
     return;
   }
 
+  // --- NEW: DUPLICATE EMAIL CHECK ---
+  if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
+      hideLoading();
+      showModal('Error', 'This email is already in use.');
+      return;
+  }
+
   // C. Generate a permanent 8-digit code for this new user
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let myNewRefCode = '';
@@ -161,8 +182,9 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
   }
 
   hideLoading();
-  showModal('Success', 'Registration successful! Please Log In.', {autoClose: 4500});
-  setTimeout(() => { navigateTo('login'); }, 2000);
+  // --- NEW: VERIFY EMAIL MODAL ---
+  showModal('Verify Email', 'Registration successful! Please check your email inbox to verify your account before logging in.', {autoClose: 5000});
+  setTimeout(() => { navigateTo('login'); }, 4000);
 });
 
 // 2. LOGIN & FETCH DATA
@@ -178,7 +200,12 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
 
   if(error){ 
     hideLoading();
-    showModal('Incorrect', error.message); 
+    // --- NEW: UNVERIFIED EMAIL CATCH ---
+    if(error.message.includes("Email not confirmed")) {
+        showModal('Verification Required', 'Please check your email and click the verification link before logging in.', {autoClose: 5000});
+    } else {
+        showModal('Incorrect', error.message); 
+    }
     return;
   }
 
@@ -220,6 +247,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     window.location.href = 'post-utme-dashboard.html';
   }
 });
+
 // 3. RESET PASSWORD
 document.getElementById('resetBtn').addEventListener('click', async () => {
   const email = document.getElementById('resetEmail').value.trim().toLowerCase();
@@ -227,7 +255,7 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
 
   showLoading();
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + 'update-password.html',
+      redirectTo: window.location.origin + '/update-password.html',
   });
   hideLoading();
 
