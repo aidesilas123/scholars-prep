@@ -43,11 +43,10 @@
         }
     }, { capture: true }); // Use capture phase to intercept before other scripts
 })();
-
 // --- AUTH GUARD & INIT ---
 (function protectPage() {
     const putmeUser = localStorage.getItem('post_utme_logged_in_user');
-    if (!putmeUser) window.location.replace('index.html'); 
+    if (!putmeUser) window.location.replace('/'); 
 })();
 
 const _sb = window.supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
@@ -86,16 +85,15 @@ window.addEventListener('popstate', (e) => {
     if (e.state && e.state.view) {
         switchView(e.state.view, false);
     } else {
-        window.location.replace('post-utme-dashboard.html');
+        window.location.replace('/post-utme-dashboard');
     }
 });
 
-// --- BULLETPROOF MOBILE-SAFE MATH FIXER ---
 function fixMathText(text) {
     if (!text) return "";
 
-    // DO NOT process if it's purely a standard HTML wrapper without math
-    if (/<\/?[a-z][\s\S]*>/i.test(text) && !/[=^_{}\\]/.test(text)) {
+    // DO NOT process HTML tags
+    if (/<\/?[a-z][\s\S]*>/i.test(text)) {
         return text;
     }
 
@@ -109,20 +107,22 @@ function fixMathText(text) {
     ];
 
     mathWords.forEach(word => {
-        // MOBILE FIX: Replaced the negative lookbehind (?<!\\) with a safe capturing group (^|[^\\]) 
-        // because negative lookbehinds crash older iOS Safari and Android WebViews.
-        const regex = new RegExp(`(^|[^\\\\])\\b(${word})\\b`, 'g');
-        fixed = fixed.replace(regex, `$1\\$2`);
+        const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'g');
+        fixed = fixed.replace(regex, `\\${word}`);
     });
 
-    // Clean up any double backslashes
     fixed = fixed.replace(/\\\\/g, "\\");
 
-    const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}]/.test(fixed);
-    const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
+    const isMathSymbol =
+        /[\\][a-zA-Z]+/.test(fixed) ||
+        /[=^_{}]/.test(fixed);
 
-    // MOBILE FIX 2: Removed the "fixed.length < 50" limit so long questions get formatted properly
-    if (isMathSymbol && !hasDelimiters) {
+    const hasDelimiters =
+        fixed.includes("$") ||
+        fixed.includes("\\(") ||
+        fixed.includes("\\[");
+
+    if (isMathSymbol && !hasDelimiters && fixed.length < 50) {
         return `\\( ${fixed} \\)`;
     }
 
@@ -133,7 +133,7 @@ function fixMathText(text) {
 async function loadSubjects() {
     try {
         const { data: subjects } = await _sb.from('putme_subjects').select('*');
-        const { data: qYears } = await _sb.from('putme_questions').select('subject_id, year');
+        const { data: qYears } = await _sb.from('putme_questions').select('subject_id, year').limit(10000);
         
         const container = document.getElementById('subjectListContainer');
         container.innerHTML = '';
@@ -171,7 +171,6 @@ async function loadSubjects() {
         console.error(err);
     }
 }
-
 // --- LIVE SUBJECT SEARCH FILTER ---
 window.filterSubjects = function(event) {
     const query = event.target.value.toLowerCase();
@@ -210,6 +209,8 @@ window.toggleSubject = function(id) {
 };
 
 // --- 2. LOAD & RENDER PAST QUESTIONS ---
+// --- 2. LOAD & RENDER PAST QUESTIONS (With Freemium Trap) ---
+// --- 2. LOAD & RENDER PAST QUESTIONS (With Real-Time Security) ---
 window.loadPastQuestions = async function() {
     showLoading(true, "Fetching Past Questions...");
     
@@ -258,7 +259,7 @@ window.loadPastQuestions = async function() {
             
             const FREE_LIMIT = 10; // The max questions free users can see
 
-            // Only slice if they are a free user AND there are more than 10 questions
+            // Only slice if they are a free user AND there are more than 30 questions
             if (isFreeUser && rawData.length > FREE_LIMIT) {
                 questionsToRender = rawData.slice(0, FREE_LIMIT);
                 showPaywallBlock = true;
@@ -268,28 +269,30 @@ window.loadPastQuestions = async function() {
                 
                let parsedOpts = [];
 
-               try {
-                   parsedOpts = Array.isArray(q.options)
-                       ? q.options
-                       : JSON.parse(q.options);
-               } catch (e) {
-                   console.error("OPTIONS PARSE FAILED:", q.options);
-                   console.error(e);
-                   return;
-               }
-               
-                const fixedQText = fixMathText(q.question_text);
+try {
+    parsedOpts = Array.isArray(q.options)
+        ? q.options
+        : JSON.parse(q.options);
+
+    
+
+} catch (e) {
+    console.error("OPTIONS PARSE FAILED:", q.options);
+    console.error(e);
+    return;
+}
+               const fixedQText = q.question_text;
                 const correctAnsIdx = parseInt(q.answer);
                 
                 currentPQData.push({
                     qText: fixedQText,
-                    correctText: parsedOpts[correctAnsIdx],
+                   correctText: parsedOpts[correctAnsIdx],
                     allOpts: parsedOpts
                 });
 
                 const optsHtml = parsedOpts.map((opt, i) => {
                     const isCorrect = (i === correctAnsIdx);
-                    return `<div class="pq-opt ${isCorrect ? 'correct' : ''}">${fixMathText(opt)}</div>`;
+                    return `<div class="pq-opt ${isCorrect ? 'correct' : ''}">${opt}</div>`;
                 }).join('');
 
                 htmlBlock += `
@@ -301,17 +304,18 @@ window.loadPastQuestions = async function() {
                         Ask Nexus <img src="Logo.png" alt="Nexus" style="height: 16px; margin-left: 6px; vertical-align: middle;">
                     </ion-button>
 
-                    <div id="nexus-widget-${idx}" class="nexus-inline-widget" style="display: none; margin-top: 10px;">
-                        <div class="nexus-header" style="background: var(--ion-color-primary); color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0;">
+                    <div id="nexus-widget-${idx}" class="nexus-inline-widget">
+                        <div class="nexus-header">
                             <span style="font-weight: bold; font-size: 13px;">Nexus AI Tutor</span>
                             <span onclick="toggleNexusWidget(${idx})" style="cursor: pointer; font-size: 16px;">✖</span>
                         </div>
-                        <div id="nexus-chat-${idx}" class="nexus-chat-area" style="padding: 12px; border: 1px solid var(--ion-color-primary); border-top: none; max-height: 250px; overflow-y: auto;">
+                        <div id="nexus-chat-${idx}" class="nexus-chat-area">
                             <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below.</div>
                         </div>
-                        <div class="nexus-input-area" style="display: flex; border: 1px solid var(--ion-color-primary); border-top: none; border-radius: 0 0 8px 8px;">
-                            <input type="text" id="nexus-input-${idx}" placeholder="Ask about this..." autocomplete="off" style="flex: 1; padding: 10px; border: none; outline: none; background: transparent; color: var(--ion-text-color);">
-                            <button onclick="sendToNexus(${idx}, false)" style="background: transparent; color: var(--ion-color-primary); border: none; padding: 0 12px; font-weight: bold; cursor: pointer;">Send</button>
+                        <div class="nexus-input-area">
+                            <input type="text" id="nexus-input-${idx}" placeholder="Ask about this..." autocomplete="off">
+                            <button onclick="sendToNexus(${idx}, false)">Send</button>
+                            
                         </div>
                     </div>
                 </div>`;
@@ -333,13 +337,10 @@ window.loadPastQuestions = async function() {
 
             contentArea.innerHTML = htmlBlock;
             
-            // MOBILE DOM BUFFER: Wait 150ms for Mobile WebView to paint the HTML before triggering MathJax
-            setTimeout(() => {
-                if(window.MathJax) {
-                    MathJax.typesetClear();
-                    MathJax.typesetPromise().catch(err => console.error("MathJax Mobile Error:", err));
-                }
-            }, 150);
+            if(window.MathJax) {
+                MathJax.typesetClear();
+                MathJax.typesetPromise().catch(err => console.error(err));
+            }
 
             switchView('view-questions');
         } else {
@@ -352,7 +353,6 @@ window.loadPastQuestions = async function() {
         showLoading(false);
     }
 };
-
 // --- 3. NEXUS INLINE AI LOGIC ---
 window.toggleNexusWidget = function(qIndex) {
     const widget = document.getElementById(`nexus-widget-${qIndex}`);
@@ -417,7 +417,6 @@ window.sendToNexus = async function(qIndex, isAutoExplain) {
         responseContainer.innerHTML = `<span style="color: var(--ion-color-danger);">Connection error. Please try again.</span>`;
     }
 };
-
 // --- 4. MODAL & PAYSTACK LOGIC ---
 const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
 
