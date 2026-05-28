@@ -897,10 +897,10 @@ document.getElementById('memory-btn').addEventListener('click', async () => {
                 What should Nexus remember about you across all chats? (e.g., your department, current level, or how you like to learn).
             </p>
             
-            <textarea id="memory-textarea" rows="8" maxlength="500" placeholder="I am a 200-level Engineering student..." style="width: 100%; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); outline: none; resize: none;">${userMemoryText}</textarea>
+            <textarea id="memory-textarea" rows="8" maxlength="100" placeholder="I am a 200-level Engineering student..." style="width: 100%; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); outline: none; resize: none;">${userMemoryText}</textarea>
             
             <div id="memory-counter" style="text-align: right; font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                ${userMemoryText.length} / 500
+                ${userMemoryText.length} / 100
             </div>
 
             <button id="save-memory-btn" style="width: 100%; padding: 12px; margin-top: 15px; border-radius: 8px; background: #043112; color: white; font-weight: bold; border: none; cursor: pointer;">Save Memory</button>
@@ -915,7 +915,7 @@ document.getElementById('memory-btn').addEventListener('click', async () => {
     const counterDisplay = document.getElementById('memory-counter');
     
     textArea.addEventListener('input', () => {
-        counterDisplay.innerText = `${textArea.value.length} / 500`;
+        counterDisplay.innerText = `${textArea.value.length} / 100`;
     });
 
     // 4. Save to Supabase
