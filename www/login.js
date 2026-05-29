@@ -45,13 +45,10 @@ const loginForm = document.getElementById('loginForm');
 const signupForm = document.getElementById('signupForm');
 const toggleToSignup = document.getElementById('toggleToSignup');
 const toggleToLogin = document.getElementById('toggleToLogin');
-const socialLoginWrapper = document.getElementById('socialLoginWrapper'); // NEW
 
 document.querySelector('#toggleToSignup .toggle')?.addEventListener('click', () => {
   loginForm.style.display = 'none';
   signupForm.style.display = 'block';
-  document.getElementById('resetForm').style.display = 'none';
-  socialLoginWrapper.style.display = 'block'; // Ensure Google is visible
   document.getElementById('formTitle').textContent = 'Create Account';
   document.getElementById('formSubtitle').textContent = 'Sign up to access ABU PQ & Answers';
   toggleToSignup.style.display = 'none';
@@ -61,8 +58,6 @@ document.querySelector('#toggleToSignup .toggle')?.addEventListener('click', () 
 document.querySelector('#toggleToLogin .toggle')?.addEventListener('click', () => {
   loginForm.style.display = 'block';
   signupForm.style.display = 'none';
-  document.getElementById('resetForm').style.display = 'none';
-  socialLoginWrapper.style.display = 'block'; // Ensure Google is visible
   document.getElementById('formTitle').textContent = 'Welcome Back';
   document.getElementById('formSubtitle').textContent = 'Sign in to access your study resources';
   toggleToSignup.style.display = 'block';
@@ -73,7 +68,6 @@ document.querySelector('#toggleToLogin .toggle')?.addEventListener('click', () =
 document.getElementById('forgotPwdLink').addEventListener('click', () => {
     loginForm.style.display = 'none';
     signupForm.style.display = 'none';
-    socialLoginWrapper.style.display = 'none'; // Hide Google on reset screen
     document.getElementById('resetForm').style.display = 'block';
     document.getElementById('formTitle').textContent = 'Reset Password';
     document.getElementById('formSubtitle').textContent = 'Enter your email to receive a reset link';
@@ -86,8 +80,8 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- NEW: GLOBAL AUTH LISTENER ---
-// Automatically catches users returning from Google Auth AND clicking Email Verification links
+// --- GLOBAL AUTH LISTENER ---
+// Automatically catches users returning from clicking Email Verification links
 supabaseClient.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
         const userObj = {
@@ -99,30 +93,12 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         localStorage.setItem('abupq_logged_in_user', JSON.stringify(userObj));
         localStorage.setItem('isLoggedIn', 'true');
         
-        // Hide loader and redirect
         hideLoading();
         window.location.href = 'dashboard.html';
     }
 });
 
-// --- NEW: GOOGLE LOGIN TRIGGER ---
-document.getElementById('googleBtn')?.addEventListener('click', async () => {
-    showLoading();
-    const { error } = await supabaseClient.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            // Send them back to this page so the onAuthStateChange listener can catch the session
-            redirectTo: window.location.origin + window.location.pathname 
-        }
-    });
-
-    if (error) {
-        hideLoading();
-        showModal('Error', error.message);
-    }
-});
-
-// SIGNUP (Updated for Email Verification)
+// SIGNUP
 document.getElementById('signupBtn').addEventListener('click', async (e) => {
   e.preventDefault();
   const name = document.getElementById('signupName').value.trim();
@@ -142,11 +118,10 @@ document.getElementById('signupBtn').addEventListener('click', async (e) => {
   if(error){ 
     showModal('Error', error.message); 
   } else {
-    // Check if email verification is required (Supabase returns a user but no session yet)
+    // Check if email is already used
     if (data.user && data.user.identities && data.user.identities.length === 0) {
        showModal('Error', 'This email is already in use.');
     } else {
-       // Updated message to reflect email verification requirement
        showModal('Verify Email', 'Account created! Please check your email inbox to verify your account.', {autoClose: 5000});
        setTimeout(() => { document.querySelector('#toggleToLogin .toggle').click(); }, 3000);
     }
@@ -187,7 +162,6 @@ document.getElementById('loginBtn').addEventListener('click', async (e) => {
 
   if(error){ 
     hideLoading();
-    // Catch specific error if they haven't verified their email yet
     if(error.message.includes("Email not confirmed")) {
         showModal('Verification Required', 'Please check your email and click the verification link before logging in.');
     } else {
@@ -195,12 +169,10 @@ document.getElementById('loginBtn').addEventListener('click', async (e) => {
     }
     return;
   }
-
-  // The onAuthStateChange listener at the top will automatically catch the successful login, 
-  // set localStorage, and route to dashboard.html!
+  
+  // The onAuthStateChange listener at the top will automatically catch the successful login
 });
 
-// Watermark
 const stored = localStorage.getItem('abupq_logged_in_user');
 if(stored) {
     try {
