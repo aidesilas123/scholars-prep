@@ -6,13 +6,11 @@
   <title>POST UTME — Login</title>
   <link rel="icon" type="image" href="favicon1.png">
   
-  <!-- IONIC NATIVE FRAMEWORK -->
   <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
-<script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
-<link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
   <script defer src="app-init.js"></script>
 
-  <!-- Supabase Library -->
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -22,74 +20,43 @@
       --accent: #044908;
       --accent-dark: #02270a;
       --muted: #8f96a3;
-      --ion-color-primary: #044908; /* Ionic Accent Integration */
+      --ion-color-primary: #044908;
     }
 
     html, body {
-      height: 100%; margin: 0;
-      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      background: var(--background) no-repeat center center fixed;
-      background-size: cover; 
-      -webkit-font-smoothing: antialiased;
+      height: 100%; margin: 0; font-family: Inter, sans-serif;
+      background: var(--background) no-repeat center center fixed; background-size: cover; -webkit-font-smoothing: antialiased;
     }
 
     .watermark {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      pointer-events: none; display: flex; align-items: center;
-      justify-content: center; z-index: 0; opacity: 0.08; user-select: none;
-      transform: rotate(-25deg); font-size: 38px; color: #fff;
-      mix-blend-mode: overlay; font-weight: 700; letter-spacing: 6px;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; z-index: 0; opacity: 0.08; user-select: none; transform: rotate(-25deg); font-size: 38px; color: #fff; mix-blend-mode: overlay; font-weight: 700; letter-spacing: 6px;
     }
 
     .container {
-      min-height: 100%; display: flex; align-items: center;
-      justify-content: center; padding: 40px 20px; z-index: 10; position: relative;
+      min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px 20px; z-index: 10; position: relative;
     }
     
     .card {
-      width: 420px; background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-      border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 18px;
-      padding: 34px; box-shadow: 0 10px 30px rgba(12, 20, 40, 0.25);
-      z-index: 20; position: relative;
+      width: 420px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 18px; padding: 34px; box-shadow: 0 10px 30px rgba(12, 20, 40, 0.25); z-index: 20; position: relative;
     }
 
     h1 { text-align: center; margin: 0 0 8px; color: #07520e; font-size: 32px; font-weight: bold; }
     p.lead { margin: 0 0 20px; text-align: center; color: #4a5568; font-size: 14px; }
 
-    /* Ionic Form Adjustments */
-    ion-item {
-      --background: transparent;
-      --border-color: #cbd5e1;
-      margin-bottom: 12px;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
+    ion-item { --background: transparent; --border-color: #cbd5e1; margin-bottom: 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
     ion-input { font-size: 15px; }
 
     .btn-submit { margin-top: 16px; font-weight: bold; --border-radius: 10px; }
     .toggle { cursor: pointer; color: var(--accent-dark); font-weight: 600; text-decoration: underline; }
 
-    /* Modal & Loaders */
     .modal-overlay { position: fixed; inset: 0; background: rgba(6,12,34,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal { background: #fff; border-radius: 10px; padding: 18px 20px; width: 380px; box-shadow: 0 10px 30px rgba(12,20,40,0.25); }
     .modal h3 { margin: 0 0 8px; font-size: 18px; color: #21324a; }
     .modal p { margin: 0 0 12px; color: #445; font-size: 14px; }
     
-    .loading-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.7); display: none;
-      align-items: center; justify-content: center;
-      z-index: 9999; backdrop-filter: blur(4px);
-    }
-    .page-loading {
-      display: flex; flex-direction: column; align-items: center; gap: 20px;
-      background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12);
-    }
-    .loading-spinner {
-      width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%; border-top-color: var(--accent); animation: spin 1s ease-in-out infinite;
-    }
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
+    .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s ease-in-out infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 480px) { .card { width: 100%; padding: 24px; } }
@@ -101,7 +68,7 @@
   <div class="loading-overlay" id="globalLoading">
     <div class="page-loading">
       <div class="loading-spinner"></div>
-      <div style="font-size: 18px; font-weight: 600; color: white;">Authenticating...</div>
+      <div style="font-size: 18px; font-weight: 600; color: white;">Processing...</div>
     </div>
   </div>
 
@@ -110,7 +77,6 @@
       <h1 id="formTitle">POST UTME Student Login</h1>
       <p class="lead" id="formSubtitle">Sign in to your post utme dashboard</p>
 
-      <!-- VIEW 1: LOGIN -->
       <div id="view-login">
         <ion-item>
           <ion-input id="loginEmail" type="email" label="Email Address" label-placement="floating"></ion-input>
@@ -127,10 +93,12 @@
         </div>
       </div>
 
-      <!-- VIEW 2: SIGNUP -->
       <div id="view-signup" style="display: none;">
         <ion-item>
-          <ion-input id="signupName" type="text" label="Full Name" label-placement="floating"></ion-input>
+          <ion-input id="signupSurname" type="text" label="Surname" label-placement="floating"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input id="signupLastname" type="text" label="Last Name" label-placement="floating"></ion-input>
         </ion-item>
         <ion-item>
           <ion-input id="signupEmail" type="email" label="Email Address" label-placement="floating"></ion-input>
@@ -141,25 +109,33 @@
         <ion-item>
           <ion-input id="confirmPassword" type="password" label="Confirm Password" label-placement="floating"></ion-input>
         </ion-item>
-        
         <ion-item>
           <ion-input id="signupReferral" type="text" label="Referral Code (Optional)" label-placement="floating" autocapitalize="characters" style="text-transform: uppercase; font-weight: bold; color: var(--ion-color-primary);"></ion-input>
         </ion-item>
 
         <ion-button expand="block" class="btn-submit" id="signupBtn">Create Account</ion-button>
         <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
-          Already registered? <span class="toggle" onclick="navigateTo('login.html')">Log In</span>
+          Already registered? <span class="toggle" onclick="navigateTo('login')">Log In</span>
         </div>
       </div>
 
-      <!-- VIEW 3: RESET PASSWORD -->
+      <div id="view-verify" style="display: none;">
+        <ion-item>
+          <ion-input id="verifyCode" type="number" label="6-Digit Code" label-placement="floating" placeholder="e.g. 123456"></ion-input>
+        </ion-item>
+        <ion-button expand="block" class="btn-submit" id="verifyBtn">Verify & Login</ion-button>
+        <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
+          Didn't receive it? Check your spam folder or <span class="toggle" onclick="navigateTo('login')">Return to Login</span>
+        </div>
+      </div>
+
       <div id="view-reset" style="display: none;">
         <ion-item>
           <ion-input id="resetEmail" type="email" label="Email Address" label-placement="floating"></ion-input>
         </ion-item>
         <ion-button expand="block" class="btn-submit" id="resetBtn">Send Reset Link</ion-button>
         <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
-          Back to <span class="toggle" onclick="navigateTo('login.html')">Log In</span>
+          Back to <span class="toggle" onclick="navigateTo('login')">Log In</span>
         </div>
       </div>
 
@@ -169,6 +145,5 @@
   <div id="modalRoot" style="display:none;"></div>
 
   <script defer src="post-utme-login.js"></script>
-  
 </body>
 </html>
