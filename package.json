@@ -1,11 +1,11 @@
 {
   "name": "scholars-prep",
-  "version": "6.2.7",
+  "version": "6.3.2",
   "description": "",
   "main": "cbt-app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx javascript-obfuscator ./www --output ./www --self-defending true",
+   "build": "npx javascript-obfuscator ./www --output ./www --self-defending true && node build-update.js",
     "push": "capgo bundle upload com.scholarsprep.app.app --path ./www --channel production --no-code-check"
   },
   "repository": {
@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
+    "archiver": "^8.0.0",
     "javascript-obfuscator": "^5.4.1"
   }
 }

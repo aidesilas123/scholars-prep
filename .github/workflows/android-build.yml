@@ -28,7 +28,7 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      # 🚨 THE SCRAMBLING MACHINE 🚨
+      #  THE SCRAMBLING MACHINE 
       # This runs before Capacitor grabs the files, ensuring the APK only gets the gibberish.
       # IMPORTANT: Change "./www" to whatever folder contains your HTML/JS (e.g., ./public, ./dist, or ./build)
       - name: Scramble CBT Logic

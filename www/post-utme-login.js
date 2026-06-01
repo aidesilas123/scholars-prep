@@ -26,8 +26,8 @@ function renderView(viewId) {
   const title = document.getElementById('formTitle');
   const sub = document.getElementById('formSubtitle');
 
-  if (viewId === 'login') { title.textContent = 'POST UTME Portal'; sub.textContent = 'Sign in to your candidate dashboard'; }
-  else if (viewId === 'signup') { title.textContent = 'Candidate Registration'; sub.textContent = 'Register for POST UTME CBT Prep'; }
+  if (viewId === 'login') { title.textContent = 'POST UTME Practice Portal'; sub.textContent = 'Sign in to your dashboard'; }
+  else if (viewId === 'signup') { title.textContent = 'Aspirant Registration'; sub.textContent = 'Register for POST UTME Practice'; }
   else if (viewId === 'verify') { title.textContent = 'Verify Email'; sub.textContent = 'Enter the 6-digit code sent to your inbox'; }
   else if (viewId === 'reset') { title.textContent = 'Reset Password'; sub.textContent = 'Enter your email to receive a reset link'; }
 }
@@ -129,7 +129,7 @@ document.getElementById('verifyBtn').addEventListener('click', async () => {
       hideLoading(); showModal('Invalid Code', 'The code is incorrect or has expired. Please try again.'); return;
   }
 
-  // Verification Success! Now we securely insert them into the database
+  // Verification Success! securely insert them into the database
   const user = verifyData.user;
   const metadata = user.user_metadata;
 
