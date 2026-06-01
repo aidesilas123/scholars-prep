@@ -1,6 +1,10 @@
 import fs from 'fs';
-import archiver from 'archiver';
 import path from 'path';
+import { createRequire } from 'module';
+
+// A custom require function to load CommonJS modules
+const require = createRequire(import.meta.url);
+const archiver = require('archiver');
 
 const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 const version = packageJson.version;
