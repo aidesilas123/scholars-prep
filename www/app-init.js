@@ -6,49 +6,59 @@ window.addEventListener('DOMContentLoaded', async () => {
             await Updater.notifyAppReady();
             console.log("Capgo Updater: App state verified.");
 
-            // 1. Ask Capgo what OTA version is CURRENTLY active in memory
             const capgoState = await Updater.current();
             const activeOtaVersion = capgoState && capgoState.bundle ? capgoState.bundle.version : null;
-
-            // 2. Fallback to the native baseline version
-            const nativeVersion = "6.5.0"; // Ensure this matches the APK installed on the phone
+            
+            // Your Master APK baseline
+            const nativeVersion = "6.5.0"; 
             
             const currentAppVersion = activeOtaVersion || nativeVersion;
             console.log(`Current active version: ${currentAppVersion}`);
 
-            // 3. Check Vercel
             const response = await fetch('https://scholars-prep.vercel.app/update.json');
             
             if (response.ok) {
                 const data = await response.json();
                 
-                // 4. Compare true version against Vercel
                 if (data.latestVersion !== currentAppVersion) {
-                    console.log(`New update ${data.latestVersion} found. Starting download...`);
+                    console.log(`New update ${data.latestVersion} found. Starting silent download...`);
                     
-                    // Listen to the download progress to verify the file is moving
-                    let progressListener = await Updater.addListener('download', (info) => {
-                        console.log(`Downloading: ${info.percent}%`);
-                    });
-                    
-                    // 5. Start the download with the new Cache-Busting URL
                     const version = await Updater.download({
                         version: data.latestVersion,
                         url: data.url, 
                     });
 
-                    // Clean up the listener once finished
-                    if (progressListener) {
-                        progressListener.remove();
-                    }
-
-                    // 6. The Requested Success Indicator
-                    console.log(`Download complete! Version ${data.latestVersion} has been safely stored in the background and will be loaded on the next launch.`);
+                    console.log(`Download complete! The update is waiting.`);
+                    console.log(`It will install automatically the exact moment the app is minimized.`);
                     
-                    // 7. Set the update to apply silently on next app boot
-                    await Updater.set(version, {
-                        strategy: 'background' 
+                    // ==========================================
+                    // THE FIX: Wait for app to be hidden to apply
+                    // ==========================================
+                    let updateApplied = false;
+
+                    const applyUpdateSilently = async () => {
+                        if (!updateApplied) {
+                            updateApplied = true;
+                            console.log("App moved to background. Applying update now...");
+                            await Updater.set(version);
+                        }
+                    };
+
+                    // 1. Standard Web API for background detection
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.visibilityState === 'hidden') {
+                            applyUpdateSilently();
+                        }
                     });
+
+                    // 2. Native Capacitor App Plugin fallback (if installed)
+                    if (window.Capacitor.Plugins.App) {
+                        window.Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => {
+                            if (!isActive) {
+                                applyUpdateSilently();
+                            }
+                        });
+                    }
                     
                 } else {
                     console.log("App is up to date.");
