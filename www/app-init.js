@@ -11,7 +11,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             const activeOtaVersion = capgoState && capgoState.bundle ? capgoState.bundle.version : null;
 
             // 2. Fallback to the native baseline version
-            const nativeVersion = "6.4.5"; // Ensure this matches the APK installed on the phone
+            const nativeVersion = "6.5.0"; // Ensure this matches the APK installed on the phone
             
             const currentAppVersion = activeOtaVersion || nativeVersion;
             console.log(`Current active version: ${currentAppVersion}`);
