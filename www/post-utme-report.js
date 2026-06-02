@@ -82,7 +82,7 @@ window.submitReport = async function() {
         if (error) throw error;
 
         showLoading(false);
-        showModal('Success!', 'Thank you! Your report has been submitted. Our team will review it shortly.', () => {
+        showModal('Success!', 'Thank you! Your message has been submitted. Our team will review it shortly.', () => {
             window.location.replace('post-utme-dashboard.html');
         }, false);
 
