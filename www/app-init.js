@@ -13,7 +13,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 const data = await response.json();
                 
                 // 3. Set the current version (Must match the version in this specific APK)
-                const currentVersion = "6.3.2"; 
+                const currentVersion = "6.4.1"; 
 
                 // 4. Compare versions and trigger download if a newer version is hosted
                 if (data.latestVersion !== currentVersion) {
