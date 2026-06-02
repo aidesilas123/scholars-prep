@@ -1,42 +1,45 @@
 import fs from 'fs';
 import path from 'path';
-import { createRequire } from 'module';
 
-// A custom require function to load CommonJS modules
-const require = createRequire(import.meta.url);
-const archiver = require('archiver');
+async function buildUpdate() {
+  // Use a dynamic import to safely load the CommonJS package in an ES module
+  const archiverModule = await import('archiver');
+  const archiver = archiverModule.default || archiverModule;
 
-const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-const version = packageJson.version;
+  const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+  const version = packageJson.version;
 
-const outputDir = './www';
-const zipPath = path.join(outputDir, 'update.zip');
+  const outputDir = './www';
+  const zipPath = path.join(outputDir, 'update.zip');
 
-// 1. Create update.json
-const updateData = {
-  latestVersion: version,
-  url: `https://scholars-prep.vercel.app/update.zip` 
-};
-fs.writeFileSync(path.join(outputDir, 'update.json'), JSON.stringify(updateData, null, 2));
+  // 1. Create update.json
+  const updateData = {
+    latestVersion: version,
+    url: `https://scholars-prep.vercel.app/update.zip` 
+  };
+  fs.writeFileSync(path.join(outputDir, 'update.json'), JSON.stringify(updateData, null, 2));
 
-// 2. Zip the www folder
-const output = fs.createWriteStream(zipPath);
-const archive = archiver('zip', { zlib: { level: 9 } });
+  // 2. Zip the www folder
+  const output = fs.createWriteStream(zipPath);
+  const archive = archiver('zip', { zlib: { level: 9 } });
 
-output.on('close', () => {
-  console.log(`Update v${version} zipped successfully.`);
-});
+  output.on('close', () => {
+    console.log(`Update v${version} zipped successfully. Ready for Vercel deployment.`);
+  });
 
-output.on('error', (err) => {
-  throw err;
-});
+  output.on('error', (err) => {
+    throw err;
+  });
 
-archive.pipe(output);
+  archive.pipe(output);
 
-// Add all files in the www folder, ignoring the zip and json themselves
-archive.glob('**/*', {
-  cwd: outputDir,
-  ignore: ['update.zip', 'update.json']
-});
+  // Add all files in the www folder, ignoring the zip itself
+  archive.glob('**/*', {
+    cwd: outputDir,
+    ignore: ['update.zip', 'update.json']
+  });
 
-archive.finalize();
+  await archive.finalize();
+}
+
+buildUpdate().catch(console.error);
