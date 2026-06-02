@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 
 async function buildUpdate() {
-  // Use a dynamic import to safely load the CommonJS package in an ES module
   const archiverModule = await import('archiver');
   const archiver = archiverModule.default || archiverModule;
 
@@ -19,27 +18,32 @@ async function buildUpdate() {
   };
   fs.writeFileSync(path.join(outputDir, 'update.json'), JSON.stringify(updateData, null, 2));
 
-  // 2. Zip the www folder
+  // 2. Setup the Zip Stream
   const output = fs.createWriteStream(zipPath);
   const archive = archiver('zip', { zlib: { level: 9 } });
 
-  output.on('close', () => {
-    console.log(`Update v${version} zipped successfully. Ready for Vercel deployment.`);
+  // 3. STRICT PROMISE: Force Vercel to wait until the file finishes writing to disk
+  await new Promise((resolve, reject) => {
+    output.on('close', () => {
+      console.log(`Update v${version} fully written to disk (${archive.pointer()} bytes).`);
+      resolve();
+    });
+
+    archive.on('error', (err) => {
+      console.error('Archiver Error:', err);
+      reject(err);
+    });
+
+    archive.pipe(output);
+
+    // Add all files in the www folder, ignoring the zip and json
+    archive.glob('**/*', {
+      cwd: outputDir,
+      ignore: ['update.zip', 'update.json']
+    });
+
+    archive.finalize();
   });
-
-  output.on('error', (err) => {
-    throw err;
-  });
-
-  archive.pipe(output);
-
-  // Add all files in the www folder, ignoring the zip itself
-  archive.glob('**/*', {
-    cwd: outputDir,
-    ignore: ['update.zip', 'update.json']
-  });
-
-  await archive.finalize();
 }
 
 buildUpdate().catch(console.error);
