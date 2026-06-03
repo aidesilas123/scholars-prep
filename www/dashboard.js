@@ -48,17 +48,13 @@ async function checkAppStatus() {
 
 // --- 3. DYNAMIC COURSE FETCHING (ss_courses only) ---
 async function fetchAndRenderCourses() {
-    // Show Skeleton UI initially
-    document.getElementById('skeleton-ui').style.display = 'block';
-    document.getElementById('real-ui').style.display = 'none';
-    
     const grid = document.getElementById('courseGridContainer');
     
     try {
         const { data: courses, error: cError } = await supabaseClient
             .from('ss_courses')
             .select('*')
-            .order('code', { ascending: true }); // Using 'code' as requested
+            .order('code', { ascending: true });
 
         if (cError) throw cError;
 
@@ -68,11 +64,8 @@ async function fetchAndRenderCourses() {
     } catch (error) {
         console.error("Error fetching courses:", error);
         grid.innerHTML = `<p style="grid-column: span 3; text-align: center; color: red;">Failed to load courses.</p>`;
-    } finally {
-        // Hide Skeleton, Show Real UI
-        document.getElementById('skeleton-ui').style.display = 'none';
-        document.getElementById('real-ui').style.display = 'block';
-    }
+    } 
+    
 }
 
 function renderCourseGrid(courseArray) {
@@ -207,8 +200,30 @@ if (localStorage.getItem('sp_theme') === 'dark') {
 }
 
 // BOOTSTRAP APP
-document.addEventListener('DOMContentLoaded', () => {
-    checkAppStatus();
-    fetchAndRenderCourses();
-    setTimeout(startCarousel, 1000); 
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Force Skeleton ON and Real UI OFF
+    document.getElementById('skeleton-ui').style.display = 'block';
+    document.getElementById('real-ui').style.display = 'none';
+
+    // 2. Run Supabase & Paystack checks simultaneously
+    await Promise.all([
+        checkAppStatus(),
+        fetchAndRenderCourses()
+    ]);
+
+    // 3. Force a 1.2-second delay so the user actually sees the loading state
+    setTimeout(() => {
+        document.getElementById('skeleton-ui').style.display = 'none';
+        
+        const realUI = document.getElementById('real-ui');
+        realUI.style.display = 'block';
+        
+        // Optional: Smooth fade-in
+        realUI.style.opacity = '0';
+        realUI.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => { realUI.style.opacity = '1'; }, 50);
+
+        // Start the sliding animation ONLY after the UI is visible
+        startCarousel(); 
+    }, 1200); 
 });
