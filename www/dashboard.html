@@ -1,1238 +1,318 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Scholars Prep</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
- <style id="iron-cloak">
-    html, body { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Scholars Prep — Dashboard</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-
-    (function() {
-
-        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
-
-
-
-        async function strictGuard() {
-
-            const ua = navigator.userAgent.toLowerCase();
-
-            const platform = navigator.platform.toLowerCase();
-
-           
-
-            // 🛡️ THE TRIPLE THREAT CHECK
-
-            const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-
-            const isApp = ua.includes('wv') || window.Capacitor;
-
-            const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
-           
-
-            // Strictly block if it smells like a PC (Windows, Mac, Linux)
-
-            const isPC = /win|mac|linux/.test(platform);
-
-
-
-            // 1. Instant Desktop Kick (No DB wait)
-
-            if (isPC && !isApp) {
-
-                window.location.replace('/');
-
-                return;
-
-            }
-
-
-
-            // 2. Database Check
-
-            const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
-
-
-
-            // Logic: If mobile mode is ON, only allow REAL mobile devices
-
-            if (data && data.mobile_only_mode) {
-
-                if (isMobileOS || isApp || (hasTouch && !isPC)) {
-
-                    // VALID MOBILE: Unlock the page
-
-                    unlock();
-
-                } else {
-
-                    // BYPASS ATTEMPT: Kick to index
-
-                    window.location.replace('/');
-
-                }
-
-            } else {
-
-                // MAINTENANCE OFF: Unlock for everyone
-
-                unlock();
-
-            }
-
-        }
-
-
-
-        function unlock() {
-
-            const cloak = document.getElementById('iron-cloak');
-
-            if (cloak) cloak.remove();
-
-            document.documentElement.style.display = 'block';
-
-        }
-
-
-
-        strictGuard();
-
-    })();
-
-</script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://js.paystack.co/v1/inline.js"></script>
 
   <style>
-    .footer-actions {
-  /* 1. Bring it to the front (Above the slideshow which is z-index 0 and 1) */
-  position: relative;
-  z-index: 10; 
-  
-  /* 2. Optional: Center it nicely at the bottom */
-  text-align: center;
-  margin-top: 20px;
-}
-
-/* Override the inline black color so it's readable */
-.footer-actions p {
-  color: #ffffff !important; 
-}
-    /* --- 1. Position the Slideshow behind everything --- */
-.slideshow {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  z-index: 0; /* Sits at the bottom */
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/* Optional: Dark Overlay to make text readable */
-.slideshow::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6); 
-  z-index: 1;
-}
-
-/* --- 2. Set up the animation logic --- */
-.slideshow li span {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
-  opacity: 0;
-  z-index: 0;
-  animation: imageAnimation 15s linear infinite; 
-}
-
-/* --- 3. Define your images here --- */
-.slideshow li:nth-child(1) span { 
-  background-image: url('img/slider6.jpg'); 
-}
-.slideshow li:nth-child(2) span { 
-  background-image: url('img/slider7.jpg'); 
-  animation-delay: 5s; 
-}
-.slideshow li:nth-child(3) span { 
-  background-image: url('img/slider9.jpg'); 
-  animation-delay: 10s; 
-}
-
-/* --- 4. The Fading Keyframes --- */
-@keyframes imageAnimation { 
-  0% { opacity: 0; animation-timing-function: ease-in; }
-  10% { opacity: 1; animation-timing-function: ease-out; }
-  33% { opacity: 1; } 
-  43% { opacity: 0; }
-  100% { opacity: 0; }
-}
-    /* Loading Overlay Styles */
-    .loading-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 9999;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
+    :root {
+      --background: #f8fafc;
+      --card-bg: #ffffff;
+      --accent: #044908;
+      --accent-dark: #02270a;
+      --muted: #8f96a3;
+      --ion-color-primary: #044908;
     }
 
-    .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 5px solid #f3f3f3;
-      border-top: 5px solid #4CAF50;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    .feedback-btn {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #1f8a1f; /* Light green */
-      color: white;
-      text-decoration: none;
-      border-radius: 10px;
-      font-weight: 500;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      width: 100px;
-      height: 20px;
+    body.dark {
+      --background: #121212;
+      --card-bg: #1e1e1e;
+      --ion-text-color: #ffffff;
+      --ion-background-color: #121212;
+      --ion-toolbar-background: #1f1f1f;
+      --ion-tab-bar-background: #121212;
     }
 
-    .feedback-btn:hover {
-      background-color: #7DCE7D; /* Slightly darker green on hover */
+    html, body {
+      height: 100%; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--background); 
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: none; 
+      -webkit-tap-highlight-color: transparent; 
+      touch-action: pan-x pan-y; 
     }
 
-    .loading-text {
-      color: white;
-      font-size: 18px;
-      font-weight: bold;
+    ion-header { padding-top: env(safe-area-inset-top); }
+    ion-tab-bar { padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid rgba(128,128,128,0.1); }
+
+    /* ALL BUTTONS: Transparent background, dark green border */
+    .green-outline-btn {
+      --background: transparent;
+      --border-color: var(--accent-dark);
+      --border-style: solid;
+      --border-width: 1.5px;
+      --color: var(--accent-dark);
+      --border-radius: 8px;
+      font-weight: 600;
     }
+    body.dark .green-outline-btn { --color: #ffffff; }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Original styles remain unchanged */
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #051f01, hsl(135, 94%, 6%));
-      color: #130101;
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 15px 30px;
-      background: rgba(0, 0, 0, 0.3);
-      position: relative;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 22px;
-      font-weight: bold;
-      color: white;
-    }
-
-    header .user-email {
-      font-size: 14px;
-      opacity: 0.9;
-      margin-right: 15px;
-      color: white;
-    }
-
-    header button {
-      padding: 10px 20px;
-      border: none;
-      background: #ff4b5c;
-      color: #fff;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: 0.3s;
-    }
-
-    header button:hover {
-      background: #e84118;
-    }
-
-    /* Header Action Buttons */
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-
-    .action-btn {
-      background: rgba(255, 255, 255, 0.2);
-      border: none;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 18px;
-      transition: all 0.3s ease;
-      color: white;
-      position: relative;
-    }
-
-    .action-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: scale(1.1);
-    }
-
-    .action-btn.settings {
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    .action-btn.notification {
-      position: relative;
-    }
-
-    /* Badge Animation */
-    @keyframes pop {
-      0% { transform: scale(0); }
-      80% { transform: scale(1.2); }
-      100% { transform: scale(1); }
-    }
-
-    .notification-badge {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      background: #ff4b5c;
-      color: white;
-      border-radius: 50%;
-      width: 18px;
-      height: 18px;
-      font-size: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      animation: pop 0.3s ease-out;
-    }
-
-    /* Dropdown Menus */
-    .dropdown {
-      position: relative;
-      display: inline-block;
-    }
-
-    .dropdown-content {
-      display: none;
-      position: absolute;
-      top: 50px;
-      right: 0;
-      background: white;
-      min-width: 250px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      border-radius: 8px;
-      z-index: 1000;
-      color: #333;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-
-    .dropdown-content.left {
-      right: auto;
-      left: 0;
-    }
-
-    .dropdown-content a {
-      color: #333;
-      padding: 12px 16px;
-      text-decoration: none;
-      display: block;
-      border-bottom: 1px solid #f1f1f1;
-      transition: background 0.3s;
-    }
-
-    .dropdown-content a:hover {
-      background: #f1f1f1;
-    }
-
-    .dropdown-content a:last-child {
-      border-bottom: none;
-    }
-
-    .show { display: block; }
-
-    .main {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .container {
+    /* COURSE GRID */
+    .course-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 25px;
-      max-width: 900px;
-      width: 100%;
-      /* Apply this to whatever div wraps your page content */
-
-  position: relative;
-  z-index: 10; /* Must be higher than 0 to sit on top of images */
-
-    }
-
-    .card {
-  /* 1. Change solid green to Semi-Transparent Green */
-  /* The last number (0.25) is the transparency level (0 to 1) */
-  background: rgba(85, 172, 85, 0.25);
-
-  /* 2. Optional: Add 'Frosted Glass' Blur */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  /* 3. Add a thin border so the card doesn't disappear completely */
-  border: 1px solid rgba(255, 255, 255, 0.3);
-
-  /* Your existing styles */
-  border-radius: 20px;
-  padding: 40px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, background 0.3s ease;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  
-  /* Ensure text is white so it reads well on dark backgrounds */
-  color: white; 
-}
-
-/* Optional: Make it slightly less transparent when you hover over it */
-.card:hover {
-  background: rgba(85, 172, 85, 0.4);
-  transform: translateY(-5px);
-}
-
-    .card:hover {
-      transform: translateY(-8px);
-      background: rgba(255, 255, 255, 0.25);
-    }
-
-    .card h2 {
-      font-size: 20px;
-      margin: 15px 0 0;
-      color: #ccc;
-    }
-
-    .icon {
-      font-size: 40px;
-      margin-bottom: 10px;
-      display: block;
-      color: white;
-    }
-
-    /* Footer Actions */
-    .footer-actions {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      padding: 20px;
-      flex-wrap: wrap;
-    }
-
-    .footer-btn {
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 20px;
-      padding: 12px 24px;
-      color: white;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .footer-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
-    }
-
-    .footer-btn.feedback {
-      background: linear-gradient(135deg, #4CAF50, #45a049);
-    }
-
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-    }
-
-    .modal-content {
-      background: white;
-      padding: 30px;
-      border-radius: 15px;
-      max-width: 500px;
-      width: 90%;
-      text-align: center;
-      color: #333;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-
-    .modal-buttons {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
       margin-top: 20px;
+      margin-bottom: 30px;
     }
 
-    .modal-btn {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
+    .course-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--ion-color-primary); 
+      border-radius: 12px;
+      padding: 15px 5px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
       cursor: pointer;
-      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
     }
-
-    .modal-btn.primary {
-      background: #4CAF50;
-      color: white;
+    .course-card:active { transform: scale(0.95); }
+    
+    .course-card ion-icon {
+      font-size: 28px;
+      color: var(--ion-color-primary);
+      margin-bottom: 6px;
     }
-
-    .modal-btn.secondary {
-      background: #f1f1f1;
-      color: #333;
-    }
-
-    /* Profile Settings Form */
-    .form-group {
-      margin-bottom: 15px;
-      text-align: left;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
-
-    .form-group input, .form-group select, .form-group textarea {
+    .course-card span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ion-text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 14px;
-      box-sizing: border-box;
     }
 
-    .form-group textarea {
-      min-height: 100px;
-      resize: vertical;
+    /* 90% WIDTH SLIDER CAROUSEL (REDUCED HEIGHT) */
+    .slider-container {
+      width: 90%;
+      margin: auto auto 5px auto;
+      overflow: hidden;
+      border-radius: 12px;
     }
 
-    .subscription-info {
-      background: #e8f5e8;
-      padding: 15px;
-      border-radius: 8px;
-      margin: 15px 0;
-      text-align: left;
-    }
-
-    .subscription-status {
-      font-weight: bold;
-      color: #4CAF50;
-    }
-
-    .subscription-expired {
-      color: #ff4b5c;
-    }
-
-    /* Theme Options */
-    .theme-options {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
+    .slider-track {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
       gap: 10px;
-      margin: 15px 0;
+      padding-bottom: 10px; /* Slight padding for shadow */
+    }
+    .slider-track::-webkit-scrollbar { display: none; }
+
+    .slide-card {
+      min-width: 100%;
+      scroll-snap-align: center;
+      margin: 0;
+      background: var(--card-bg);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border: 1px solid var(--ion-color-primary); /* Green border */
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .theme-option {
-      padding: 15px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.3s;
+    .slide-card-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
-    .theme-option:hover {
-      border-color: #4CAF50;
+    .slide-card-left ion-icon {
+      font-size: 32px;
+      color: var(--ion-color-primary);
+    }
+    
+    .slide-card-text h3 {
+      margin: 0; font-size: 15px; font-weight: bold; color: var(--ion-text-color);
+    }
+    .slide-card-text p {
+      margin: 2px 0 0 0; font-size: 11px; color: var(--muted);
     }
 
-    .theme-option.selected {
-      border-color: #4CAF50;
-      background: #e8f5e8;
-    }
-
-    /* Notification Preview Styles */
-    .notification-preview {
-      padding: 10px;
-      border-bottom: 1px solid #f1f1f1;
-      cursor: pointer;
-    }
-
-    .notification-preview:hover {
-      background: #f8f9fa;
-    }
-
-    .notification-preview.unread {
-      background: #e8f4fd;
-      border-left: 3px solid #007bff;
-    }
-
-    .notification-title {
-      font-weight: bold;
-      margin-bottom: 5px;
-      font-size: 14px;
-    }
-
-    .notification-message {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 5px;
-    }
-
-    .notification-time {
-      font-size: 11px;
-      color: #999;
-      text-align: right;
-    }
-
-    /* Message Preview Styles */
-    .message-preview {
-      padding: 10px;
-      border-bottom: 1px solid #f1f1f1;
-      cursor: pointer;
-    }
-
-    .message-preview:hover {
-      background: #f8f9fa;
-    }
-
-    .message-preview.unread {
-      background: #f1f8e9;
-      border-left: 3px solid #4CAF50;
-    }
-
-    .message-sender {
-      font-weight: bold;
-      margin-bottom: 5px;
-      font-size: 14px;
-    }
-
-    .message-text {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 5px;
-    }
-
-    .message-time {
-      font-size: 11px;
-      color: #999;
-      text-align: right;
-    }
-
-    /* Feedback Modal Styles */
-    .feedback-modal {
-      max-width: 600px;
-    }
-
-    .feedback-type-buttons {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin: 15px 0;
-    }
-
-    .feedback-type-btn {
-      padding: 15px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.3s;
-      background: white;
-    }
-
-    .feedback-type-btn:hover {
-      border-color: #4CAF50;
-    }
-
-    .feedback-type-btn.selected {
-      border-color: #4CAF50;
-      background: #e8f5e8;
-    }
-    /* New styles for the centered logo */
-.header-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.dashboard-logo {
-  width: 60px;       /* Size of the logo */
-  height: 60px;
-  border-radius: 50%; /* Makes it circular */
-  margin-bottom: 8px; /* Space between image and H1 */
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  object-fit: cover;
-}
-/* --- SIDEBAR & MOBILE RESPONSIVENESS --- */
-
-/* 1. The Sidebar (Hidden by default) */
-.sidebar {
-  height: 100%;
-  width: 0; /* Closed width */
-  position: fixed;
-  z-index: 2000; /* On top of everything */
-  top: 0;
-  right: 0;
-  background-color: rgba(19, 1, 1, 0.95); /* Dark background matching theme */
-  overflow-x: hidden;
-  transition: 0.5s; /* Slide animation */
-  padding-top: 60px;
-  box-shadow: -5px 0 15px rgba(0,0,0,0.5);
-  backdrop-filter: blur(10px);
-}
-
-/* Sidebar Links/Content */
-.sidebar a, .sidebar .user-info {
-  padding: 8px 8px 8px 32px;
-  text-decoration: none;
-  font-size: 18px;
-  color: #f1f1f1;
-  display: block;
-  transition: 0.3s;
-  white-space: nowrap;
-}
-
-.sidebar .user-info {
-  font-size: 14px;
-  color: #aaa;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-}
-
-.sidebar a:hover {
-  color: #4CAF50;
-}
-
-.sidebar .closebtn {
-  position: absolute;
-  top: 0;
-  right: 25px;
-  font-size: 36px;
-  margin-left: 50px;
-  cursor: pointer;
-}
-
-/* 2. The Hamburger Menu Button (Visible only on mobile) */
-.menu-btn {
-  display: none; /* Hidden on desktop */
-  font-size: 24px;
-  cursor: pointer;
-  background: none;
-  border: none;
-  color: white;
-  padding: 10px;
-}
-
-/* 3. Mobile Media Query */
-@media screen and (max-width: 768px) {
-  /* Adjust Header Layout */
-  header {
-    padding: 10px 15px;
-  }
-  
-  /* Hide the desktop user controls on mobile */
-  .desktop-controls {
-    display: none !important;
-  }
-  
-  /* Show the hamburger menu */
-  .menu-btn {
-    display: block;
-  }
-  
-  /* Adjust Logo size for mobile */
-  .dashboard-logo {
-    width: 40px;
-    height: 40px;
-  }
-  
-  header h1 {
-    font-size: 18px;
-  }
-  
-  /* Adjust container grid for small screens */
-  .container {
-    grid-template-columns: 1fr; /* 1 column on mobile */
-    padding: 10px;
-  }
-}
-/* The Modal Background */
-.modal {
-  display: none; /* Hidden by default */
-  position: fixed; 
-  z-index: 1000; 
-  left: 0;
-  top: 0;
-  width: 100%; 
-  height: 100%; 
-  background-color: rgba(0,0,0,0.5); /* Black w/ opacity */
-  align-items: center;
-  justify-content: center;
-}
-
-/* Modal Box */
-.modal-content {
-  background-color: #fefefe;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-  width: 90%;
-  max-width: 350px;
-  text-align: center;
-  animation: fadeIn 0.3s;
-}
-
-/* Buttons Container */
-.modal-buttons {
-  margin-top: 20px;
-  display: flex;
-  justify-content: space-around;
-  gap: 10px;
-}
-
-/* Button Styles */
-.btn-cancel {
-  background-color: #f1f1f1;
-  color: #333;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.btn-confirm {
-  background-color: #ff4444; /* Red for logout warning */
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-@keyframes fadeIn {
-  from {opacity: 0; transform: translateY(-10px);}
-  to {opacity: 1; transform: translateY(0);}
-}
-/* GLASS BUTTONS FOR PAYMENT */
-.glass-btn {
-    width: 80%;               /* 80% Wide */
-    margin: 15px auto;        /* Center it */
-    background: rgba(255, 255, 255, 0.25); /* Transparent White */
-    backdrop-filter: blur(10px); /* The Blur Effect */
-    -webkit-backdrop-filter: blur(10px); /* For Safari/Old Android */
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 15px;
-    padding: 20px;
-    color: #333; /* Dark text for readability */
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    cursor: pointer;
-    text-align: center;
-}
-
-/* CUSTOM MODAL (Replaces Alert) */
-#access-modal {
-    display: none; /* Hidden by default */
-    position: fixed; 
-    z-index: 9999; 
-    left: 0;
-    top: 0;
-    width: 100%; 
-    height: 100%; 
-    background-color: rgba(0,0,0,0.6); /* Black overlay */
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    background-color: #fff;
-    margin: 15% auto;
-    padding: 25px;
-    border-radius: 12px;
-    width: 80%;
-    max-width: 300px;
-    text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    animation: popIn 0.3s ease;
-}
-
-.modal-btn {
-    background: #007bff; 
-    color: white; 
-    border: none; 
-    padding: 10px 20px; 
-    border-radius: 5px; 
-    margin-top: 15px;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-@keyframes popIn {
-    from { transform: scale(0.8); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-/* Premium Loading Box */
-.page-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  background: rgba(19, 1, 1, 0.85);
-  padding: 40px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.12);
-  backdrop-filter: blur(10px);
-}
+    /* MODALS & OVERLAYS */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
+    
+    .overlay-modal { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px); }
+    .custom-modal { background: var(--card-bg); border-radius: 14px; padding: 24px; width: min(92vw, 350px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
   </style>
 </head>
-
 <body>
-  <ul class="slideshow">
-  <li><span></span></li>
-  <li><span></span></li>
-  <li><span></span></li>
-</ul>
-  <div class="loading-overlay" id="globalLoading" style="display: none;">
-  <div class="page-loading">
-    <div class="loading-spinner"></div>
-    <div style="font-size: 18px; font-weight: 600; color: white;">Loading...</div>
-    <div style="color: #cbd5e1; font-size: 14px;">Please wait</div>
-  </div>
-</div>
 
-<div id="exitConfirmModal" class="modal">
-  <div class="modal-content">
-    <h3 style="color: #ff4444; margin-top: 0;">Exit App?</h3>
-    <p>Are you sure you want to exit Scholars Prep?</p>
-    <div class="modal-buttons">
-      <button onclick="cancelExit()" class="btn-cancel">Cancel</button>
-      <button onclick="confirmExit()" class="btn-confirm">Yes, Exit</button>
-    </div>
-  </div>
-</div>
+  <ion-app>
+    <ion-menu side="end" content-id="main-content">
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Menu</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content>
+        <ion-list lines="none">
+          <ion-item button onclick="window.location.href='profile.html'">
+            <ion-icon name="person-circle-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>Profile</ion-label>
+          </ion-item>
+          <ion-item button onclick="window.location.href='feedback.html'">
+            <ion-icon name="bug-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>Report Issue</ion-label>
+          </ion-item>
+          <ion-item button id="themeToggleBtn">
+            <ion-icon name="moon-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>Toggle Dark Mode</ion-label>
+          </ion-item>
+          <ion-item button onclick="openLogoutModal()" style="margin-top: 30px; border: 1px solid var(--accent-dark); border-radius: 8px; margin-inline: 16px;">
+            <ion-icon name="log-out-outline" slot="start" color="primary"></ion-icon>
+            <ion-label color="primary" style="font-weight: bold;">Sign out</ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-content>
+    </ion-menu>
 
-  <header>
-  <div class="header-actions">
-    <div class="header-actions">
-    
-    <button class="action-btn notification" onclick="window.location.href='notifications.html'">
-      <span class="material-symbols-rounded">notifications</span>
-      <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
-    </button>
-
-    <button class="action-btn" onclick="window.location.href='messages.html'">
-      <span class="material-symbols-rounded">chat_bubble</span>
-      <span id="messageBadge" class="notification-badge" style="display: none;">0</span>
-    </button>
-
-  </div>
-  </div>
-
-  <div class="header-center">
-    <img src="favicon1.png" alt="Logo" class="dashboard-logo">
-  </div>
-   <h1 style=" text-align: center;">Scholars Prep</h1>
-
-  <div class="header-actions desktop-controls">
-    <div class="user-email" id="userEmail"></div>
-    
-    <div class="dropdown">
-      <button class="action-btn settings" onclick="toggleDropdown('settingsDropdown')">
-        <span class="material-symbols-rounded">settings</span>
-      </button>
-      <div id="settingsDropdown" class="dropdown-content">
-        <a href="#" onclick="openNotificationSettings()">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">notifications</span> Preferences
-        </a>
-        <a href="#" onclick="openThemeSettings()">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">palette</span> Theme
-        </a>
-        <a href="#" onclick="openMessageAdminModal()">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">chat</span> Message Admin
-        </a>
-        <a href="feedback.html" onclick="openReportIssue()">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">bug_report</span> Report Issue
-        </a>
-      </div>
-    </div>
-
-    <button onclick="openLogoutModal()">Logout</button>
-  </div>
-
-  <button class="menu-btn" onclick="openSidebar()">
-    <span class="material-symbols-rounded">menu</span>
-  </button>
-</header>
-
-<div id="mySidebar" class="sidebar">
-  <a href="dashboard.html" class="closebtn" onclick="closeSidebar(); return false;">&times;</a>
-  
-  <div class="user-info" id="mobileUserEmail">User Email</div>
-  
-  <a href="#" onclick="openProfileSettings(); closeSidebar()">
-    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">person</span> Profile Settings
-  </a>
-  <a href="notifications.html" onclick="openNotificationSettings(); closeSidebar()">
-    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">notifications</span> Notifications
-  </a>
-  <a href="#" onclick="openThemeSettings(); closeSidebar()">
-    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">palette</span> Theme
-  </a>
-  <a href="messages.html">
-    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">chat</span> Message Admin
-  </a>
-  <a href="feedback.html" onclick="openReportIssue(); closeSidebar()">
-    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 6px;">bug_report</span> Report Issue
-  </a>
-  
-  <hr style="border-color: rgba(255,255,255,0.1); margin: 10px 0;">
-  <button onclick="openLogoutModal()">
-    <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px; margin-right: 4px;">logout</span> Logout
-  </button>
-  
-</div>
-  <div class="main">
-    <div class="container">
-
-      <div class="card" onclick="window.open('https://whatsapp.com/channel/0029VbBk1jU1CYoaefZvZs3m', '_blank')">
-  <span class="icon">
-    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#25D366">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.937 3.659 1.432 5.633 1.433h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-    </svg>
-  </span>
-  <h2>Join Our WhatsApp Channel</h2>
-</div>
+    <div class="ion-page" id="main-content">
       
-      <div class="card" onclick="checkPremiumAccess('cbt.html')">
-        <span class="icon material-symbols-rounded">computer</span>
-        <h2>Practice CBT</h2>
-      </div>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <img src="favicon1.png" alt="Logo" style="height: 32px; border-radius: 50%; margin-left: 16px; margin-right: 8px; vertical-align: middle;" slot="start">
+          <span slot="start" style="font-weight: 800; color: var(--ion-color-primary); font-size: 15px;">Scholars Prep</span>
+          
+          <div slot="end" style="display: flex; align-items: center; padding-right: 8px;">
+            <ion-button fill="clear" color="primary" onclick="window.location.href='history.html'">
+              <ion-icon name="time-outline" style="font-size: 24px;"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" color="primary" onclick="window.location.href='notifications.html'">
+              <ion-icon name="notifications-outline" style="font-size: 24px;"></ion-icon>
+            </ion-button>
+            <ion-menu-button color="primary"></ion-menu-button>
+          </div>
+        </ion-toolbar>
+      </ion-header>
 
-      <div class="card" onclick="checkPremiumAccess('mock-exam.html')">
-        <span class="icon material-symbols-rounded">timer</span>
-        <h2>Mock Exam</h2>
-      </div>
+      <ion-content class="ion-padding" scroll-y="true">
+        <div style="display: flex; flex-direction: column; min-height: 100%;">
+          
+          <div style="flex: 1;">
+            <h2 style="font-weight: 800; margin-top: 5px; font-size: 24px; color: var(--ion-text-color);">Welcome, <span id="candidateName">Student</span> 👋</h2>
+            
+            <ion-searchbar id="courseSearch" placeholder="Search courses..." style="--border-radius: 12px; padding: 0; margin-top: 15px; --icon-color: var(--accent-dark);"></ion-searchbar>
 
-      <div class="card" onclick="navigateWithLoading(null, 'https://drive.google.com/drive/folders/1KGOo-qL0GwoFQMvZro5A2VnoOhdNbmeo?usp=drive_link')">
-        <span class="icon material-symbols-rounded">library_books</span>
-        <h2>Materials</h2>
-      </div>
+            <div class="course-grid" id="courseGridContainer">
+              </div>
+          </div>
 
-      <div class="card" onclick="checkPremiumAccess('pastquestions.html')">
-        <span class="icon material-symbols-rounded">history_edu</span>
-        <h2>Comprehensive Past Questions</h2>
-      </div>
+          <div class="slider-container">
+            <div class="slider-track" id="sliderTrack">
+              
+              <div id="activateAppCard" class="slide-card" onclick="showAccessModal('direct_pay')" style="cursor: pointer;">
+                <div class="slide-card-left">
+                  <ion-icon name="key-outline"></ion-icon>
+                  <div class="slide-card-text">
+                    <h3>Activate App</h3>
+                    <p>Unlock full mock exams & AI.</p>
+                  </div>
+                </div>
+                <ion-button class="green-outline-btn" size="small">Activate</ion-button>
+              </div>
 
-      <div class="card" onclick="navigateWithLoading(null, 'cbt-history.html')">
-        <span class="icon material-symbols-rounded">analytics</span>
-        <h2>CBT History</h2>
-      </div>
+              <div class="slide-card" onclick="window.open('https://whatsapp.com/channel/0029VbBk1jU1CYoaefZvZs3m', '_blank')" style="cursor: pointer;">
+                <div class="slide-card-left">
+                  <ion-icon name="logo-whatsapp"></ion-icon>
+                  <div class="slide-card-text">
+                    <h3>WhatsApp</h3>
+                    <p>Join for instant updates.</p>
+                  </div>
+                </div>
+                <ion-button class="green-outline-btn" size="small">Join</ion-button>
+              </div>
 
-      <div class="card" onclick="navigateWithLoading(null, 'leaderboard.html')">
-        <span class="icon material-symbols-rounded">emoji_events</span>
-        <h2>Leaderboard</h2>
-      </div>
+              <div class="slide-card" onclick="window.location.href='leaderboard.html'" style="cursor: pointer;">
+                <div class="slide-card-left">
+                  <ion-icon name="trophy-outline"></ion-icon>
+                  <div class="slide-card-text">
+                    <h3>Leaderboard</h3>
+                    <p>View Top Scorers & Prizes.</p>
+                  </div>
+                </div>
+                <ion-button class="green-outline-btn" size="small">View</ion-button>
+              </div>
 
-    </div>
-</div>
+            </div>
+          </div>
 
-
-<div id="payment-plans-container" style="display: none; margin-top: 30px; padding-bottom: 50px;">
-    
-    <h3 style="text-align: center; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
-        Premium Plans
-    </h3>
-
-    <div class="card glass-btn" onclick="triggerPaystack('semester',2300)">
-        <span class="icon material-symbols-rounded" style="font-size: 2em;">event_available</span>
-        <h2>Semester Plan</h2>
-        <p>₦2,300 <small>(Ends June 1st)</small></p>
-    </div>
-
-    <div class="card glass-btn" onclick="triggerPaystack('session', 4500)">
-        <span class="icon material-symbols-rounded" style="font-size: 2em;">calendar_month</span>
-        <h2>Session Plan</h2>
-        <p>₦4,500 <small>(Ends Dec 31st)</small></p>
-    </div>
-
-</div>
-
-  <div class="footer-actions">
-  <p style="color: #130101; font-size: 20px;">Report a Question? have complaints/feedback?</p>
-  <a href="feedback.html" class="feedback-btn">click here</a>
-</div>
-
-  
-
-  <div id="profileModal" class="modal">
-    <div class="modal-content">
-      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">person</span> Profile Settings</h3>
-      
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="profileEmail" readonly>
-      </div>
-      
-      <div class="form-group">
-        <label>Change Password</label>
-        <input type="password" id="newPassword" placeholder="Enter new password">
-      </div>
-      
-      <div class="form-group">
-        <label>Confirm Password</label>
-        <input type="password" id="confirmPassword" placeholder="Confirm new password">
-      </div>
-
-      
-
-      <div class="modal-buttons">
-        <button class="modal-btn secondary" onclick="closeModal('profileModal')">Cancel</button>
-        <button class="modal-btn primary" onclick="updateProfile()">Save Changes</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="notificationModal" class="modal">
-    <div class="modal-content">
-      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">notifications</span> Notification Preferences</h3>
-      <div class="form-group" style="text-align: left;">
-        <label><input type="checkbox" id="notifyCBT" checked> New CBT Questions</label>
-      </div>
-      
-      <div class="form-group" style="text-align: left;">
-        <label><input type="checkbox" id="notifyMaterials" checked> New Study Materials</label>
-      </div>
-      
-      <div class="form-group" style="text-align: left;">
-        <label><input type="checkbox" id="notifySubscription" checked> Subscription Reminders</label>
-      </div>
-      
-      <div class="form-group" style="text-align: left;">
-        <label><input type="checkbox" id="notifyScores" checked> Score Updates & Leaderboard</label>
-      </div>
-
-      <div class="modal-buttons">
-        <button class="modal-btn secondary" onclick="closeModal('notificationModal')">Cancel</button>
-        <button class="modal-btn primary" onclick="saveNotificationSettings()">Save Preferences</button>
-      </div>
-    </div>
-  </div>
-
- <div id="themeModal" class="modal">
-    <div class="modal-content">
-      <h3><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">palette</span> Theme Settings</h3>
-      
-      <div class="theme-options">
-        <div class="theme-option selected" onclick="selectTheme('default')">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">eco</span> Default Green
         </div>
-        <div class="theme-option" onclick="selectTheme('blue')">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">water_drop</span> Blue Ocean
-        </div>
-        <div class="theme-option" onclick="selectTheme('dark')">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">dark_mode</span> Dark Mode
-        </div>
-        <div class="theme-option" onclick="selectTheme('purple')">
-          <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 20px; margin-right: 4px;">auto_awesome</span> Purple Dream
+      </ion-content>
+
+      <ion-tab-bar slot="bottom" id="bottomNavBar">
+        <ion-tab-button tab="home" href="dashboard.html" class="tab-selected">
+          <ion-icon name="home" color="primary"></ion-icon>
+          <ion-label color="primary">Home</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="nexus" onclick="checkPremiumAccess('chat.html')">
+          <ion-icon name="planet-outline" color="primary"></ion-icon>
+          <ion-label color="primary">Nexus</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="exam" onclick="checkPremiumAccess('mock-exam.html')">
+          <ion-icon name="timer-outline" color="primary"></ion-icon>
+          <ion-label color="primary">Mock Exam</ion-label>
+        </ion-tab-button>
+
+        <ion-tab-button tab="cbt" onclick="checkPremiumAccess('cbt.html')">
+          <ion-icon name="laptop-outline" color="primary"></ion-icon>
+          <ion-label color="primary">CBT</ion-label>
+        </ion-tab-button>
+      </ion-tab-bar> 
+    </div>
+
+    <div class="loading-overlay" id="globalLoading">
+      <div class="page-loading">
+        <ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner>
+        <div style="font-size: 18px; font-weight: 600; color: white;" id="loadingText">Processing...</div>
+      </div>
+    </div>
+
+    <div class="overlay-modal" id="logoutModal">
+      <div class="custom-modal">
+        <h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Log Out</h3>
+        <p style="margin: 0 0 24px; color: var(--muted); font-size: 15px;">Are you sure you want to log out?</p>
+        <div style="display: flex; justify-content: space-between; gap: 10px;">
+          <ion-button class="green-outline-btn" style="flex:1" onclick="document.getElementById('logoutModal').style.display='none'">CANCEL</ion-button>
+          <ion-button class="green-outline-btn" style="flex:1" onclick="confirmLogout()">YES</ion-button>
         </div>
       </div>
+    </div>
 
-      <div class="modal-buttons">
-        <button class="modal-btn secondary" onclick="closeModal('themeModal')">Cancel</button>
-        <button class="modal-btn primary" onclick="applyTheme()">Apply Theme</button>
+    <div class="overlay-modal" id="accessModal">
+      <div class="custom-modal">
+        <ion-icon name="lock-closed" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
+        <h3 style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Access Denied</h3>
+        <p style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">You need a premium subscription to access this feature.</p>
+        <ion-button class="green-outline-btn" expand="block" onclick="triggerPaystack()">
+            <ion-icon name="card-outline" slot="start"></ion-icon> Activate App
+        </ion-button>
+        <ion-button class="green-outline-btn" expand="block" style="margin-top: 10px;" onclick="document.getElementById('accessModal').style.display='none'">Cancel</ion-button>
       </div>
     </div>
-  </div>
+  </ion-app>
 
-  <div id="logoutModal" class="modal">
-  <div class="modal-content">
-    <h3>Are you sure you want to logout?</h3>
-    <p>You will need to sign in again to access your account.</p>
-    <div class="modal-buttons">
-      <button onclick="closeLogoutModal()" class="btn-cancel">Cancel</button>
-      <button onclick="confirmLogout()" class="btn-confirm">Yes, Logout</button>
-    </div>
-  </div>
-</div>
-<div id="access-modal">
-    <div class="modal-content">
-       <h2 style="color: #d9534f; margin-bottom: 10px;"><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 6px;">lock</span> Access Denied</h2>
-        <p>This premium feature requires a subscription.</p>
-        <p style="font-size: 0.9em; color: #666;">Please choose a plan below to continue.</p>
-        <button class="modal-btn" onclick="closeModalAndScroll()">Okay, Show Plans</button>
-    </div>
-</div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  
-  <script src="https://js.paystack.co/v1/inline.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="dashboard.js"></script>
-
-</script>
+  <script defer src="dashboard.js"></script>
 </body>
 </html>

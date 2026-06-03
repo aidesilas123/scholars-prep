@@ -2,56 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Scholars Prep — Login</title>
   <link rel="icon" type="image" href="favicon1.png">
   
-  <style id="security-cloak">
-    html, body { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-  </style>
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="app-init.js"></script>
-  <script>
-    (function() {
-      // Device Check
-      const ua = navigator.userAgent.toLowerCase();
-      const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-      const isDesktop = /win|mac|linux/.test(navigator.platform.toLowerCase()) && !isMobileOS;
-      const isApp = ua.includes('wv') || (window.Capacitor !== undefined);
-      const isValidMobile = isMobileOS || isApp || (('ontouchstart' in window || navigator.maxTouchPoints > 0) && !isDesktop);
-
-      function uncloakPage() {
-        const cloak = document.getElementById('security-cloak');
-        if (cloak) cloak.remove();
-        document.documentElement.style.display = 'block';
-      }
-
-      // DECISION TREE
-      if (isValidMobile) {
-        // IF MOBILE: Uncloak instantly. Zero delay. No DB wait required.
-        uncloakPage();
-      } else {
-        //  IF DESKTOP: Wait for Supabase check
-        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
-        
-        _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single()
-          .then(({data}) => {
-            if (data && data.mobile_only_mode) {
-              // Desktop + Switch ON = Kick to Index
-              window.location.replace('/');
-            } else {
-              // Desktop + Switch OFF = Allow access
-              uncloakPage();
-            }
-          })
-          .catch(() => {
-            // Failsafe: If DB fails, let them in so your app doesn't break
-            uncloakPage();
-          });
-      }
-    })();
-  </script>
 
   <style>
     :root {
@@ -60,164 +20,136 @@
       --accent: #044908;
       --accent-dark: #02270a;
       --muted: #8f96a3;
-      --radius: 12px;
+      --ion-color-primary: #044908;
     }
 
     html, body {
-      height: 100%; margin: 0;
-      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      background: var(--background) no-repeat center center fixed;
-      background-size: cover; 
+      height: 100%; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--background) no-repeat center center fixed; background-size: cover; 
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      
+      /* WEBVIEW LOCKS: Kills browser bounce, tap highlights, and zoom */
+      overscroll-behavior-y: none; 
+      -webkit-tap-highlight-color: transparent; 
+      touch-action: pan-x pan-y; 
     }
 
-    /* Watermark (user email) */
     .watermark {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      pointer-events: none; display: flex; align-items: center;
-      justify-content: center; z-index: 0; opacity: 0.08; user-select: none;
-      transform: rotate(-25deg); font-size: 38px; color: #fff;
-      mix-blend-mode: overlay; font-weight: 700; letter-spacing: 6px;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; z-index: 0; opacity: 0.08; user-select: none; transform: rotate(-25deg); font-size: 38px; color: #fff; mix-blend-mode: overlay; font-weight: 700; letter-spacing: 6px;
     }
 
-    /* Center card */
     .container {
-      min-height:100%; display:flex; align-items:center;
-      justify-content:center; padding:40px 20px; z-index: 10; position: relative;
+      min-height: 100%; display: flex; align-items: center; justify-content: center; z-index: 10; position: relative;
+      /* DYNAMIC SAFE AREA PADDING: Prevents UI from hiding under the iOS notch or Android status bar */
+      padding-top: calc(40px + env(safe-area-inset-top));
+      padding-bottom: calc(40px + env(safe-area-inset-bottom));
+      padding-left: calc(20px + env(safe-area-inset-left));
+      padding-right: calc(20px + env(safe-area-inset-right));
     }
+    
     .card {
-      width: 420px; background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-      border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 18px;
-      padding: 34px; box-shadow: 0 10px 30px rgba(12, 20, 40, 0.25);
-      z-index: 20; position: relative;
+      width: 420px; 
+      
+      /* The Glass Effect */
+      background: rgba(255, 255, 255, 0.15); 
+      backdrop-filter: blur(16px); 
+      -webkit-backdrop-filter: blur(16px); 
+      
+      border-top: 1px solid rgba(255, 255, 255, 0.5); 
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25); 
+      /* Structure */
+      border-radius: 18px; 
+      padding: 34px; 
+      z-index: 20; 
+      position: relative;
     }
+    h1 { text-align: center; margin: 0 0 8px; color: #07520e; font-size: 32px; font-weight: bold; }
+    p.lead { margin: 0 0 20px; text-align: center; color: #4a5568; font-size: 14px; }
 
-    h1{ text-align:center; margin:0 0 8px; color: #07520e; font-size:32px; }
-    p.lead{ margin:0 0 20px; text-align:center; color:var(--muted); font-size:14px; }
+    /* Ionic Overrides */
+    ion-item { --background: transparent; --border-color: #cbd5e1; margin-bottom: 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    ion-input { font-size: 15px; }
+    .btn-submit { margin-top: 16px; font-weight: bold; --border-radius: 10px; --background: linear-gradient(180deg, var(--accent), var(--accent-dark)); }
 
-    .field { margin-bottom:16px; }
-    label { display:block; font-size:13px; color:#333; margin-bottom:6px; }
-    input[type="email"], input[type="password"], input[type="text"] {
-      width:100%; padding:14px 16px; border-radius:8px;
-      border:1px solid #e6e9ef; box-sizing:border-box;
-      font-size:14px; outline:none; transition:box-shadow .15s, border-color .15s;
-    }
-    input:focus { box-shadow: 0 6px 18px rgba(63,102,255,0.12); border-color: var(--accent); }
+    .toggle { cursor: pointer; color: var(--accent-dark); font-weight: 600; text-decoration: underline; }
 
-    .btn {
-      width:100%; display:inline-block; padding:12px 18px; border-radius:10px;
-      border: none; background: linear-gradient(180deg,var(--accent),var(--accent-dark));
-      color:#fff; font-weight:600; font-size:16px; cursor:pointer; margin-top:6px;
-    }
-
-    .muted-row{ text-align:center; margin-top:14px; color:var(--muted); font-size:13px; }
-    .muted-row a{ color:var(--accent-dark); text-decoration:none; font-weight:600; }
-    .toggle { text-decoration:underline; cursor:pointer; color:var(--accent-dark); font-weight:600; }
-
-    /* Modal */
-    .modal-overlay { position: fixed; inset:0; background: rgba(6,12,34,0.45); display:flex; align-items:center; justify-content:center; z-index:1000; }
-    .modal { background:#fff; border-radius:10px; padding:18px 20px; width:380px; box-shadow: 0 10px 30px rgba(12,20,40,0.25); }
-    .modal h3 { margin:0 0 8px; font-size:18px; color:#21324a; }
-    .modal p { margin:0 0 12px; color:#445; font-size:14px; }
-    .note { font-size:12px; color:#6b7280; text-align:center; margin-top:10px; }
-    .no-select { user-select: none; -webkit-user-select: none; -moz-user-select: none; }
-    input, textarea { user-select: auto; }
-
-    @media (max-width:480px){
-      .card { width: 92%; padding:20px; }
-      .watermark { font-size:24px; opacity:0.06; }
-    }
-    /* --- PREMIUM LOADING OVERLAY --- */
-    .loading-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.7); display: none;
-      align-items: center; justify-content: center;
-      z-index: 9999; backdrop-filter: blur(4px);
-    }
-    .page-loading {
-      display: flex; flex-direction: column; align-items: center; gap: 20px;
-      background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(10px);
-    }
-    .loading-spinner {
-      width: 40px; height: 40px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%; border-top-color: #044908; 
-      animation: spin 1s ease-in-out infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Modals & Loading */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(6,12,34,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: #fff; border-radius: 10px; padding: 18px 20px; width: 380px; box-shadow: 0 10px 30px rgba(12,20,40,0.25); }
+    .modal h3 { margin: 0 0 8px; font-size: 18px; color: #21324a; }
+    .modal p { margin: 0 0 12px; color: #445; font-size: 14px; }
+    
+    .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
+    
+    @media (max-width: 480px) { .card { width: 100%; padding: 24px; } }
   </style>
 </head>
-<body class="no-select">
+<body>
   <div id="watermark" class="watermark" aria-hidden="true"></div>
+  
   <div class="loading-overlay" id="globalLoading">
     <div class="page-loading">
-      <div class="loading-spinner"></div>
+      <ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner>
       <div style="font-size: 18px; font-weight: 600; color: white;">Authenticating...</div>
-      <div style="color: #cbd5e1; font-size: 14px;">Please wait</div>
     </div>
   </div>
 
   <div class="container">
-    <div class="card" role="region" aria-label="login card" id="authCard">
+    <div class="card" id="authCard">
       <h1 id="formTitle">Welcome Back</h1>
       <p class="lead" id="formSubtitle">Sign in to access your study resources</p>
 
-      <form id="loginForm" autocomplete="off" onsubmit="return false;">
-        <div class="field">
-          <label for="loginEmail">Email Address</label>
-          <input id="loginEmail" type="email" placeholder="Enter your email" required />
+      <div id="view-login">
+        <ion-item>
+          <ion-input id="loginEmail" type="email" label="Email Address" label-placement="floating"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input id="loginPassword" type="password" label="Password" label-placement="floating"></ion-input>
+        </ion-item>
+        <div style="text-align: right; margin-top: 8px;">
+          <span class="toggle" onclick="navigateTo('reset')" style="font-size: 13px;">Forgot password?</span>
         </div>
-        <div class="field">
-          <label for="loginPassword">Password</label>
-          <input id="loginPassword" type="password" placeholder="Enter your password" required />
-          <div style="text-align: right; margin-top: 8px;">
-            <span class="toggle" id="forgotPwdLink" style="font-size: 12px;">Forgot password?</span>
-          </div>
+        <ion-button expand="block" class="btn-submit" id="loginBtn">Log In</ion-button>
+        <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
+          Don't have an account? <span class="toggle" onclick="navigateTo('signup')">Sign up here</span>
         </div>
-        <button class="btn" id="loginBtn" type="submit">Log In</button>
-      </form>
-
-      <form id="signupForm" style="display:none;" autocomplete="off" onsubmit="return false;">
-        <div class="field">
-          <label for="signupName">Full Name</label>
-          <input id="signupName" type="text" placeholder="Your name" required />
-        </div>
-        <div class="field">
-          <label for="signupEmail">Email Address</label>
-          <input id="signupEmail" type="email" placeholder="Enter your email" required />
-        </div>
-        <div class="field">
-          <label for="signupPassword">Password</label>
-          <input id="signupPassword" type="password" placeholder="Create a password" required /><br><br>
-          <label for="confirmPassword">Confirm Password</label>
-          <input id="confirmPassword" type="password" placeholder="Confirm your password" required />
-        </div>
-        <button class="btn" id="signupBtn">Create Account</button>
-      </form>
-
-      <form id="resetForm" style="display:none;" autocomplete="off" onsubmit="return false;">
-        <div class="field">
-          <label for="resetEmail">Email Address</label>
-          <input id="resetEmail" type="email" placeholder="Enter your registered email" required />
-        </div>
-        <button class="btn" id="resetBtn">Send Reset Link</button>
-      </form>
-
-      <div class="muted-row">
-        <div id="toggleRow">
-          <span id="toggleToSignup">Don't have an account? <span class="toggle">Sign up here</span></span>
-          <span id="toggleToLogin" style="display:none;">Already have an account? <span class="toggle">Log in</span></span>
-        </div>
-        <div class="note">Powered by Supabase Secure Auth</div>
       </div>
+
+      <div id="view-signup" style="display: none;">
+        <ion-item>
+          <ion-input id="signupName" type="text" label="Full Name" label-placement="floating"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input id="signupEmail" type="email" label="Email Address" label-placement="floating"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input id="signupPassword" type="password" label="Create Password" label-placement="floating"></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-input id="confirmPassword" type="password" label="Confirm Password" label-placement="floating"></ion-input>
+        </ion-item>
+        <ion-button expand="block" class="btn-submit" id="signupBtn">Create Account</ion-button>
+        <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
+          Already have an account? <span class="toggle" onclick="navigateTo('login')">Log In</span>
+        </div>
+      </div>
+
+      <div id="view-reset" style="display: none;">
+        <ion-item>
+          <ion-input id="resetEmail" type="email" label="Email Address" label-placement="floating"></ion-input>
+        </ion-item>
+        <ion-button expand="block" class="btn-submit" id="resetBtn">Send Reset Link</ion-button>
+        <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
+          Back to <span class="toggle" onclick="navigateTo('login')">Log In</span>
+        </div>
+      </div>
+
     </div>
   </div>
+  
   <div id="modalRoot" style="display:none;"></div>
 
   <script defer src="login.js"></script>
-  
 </body>
 </html>
