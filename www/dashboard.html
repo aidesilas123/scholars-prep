@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
   <title>Scholars Prep — Dashboard</title>
   <link rel="icon" type="image" href="favicon1.png">
   
@@ -28,21 +29,20 @@
       --card-bg: #1e1e1e;
       --ion-text-color: #ffffff;
       --ion-background-color: #121212;
-      --ion-toolbar-background: #1f1f1f;
+      --ion-toolbar-background: #121212;
       --ion-tab-bar-background: #121212;
     }
 
     html, body {
       height: 100%; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      background: var(--background); 
+      background-color: var(--background) !important; 
       -webkit-font-smoothing: antialiased;
       overscroll-behavior-y: none; 
       -webkit-tap-highlight-color: transparent; 
       touch-action: pan-x pan-y; 
     }
 
-    ion-header { padding-top: env(safe-area-inset-top); }
-    ion-tab-bar { padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid rgba(128,128,128,0.1); }
+    ion-tab-bar { border-top: 1px solid rgba(128,128,128,0.1); }
 
     /* ALL BUTTONS: Transparent background, dark green border */
     .green-outline-btn {
@@ -56,20 +56,19 @@
     }
     body.dark .green-outline-btn { --color: #ffffff; }
 
-    /* COURSE GRID */
+    /* COURSE GRID - 3 columns, more spacing */
     .course-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-top: 20px;
-      margin-bottom: 30px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding-bottom: 20px;
     }
 
     .course-card {
       background: var(--card-bg);
       border: 1.5px solid var(--ion-color-primary); 
       border-radius: 12px;
-      padding: 15px 5px;
+      padding: 20px 5px;
       text-align: center;
       box-shadow: 0 4px 10px rgba(0,0,0,0.05);
       cursor: pointer;
@@ -82,13 +81,13 @@
     .course-card:active { transform: scale(0.95); }
     
     .course-card ion-icon {
-      font-size: 28px;
+      font-size: 32px;
       color: var(--ion-color-primary);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
     .course-card span {
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: bold;
       color: var(--ion-text-color);
       white-space: nowrap;
       overflow: hidden;
@@ -99,7 +98,7 @@
     /* 90% WIDTH SLIDER CAROUSEL (REDUCED HEIGHT) */
     .slider-container {
       width: 90%;
-      margin: auto auto 5px auto;
+      margin: 10px auto; 
       overflow: hidden;
       border-radius: 12px;
     }
@@ -111,7 +110,7 @@
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
       gap: 10px;
-      padding-bottom: 10px; /* Slight padding for shadow */
+      padding-bottom: 5px;
     }
     .slider-track::-webkit-scrollbar { display: none; }
 
@@ -121,7 +120,7 @@
       margin: 0;
       background: var(--card-bg);
       box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-      border: 1px solid var(--ion-color-primary); /* Green border */
+      border: 1px solid var(--ion-color-primary); 
       border-radius: 12px;
       padding: 12px;
       display: flex;
@@ -140,17 +139,12 @@
       color: var(--ion-color-primary);
     }
     
-    .slide-card-text h3 {
-      margin: 0; font-size: 15px; font-weight: bold; color: var(--ion-text-color);
-    }
-    .slide-card-text p {
-      margin: 2px 0 0 0; font-size: 11px; color: var(--muted);
-    }
+    .slide-card-text h3 { margin: 0; font-size: 15px; font-weight: bold; color: var(--ion-text-color); }
+    .slide-card-text p { margin: 2px 0 0 0; font-size: 11px; color: var(--muted); }
 
     /* MODALS & OVERLAYS */
     .loading-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
     .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
-    
     .overlay-modal { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px); }
     .custom-modal { background: var(--card-bg); border-radius: 14px; padding: 24px; width: min(92vw, 350px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
   </style>
@@ -170,6 +164,10 @@
             <ion-icon name="person-circle-outline" slot="start" color="primary"></ion-icon>
             <ion-label>Profile</ion-label>
           </ion-item>
+          <ion-item button onclick="window.location.href='settings.html'">
+            <ion-icon name="settings-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>Settings</ion-label>
+          </ion-item>
           <ion-item button onclick="window.location.href='feedback.html'">
             <ion-icon name="bug-outline" slot="start" color="primary"></ion-icon>
             <ion-label>Report Issue</ion-label>
@@ -188,8 +186,8 @@
 
     <div class="ion-page" id="main-content">
       
-      <ion-header class="ion-no-border">
-        <ion-toolbar>
+      <ion-header class="ion-no-border" style="background: var(--background);">
+        <ion-toolbar style="--background: transparent;">
           <img src="favicon1.png" alt="Logo" style="height: 32px; border-radius: 50%; margin-left: 16px; margin-right: 8px; vertical-align: middle;" slot="start">
           <span slot="start" style="font-weight: 800; color: var(--ion-color-primary); font-size: 15px;">Scholars Prep</span>
           
@@ -203,61 +201,76 @@
             <ion-menu-button color="primary"></ion-menu-button>
           </div>
         </ion-toolbar>
+
+        <div style="padding: 0 16px 5px 16px;">
+          <h2 style="font-weight: 800; margin-top: 0px; font-size: 24px; color: var(--ion-text-color);">Welcome, <span id="candidateName">Student</span> 👋</h2>
+          <ion-searchbar id="courseSearch" placeholder="Search courses..." style="--border-radius: 12px; padding: 0; margin-top: 10px; --icon-color: var(--accent-dark);"></ion-searchbar>
+        </div>
       </ion-header>
 
-      <ion-content class="ion-padding" scroll-y="true">
-        <div style="display: flex; flex-direction: column; min-height: 100%;">
-          
-          <div style="flex: 1;">
-            <h2 style="font-weight: 800; margin-top: 5px; font-size: 24px; color: var(--ion-text-color);">Welcome, <span id="candidateName">Student</span> 👋</h2>
-            
-            <ion-searchbar id="courseSearch" placeholder="Search courses..." style="--border-radius: 12px; padding: 0; margin-top: 15px; --icon-color: var(--accent-dark);"></ion-searchbar>
-
-            <div class="course-grid" id="courseGridContainer">
-              </div>
+      <ion-content class="ion-padding" style="--background: var(--background);">
+        
+        <div id="skeleton-ui">
+          <div class="course-grid">
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 100px; border-radius: 12px;"></ion-skeleton-text>
           </div>
-
-          <div class="slider-container">
-            <div class="slider-track" id="sliderTrack">
-              
-              <div id="activateAppCard" class="slide-card" onclick="showAccessModal('direct_pay')" style="cursor: pointer;">
-                <div class="slide-card-left">
-                  <ion-icon name="key-outline"></ion-icon>
-                  <div class="slide-card-text">
-                    <h3>Activate App</h3>
-                    <p>Unlock full mock exams & AI.</p>
-                  </div>
-                </div>
-                <ion-button class="green-outline-btn" size="small">Activate</ion-button>
-              </div>
-
-              <div class="slide-card" onclick="window.open('https://whatsapp.com/channel/0029VbBk1jU1CYoaefZvZs3m', '_blank')" style="cursor: pointer;">
-                <div class="slide-card-left">
-                  <ion-icon name="logo-whatsapp"></ion-icon>
-                  <div class="slide-card-text">
-                    <h3>WhatsApp</h3>
-                    <p>Join for instant updates.</p>
-                  </div>
-                </div>
-                <ion-button class="green-outline-btn" size="small">Join</ion-button>
-              </div>
-
-              <div class="slide-card" onclick="window.location.href='leaderboard.html'" style="cursor: pointer;">
-                <div class="slide-card-left">
-                  <ion-icon name="trophy-outline"></ion-icon>
-                  <div class="slide-card-text">
-                    <h3>Leaderboard</h3>
-                    <p>View Top Scorers & Prizes.</p>
-                  </div>
-                </div>
-                <ion-button class="green-outline-btn" size="small">View</ion-button>
-              </div>
-
-            </div>
-          </div>
-
         </div>
+
+        <div id="real-ui" style="display: none;">
+          <div class="course-grid" id="courseGridContainer">
+            </div>
+        </div>
+
       </ion-content>
+
+      <ion-footer class="ion-no-border" style="background: var(--background);">
+        <div class="slider-container">
+          <div class="slider-track" id="sliderTrack">
+            
+            <div id="activateAppCard" class="slide-card" onclick="showAccessModal('direct_pay')" style="cursor: pointer;">
+              <div class="slide-card-left">
+                <ion-icon name="key-outline"></ion-icon>
+                <div class="slide-card-text">
+                  <h3>Activate App</h3>
+                  <p>Unlock full mock exams & AI.</p>
+                </div>
+              </div>
+              <ion-button class="green-outline-btn" size="small">Activate</ion-button>
+            </div>
+
+            <div class="slide-card" onclick="window.open('https://whatsapp.com/channel/0029VbBk1jU1CYoaefZvZs3m', '_blank')" style="cursor: pointer;">
+              <div class="slide-card-left">
+                <ion-icon name="logo-whatsapp"></ion-icon>
+                <div class="slide-card-text">
+                  <h3>WhatsApp</h3>
+                  <p>Join for instant updates.</p>
+                </div>
+              </div>
+              <ion-button class="green-outline-btn" size="small">Join</ion-button>
+            </div>
+
+            <div class="slide-card" onclick="window.location.href='leaderboard.html'" style="cursor: pointer;">
+              <div class="slide-card-left">
+                <ion-icon name="trophy-outline"></ion-icon>
+                <div class="slide-card-text">
+                  <h3>Leaderboard</h3>
+                  <p>View Top Scorers & Prizes.</p>
+                </div>
+              </div>
+              <ion-button class="green-outline-btn" size="small">View</ion-button>
+            </div>
+
+          </div>
+        </div>
+      </ion-footer>
 
       <ion-tab-bar slot="bottom" id="bottomNavBar">
         <ion-tab-button tab="home" href="dashboard.html" class="tab-selected">
@@ -294,8 +307,8 @@
         <h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Log Out</h3>
         <p style="margin: 0 0 24px; color: var(--muted); font-size: 15px;">Are you sure you want to log out?</p>
         <div style="display: flex; justify-content: space-between; gap: 10px;">
-          <ion-button class="green-outline-btn" style="flex:1" onclick="document.getElementById('logoutModal').style.display='none'">CANCEL</ion-button>
-          <ion-button class="green-outline-btn" style="flex:1" onclick="confirmLogout()">YES</ion-button>
+          <ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="document.getElementById('logoutModal').style.display='none'">CANCEL</ion-button>
+          <ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="confirmLogout()">YES</ion-button>
         </div>
       </div>
     </div>

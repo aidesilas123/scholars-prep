@@ -4,7 +4,7 @@ const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
 const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let globalCourses = []; // Stores the filtered list for search
+let globalCourses = []; 
 
 (function protectPage() {
     const savedUser = localStorage.getItem('abupq_logged_in_user');
@@ -36,7 +36,6 @@ async function checkAppStatus() {
             if (endDate > new Date()) isPremium = true;
         }
 
-        // Hide "Activate App" card in the slider if they already paid or if free mode is on
         const activateCard = document.getElementById('activateAppCard');
         if (activateCard && (!isSwitchActive || isPremium)) {
             activateCard.style.display = 'none';
@@ -49,15 +48,17 @@ async function checkAppStatus() {
 
 // --- 3. DYNAMIC COURSE FETCHING (ss_courses only) ---
 async function fetchAndRenderCourses() {
-    showLoading('Loading Courses...');
+    // Show Skeleton UI initially
+    document.getElementById('skeleton-ui').style.display = 'block';
+    document.getElementById('real-ui').style.display = 'none';
+    
     const grid = document.getElementById('courseGridContainer');
     
     try {
-        // Fetch strictly from the ss_courses table
         const { data: courses, error: cError } = await supabaseClient
             .from('ss_courses')
             .select('*')
-            .order('name', { ascending: true });
+            .order('code', { ascending: true }); // Using 'code' as requested
 
         if (cError) throw cError;
 
@@ -66,9 +67,11 @@ async function fetchAndRenderCourses() {
 
     } catch (error) {
         console.error("Error fetching courses:", error);
-        grid.innerHTML = `<p style="grid-column: span 4; text-align: center; color: red;">Failed to load courses.</p>`;
+        grid.innerHTML = `<p style="grid-column: span 3; text-align: center; color: red;">Failed to load courses.</p>`;
     } finally {
-        hideLoading();
+        // Hide Skeleton, Show Real UI
+        document.getElementById('skeleton-ui').style.display = 'none';
+        document.getElementById('real-ui').style.display = 'block';
     }
 }
 
@@ -77,22 +80,20 @@ function renderCourseGrid(courseArray) {
     grid.innerHTML = '';
 
     if(!courseArray || courseArray.length === 0) {
-        grid.innerHTML = `<p style="grid-column: span 4; text-align: center; color: var(--muted); font-size: 14px;">No courses available.</p>`;
+        grid.innerHTML = `<p style="grid-column: span 3; text-align: center; color: var(--muted); font-size: 14px;">No courses available.</p>`;
         return;
     }
 
     courseArray.forEach(course => {
         const card = document.createElement('div');
         card.className = 'course-card';
-        // Note: Wiring will be adjusted later as per instructions
         card.onclick = () => window.location.href = `cbt.html?course=${course.id}`;
         
-        // Dynamically use the icon column, default to 'book-outline' if empty
         const iconName = course.icon || 'book-outline';
 
         card.innerHTML = `
             <ion-icon name="${iconName}"></ion-icon>
-            <span>${course.name || course.course_code}</span>
+            <span>${course.code}</span>
         `;
         grid.appendChild(card);
     });
@@ -102,8 +103,7 @@ function renderCourseGrid(courseArray) {
 document.getElementById('courseSearch')?.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
     const filtered = globalCourses.filter(c => 
-        (c.name && c.name.toLowerCase().includes(term)) || 
-        (c.course_code && c.course_code.toLowerCase().includes(term))
+        c.code && c.code.toLowerCase().includes(term)
     );
     renderCourseGrid(filtered);
 });
@@ -123,8 +123,6 @@ function startCarousel() {
 }
 
 // --- 5. PREMIUM ACCESS GATEWAY & MODALS ---
-
-// Fix for ReferenceError: Define explicitly on the window object
 window.showAccessModal = function(intent = 'locked_feature') {
     document.getElementById('accessModal').style.display = 'flex';
 };
@@ -144,7 +142,7 @@ window.triggerPaystack = function() {
     const handler = PaystackPop.setup({
         key: PAYSTACK_KEY,
         email: user.email,
-        amount: 2500 * 100, // Customize amount as needed
+        amount: 2500 * 100, 
         currency: 'NGN', 
         ref: 'SP_' + Math.floor((Math.random() * 1000000000) + 1),
         metadata: {
@@ -194,12 +192,19 @@ window.confirmLogout = async function() {
     window.location.replace('index.html');
 };
 
-// THEME TOGGLE
+// THEME TOGGLE (Syncs Status Bar Theme Color)
 document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
     document.body.classList.toggle('dark');
-    localStorage.setItem('sp_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    const isDark = document.body.classList.contains('dark');
+    localStorage.setItem('sp_theme', isDark ? 'dark' : 'light');
+    document.getElementById('theme-color-meta').setAttribute('content', isDark ? '#121212' : '#f8fafc');
 });
-if (localStorage.getItem('sp_theme') === 'dark') document.body.classList.add('dark');
+
+// INITIAL THEME LOAD
+if (localStorage.getItem('sp_theme') === 'dark') {
+    document.body.classList.add('dark');
+    document.getElementById('theme-color-meta').setAttribute('content', '#121212');
+}
 
 // BOOTSTRAP APP
 document.addEventListener('DOMContentLoaded', () => {
