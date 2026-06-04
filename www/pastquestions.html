@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
   <title>Past questions — Scholars Prep</title>
+  <script>
+    if (localStorage.getItem('sp_theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#121212';
+    } else {
+      document.documentElement.style.backgroundColor = '#f8fafc';
+    }
+  </script>
   <link rel="icon" type="image" href="favicon1.png">
   
   <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
@@ -141,7 +149,7 @@
           <ion-buttons slot="start">
             <ion-button color="primary" onclick="goBackToDashboard()"><ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon></ion-button>
           </ion-buttons>
-          <span slot="start" style="font-weight: 800; color: var(--ion-color-primary); font-size: 16px;">Nexus Study</span>
+          <span slot="start" style="font-weight: 800; color: var(--ion-color-primary); font-size: 16px;">Study</span>
         </ion-toolbar>
       </ion-header>
       
@@ -186,12 +194,21 @@
       <div class="custom-modal">
         <ion-icon name="lock-closed" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
         <h3 style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Activate Full Access</h3>
-        <p style="margin: 0 0 20px; color: var(--muted); line-height: 1.5; font-size: 14px;">Unlock full access to view all questions and the Nexus AI Tutor.</p>
+        <p style="margin: 0 0 20px; color: var(--muted); line-height: 1.5; font-size: 14px;">Activate full access to view all questions and the Nexus AI Tutor.</p>
         
         <ion-button class="green-outline-btn" expand="block" onclick="triggerPutmePaystack()">
             <ion-icon name="card-outline" slot="start"></ion-icon> Activate Now
         </ion-button>
-        <ion-button class="green-outline-btn" expand="block" style="margin-top: 10px;" onclick="document.getElementById('premiumModal').style.display='none'">Maybe Later</ion-button>
+        <ion-button class="green-outline-btn" expand="block" style="margin-top: 10px;" onclick="document.getElementById('premiumModal').style.display='none'">Cancel</ion-button>
+      </div>
+    </div>
+
+    <div class="overlay-modal" id="genericModal">
+      <div class="custom-modal">
+        <ion-icon id="genericModalIcon" name="information-circle-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
+        <h3 id="genericModalTitle" style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Notice</h3>
+        <p id="genericModalMessage" style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">Message</p>
+        <ion-button class="green-outline-btn" expand="block" onclick="document.getElementById('genericModal').style.display='none'">OK</ion-button>
       </div>
     </div>
 

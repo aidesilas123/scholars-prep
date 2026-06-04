@@ -104,8 +104,8 @@ async function loadSubjects() {
                     <ion-item lines="none" style="--background: transparent; border: 1.5px solid var(--ion-color-primary); border-radius: 8px;">
                         <ion-label position="stacked" style="color: var(--ion-color-primary);">Select Type</ion-label>
                         <ion-select id="type-${sub.code}" interface="popover" value="exam">
-                            <ion-select-option value="exam">Exam Questions</ion-select-option>
-                            <ion-select-option value="test">Test / CA</ion-select-option>
+                            <ion-select-option value="exam">Exam</ion-select-option>
+                            <ion-select-option value="test">Test</ion-select-option>
                         </ion-select>
                     </ion-item>
                     <div style="margin-top: 10px;">
@@ -159,6 +159,17 @@ window.loadPastQuestions = function() {
     
     switchView('view-questions', true);
     fetchQuestionsEngine(activeSubjectCode, yearOpt, typeOpt);
+};
+
+window.showGenericModal = function(title, message, isError = false) {
+    document.getElementById('genericModalTitle').innerText = title;
+    document.getElementById('genericModalMessage').innerText = message;
+    
+    const icon = document.getElementById('genericModalIcon');
+    icon.setAttribute('name', isError ? 'warning-outline' : 'checkmark-circle-outline');
+    icon.setAttribute('color', isError ? 'danger' : 'primary');
+    
+    document.getElementById('genericModal').style.display = 'flex';
 };
 
 // --- Questions & Paywall ---

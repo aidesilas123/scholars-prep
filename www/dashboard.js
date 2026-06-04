@@ -36,6 +36,7 @@ async function checkAppStatus() {
             if (endDate > new Date()) isPremium = true;
         }
 
+        // Hide "Activate App" card if switch is OFF or if user has paid
         const activateCard = document.getElementById('activateAppCard');
         if (activateCard && (!isSwitchActive || isPremium)) {
             activateCard.style.display = 'none';
@@ -63,9 +64,9 @@ async function fetchAndRenderCourses() {
 
     } catch (error) {
         console.error("Error fetching courses:", error);
-        grid.innerHTML = `<p style="grid-column: span 3; text-align: center; color: red;">Failed to load courses.</p>`;
+        grid.innerHTML = `<p style="grid-column: span 3; text-align: center; color: var(--muted); font-size: 14px;">No courses available.</p>`;
+        showGenericModal('Error', 'Failed to load courses. Please check your connection.', true);
     } 
-    
 }
 
 function renderCourseGrid(courseArray) {
@@ -81,7 +82,6 @@ function renderCourseGrid(courseArray) {
         const card = document.createElement('div');
         card.className = 'course-card';
         
-        // THE UPDATE: Route to the new details page and pass the course code in the URL
         card.onclick = () => window.location.href = `course-details.html?course=${course.code}`;
         
         const iconName = course.icon || 'book-outline';
@@ -118,20 +118,29 @@ function startCarousel() {
 }
 
 // --- 5. PREMIUM ACCESS GATEWAY & MODALS ---
-window.showAccessModal = function(intent = 'locked_feature') {
-    document.getElementById('accessModal').style.display = 'flex';
+
+// Generic clean modal for alerts and errors
+window.showGenericModal = function(title, message, isError = false) {
+    document.getElementById('genericModalTitle').innerText = title;
+    document.getElementById('genericModalMessage').innerText = message;
+    
+    const icon = document.getElementById('genericModalIcon');
+    icon.setAttribute('name', isError ? 'warning-outline' : 'checkmark-circle-outline');
+    icon.setAttribute('color', isError ? 'danger' : 'primary');
+    
+    document.getElementById('genericModal').style.display = 'flex';
 };
 
-window.checkPremiumAccess = function(targetPage) {
+// Directly bypass modal and open Paystack for specific tabs (like Nexus chat)
+window.checkPremiumAccessDirect = function(targetPage) {
     if (!isSwitchActive || isPremium) {
         window.location.href = targetPage;
         return;
     }
-    window.showAccessModal();
+    triggerPaystack();
 };
 
 window.triggerPaystack = function() {
-    document.getElementById('accessModal').style.display = 'none';
     const user = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
     
     const handler = PaystackPop.setup({
@@ -151,8 +160,8 @@ window.triggerPaystack = function() {
                 subscription_end: '2026-12-31' 
             }).then(() => {
                 hideLoading();
-                alert("Payment successful! Your app is fully activated."); 
-                window.location.reload();
+                showGenericModal("Success", "Payment successful! Your app is fully activated."); 
+                setTimeout(() => window.location.reload(), 2000);
             });
         },
         onClose: function() { }
@@ -189,17 +198,14 @@ window.confirmLogout = async function() {
 
 // THEME TOGGLE (Syncs Status Bar Theme Color)
 document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
-    document.body.classList.toggle('dark');
-    const isDark = document.body.classList.contains('dark');
+    const htmlElement = document.documentElement;
+    htmlElement.classList.toggle('dark');
+    document.body.classList.toggle('dark'); // Toggle body for consistency
+    
+    const isDark = htmlElement.classList.contains('dark');
     localStorage.setItem('sp_theme', isDark ? 'dark' : 'light');
     document.getElementById('theme-color-meta').setAttribute('content', isDark ? '#121212' : '#f8fafc');
 });
-
-// INITIAL THEME LOAD
-if (localStorage.getItem('sp_theme') === 'dark') {
-    document.body.classList.add('dark');
-    document.getElementById('theme-color-meta').setAttribute('content', '#121212');
-}
 
 // BOOTSTRAP APP
 document.addEventListener('DOMContentLoaded', async () => {
@@ -213,19 +219,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchAndRenderCourses()
     ]);
 
-    // 3. Force a 1.2-second delay so the user actually sees the loading state
+    // 3. Force a delay to let the loading state be visible before showing the UI
     setTimeout(() => {
         document.getElementById('skeleton-ui').style.display = 'none';
         
         const realUI = document.getElementById('real-ui');
         realUI.style.display = 'block';
         
-        // Optional: Smooth fade-in
         realUI.style.opacity = '0';
         realUI.style.transition = 'opacity 0.4s ease';
         setTimeout(() => { realUI.style.opacity = '1'; }, 50);
 
-        // Start the sliding animation ONLY after the UI is visible
         startCarousel(); 
     }, 1200); 
 });
+// --- HARDWARE EXIT BTN---
+document.addEventListener('backbutton', (e) => {
+    // Check if any other modal is open; if so, close it instead of asking to exit
+    const accessModal = document.getElementById('accessModal');
+    const logoutModal = document.getElementById('logoutModal');
+    const genericModal = document.getElementById('genericModal');
+    
+    if (accessModal.style.display === 'flex') {
+        accessModal.style.display = 'none';
+        return;
+    }
+    if (logoutModal.style.display === 'flex') {
+        logoutModal.style.display = 'none';
+        return;
+    }
+    if (genericModal.style.display === 'flex') {
+        genericModal.style.display = 'none';
+        return;
+    }
+
+    // If no modals are open, show the exit confirmation
+    document.getElementById('exitModal').style.display = 'flex';
+}, false);
+
+window.confirmExitApp = function() {
+    // This is the standard Capacitor/Cordova command to cleanly kill the application
+    if (navigator.app) {
+        navigator.app.exitApp();
+    } else if (navigator.device) {
+        navigator.device.exitApp();
+    } else {
+        window.close();
+    }
+};

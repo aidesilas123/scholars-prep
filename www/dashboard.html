@@ -5,7 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
   <title>Scholars Prep — Dashboard</title>
+  <script>
+    if (localStorage.getItem('sp_theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#121212';
+    } else {
+      document.documentElement.style.backgroundColor = '#f8fafc';
+    }
+  </script>
   <link rel="icon" type="image" href="favicon1.png">
+
+  <script>
+    if (localStorage.getItem('sp_theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
   
   <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
   <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
@@ -24,13 +38,14 @@
       --ion-color-primary: #044908;
     }
 
-    body.dark {
+    html.dark, html.dark body.dark {
       --background: #121212;
       --card-bg: #1e1e1e;
       --ion-text-color: #ffffff;
       --ion-background-color: #121212;
       --ion-toolbar-background: #121212;
       --ion-tab-bar-background: #121212;
+      background-color: #121212 !important;
     }
 
     html, body {
@@ -54,7 +69,7 @@
       --border-radius: 8px;
       font-weight: 600;
     }
-    body.dark .green-outline-btn { --color: #ffffff; }
+    html.dark .green-outline-btn { --color: #ffffff; }
 
     /* COURSE GRID - 3 columns, more spacing */
     .course-grid {
@@ -281,7 +296,7 @@
             <ion-label color="primary">Home</ion-label>
           </ion-tab-button>
 
-          <ion-tab-button tab="nexus" onclick="window.location.href='chat.html'">
+          <ion-tab-button tab="nexus" onclick="checkPremiumAccessDirect('chat.html')">
             <ion-icon name="planet-outline" color="primary"></ion-icon>
             <ion-label color="primary">Nexus</ion-label>
           </ion-tab-button>
@@ -307,6 +322,15 @@
       </div>
     </div>
 
+    <div class="overlay-modal" id="genericModal">
+      <div class="custom-modal">
+        <ion-icon id="genericModalIcon" name="information-circle-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
+        <h3 id="genericModalTitle" style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Notice</h3>
+        <p id="genericModalMessage" style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">Message</p>
+        <ion-button class="green-outline-btn" expand="block" onclick="document.getElementById('genericModal').style.display='none'">OK</ion-button>
+      </div>
+    </div>
+
     <div class="overlay-modal" id="logoutModal">
       <div class="custom-modal">
         <h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Log Out</h3>
@@ -318,17 +342,19 @@
       </div>
     </div>
 
-    <div class="overlay-modal" id="accessModal">
+    
+    <div class="overlay-modal" id="exitModal">
       <div class="custom-modal">
-        <ion-icon name="lock-closed" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
-        <h3 style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Access Denied</h3>
-        <p style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">You need a premium subscription to access this feature.</p>
-        <ion-button class="green-outline-btn" expand="block" onclick="triggerPaystack()">
-            <ion-icon name="card-outline" slot="start"></ion-icon> Activate App
-        </ion-button>
-        <ion-button class="green-outline-btn" expand="block" style="margin-top: 10px;" onclick="document.getElementById('accessModal').style.display='none'">Cancel</ion-button>
+        <ion-icon name="exit-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
+        <h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Exit App</h3>
+        <p style="margin: 0 0 24px; color: var(--muted); font-size: 15px;">Are you sure you want to close Scholars Prep?</p>
+        <div style="display: flex; justify-content: space-between; gap: 10px;">
+          <ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="document.getElementById('exitModal').style.display='none'">CANCEL</ion-button>
+          <ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="confirmExitApp()">YES</ion-button>
+        </div>
       </div>
     </div>
+
   </ion-app>
 
   <script defer src="dashboard.js"></script>

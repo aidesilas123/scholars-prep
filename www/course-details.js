@@ -181,7 +181,7 @@ window.launchFastPass = function(destination) {
         return;
     }
 
-    showLoading('Routing...');
+    showLoading('Loading...');
 
     setTimeout(() => {
         // Construct the URLs with the query parameters and the autoStart trigger

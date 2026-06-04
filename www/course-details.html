@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
   <title>Scholars Prep — Details</title>
+  <script>
+    if (localStorage.getItem('sp_theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#121212';
+    } else {
+      document.documentElement.style.backgroundColor = '#f8fafc';
+    }
+  </script>
   <link rel="icon" type="image" href="favicon1.png">
   
   <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
