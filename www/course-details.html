@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
+  <title>Scholars Prep — Details</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --background: #f8fafc;
+      --card-bg: #ffffff;
+      --accent: #044908;
+      --accent-dark: #02270a;
+      --muted: #8f96a3;
+      --ion-color-primary: #044908;
+    }
+
+    body.dark {
+      --background: #121212;
+      --card-bg: #1e1e1e;
+      --ion-text-color: #ffffff;
+      --ion-background-color: #121212;
+      --ion-toolbar-background: #121212;
+    }
+
+    html, body {
+      height: 100%; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background-color: var(--background) !important; 
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: none; 
+      -webkit-tap-highlight-color: transparent; 
+      touch-action: pan-x pan-y; 
+    }
+
+    /* HUB TOP SECTION (Course Box + Dropdowns) */
+    .control-hub-box {
+      background: var(--card-bg);
+      border: 1.5px solid var(--ion-color-primary); 
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      gap: 15px;
+    }
+
+    .course-mini-card {
+      border: 1.5px solid var(--ion-color-primary); 
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100px;
+      min-height: 140px;
+    }
+    .course-mini-card ion-icon { font-size: 32px; color: var(--ion-color-primary); margin-bottom: 8px; }
+    .course-mini-card span { font-size: 13px; font-weight: bold; color: var(--ion-text-color); }
+
+    .dropdown-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      width: 100%;
+    }
+
+    .green-dropdown {
+      --background: transparent;
+      --border-color: var(--ion-color-primary);
+      --border-style: solid;
+      --border-width: 1.5px;
+      --border-radius: 8px;
+      --padding-start: 12px;
+      margin: 0;
+    }
+
+    .green-dropdown ion-select {
+      width: 100%;
+      color: var(--ion-text-color);
+      font-weight: 600;
+      font-size: 14px;
+    }
+    select.green-select:disabled { opacity: 0.5; }
+
+    /* ACTION BAR SECTION */
+    .action-bar-box {
+      background: var(--card-bg);
+      border: 1.5px solid var(--ion-color-primary); 
+      border-radius: 16px;
+      padding: 15px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .action-btn {
+      background: transparent;
+      border: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--ion-color-primary);
+      font-weight: bold;
+      font-size: 12px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .action-btn:active { transform: scale(0.95); }
+    .action-btn ion-icon { font-size: 28px; }
+    body.dark .action-btn { color: #ffffff; }
+
+    /* RELATED COURSES GRID */
+    .section-title {
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--ion-text-color);
+      margin-bottom: 15px;
+    }
+
+    .course-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding-bottom: 40px;
+    }
+
+    .course-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--ion-color-primary); 
+      border-radius: 12px;
+      padding: 20px 5px;
+      min-height: 180px; /* Your requested 180px height */
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      transition: transform 0.2s;
+    }
+    .course-card:active { transform: scale(0.95); }
+    .course-card ion-icon { font-size: 32px; color: var(--ion-color-primary); margin-bottom: 8px; }
+    .course-card span { font-size: 13px; font-weight: bold; color: var(--ion-text-color); }
+
+    /* LOADING SPINNER */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
+  </style>
+</head>
+<body>
+
+  <ion-app>
+    <div class="ion-page">
+      
+      <ion-header class="ion-no-border" style="background: var(--background);">
+        <ion-toolbar style="--background: transparent;">
+          <ion-buttons slot="start">
+            <ion-button color="primary" onclick="goBackToDashboard()">
+              <ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+          <span slot="start" style="font-weight: 800; color: var(--ion-color-primary); font-size: 16px;">Details</span>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding" style="--background: var(--background);">
+        
+        <div id="skeleton-ui">
+          <ion-skeleton-text animated style="height: 150px; border-radius: 16px; margin-bottom: 20px;"></ion-skeleton-text>
+          <ion-skeleton-text animated style="height: 80px; border-radius: 16px; margin-bottom: 30px;"></ion-skeleton-text>
+          <div class="course-grid">
+            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
+          </div>
+        </div>
+
+        <div id="real-ui" style="display: none;">
+          
+          <div class="control-hub-box">
+            <div class="course-mini-card">
+              <ion-icon id="courseIcon" name="book-outline"></ion-icon>
+              <span id="courseCodeText">-----</span>
+            </div>
+            
+            <div class="dropdown-group">
+              <ion-item class="green-dropdown" lines="none">
+                <ion-select id="yearSelect" interface="popover" placeholder="Loading Years..." justify="space-between">
+                  </ion-select>
+              </ion-item>
+              
+              <ion-item class="green-dropdown" lines="none">
+                <ion-select id="typeSelect" interface="popover" value="exam" justify="space-between">
+                  <ion-select-option value="exam">Exam</ion-select-option>
+                  <ion-select-option value="test">Test</ion-select-option>
+                </ion-select>
+              </ion-item>
+            </div>
+          </div> <div class="action-bar-box">
+            <button class="action-btn" onclick="launchFastPass('cbt')">
+              <ion-icon name="laptop-outline"></ion-icon>
+              <span>Take CBT</span>
+            </button>
+            <button class="action-btn" onclick="launchFastPass('pastquestions')">
+              <ion-icon name="planet-outline"></ion-icon>
+              <span>Study</span>
+            </button>
+            <button class="action-btn" onclick="launchFastPass('report')">
+              <ion-icon name="warning-outline"></ion-icon>
+              <span>Report</span>
+            </button>
+          </div>
+
+          <div class="section-title">Related Courses</div>
+          <div class="course-grid" id="relatedGridContainer">
+            </div>
+
+        </div>
+
+      </ion-content>
+    </div>
+
+    <div class="loading-overlay" id="globalLoading">
+      <div class="page-loading">
+        <ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner>
+        <div style="font-size: 18px; font-weight: 600; color: white;" id="loadingText">Processing...</div>
+      </div>
+    </div>
+
+  </ion-app>
+
+  <script defer src="course-details.js"></script>
+</body>
+</html>

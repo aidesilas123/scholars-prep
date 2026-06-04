@@ -80,7 +80,9 @@ function renderCourseGrid(courseArray) {
     courseArray.forEach(course => {
         const card = document.createElement('div');
         card.className = 'course-card';
-        card.onclick = () => window.location.href = `cbt.html?course=${course.id}`;
+        
+        // THE UPDATE: Route to the new details page and pass the course code in the URL
+        card.onclick = () => window.location.href = `course-details.html?course=${course.code}`;
         
         const iconName = course.icon || 'book-outline';
 
