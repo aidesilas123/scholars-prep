@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
+  <title>Manage Courses — Scholars Prep</title>
+
+  <script>
+    const savedTheme = localStorage.getItem('sp_theme');
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#121212';
+    } else {
+      document.documentElement.style.backgroundColor = '#f8fafc';
+    }
+  </script>
+
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root { --background: #f8fafc; --card-bg: #ffffff; --ion-color-primary: #044908; --muted: #8f96a3; }
+    html.dark, html.dark body.dark { --background: #121212; --card-bg: #1e1e1e; --ion-text-color: #ffffff; background-color: #121212 !important; }
+    html, body { height: 100%; margin: 0; background-color: var(--background) !important; font-family: Inter, sans-serif; }
+
+    .course-item {
+      --background: var(--card-bg);
+      --border-radius: 12px;
+      --padding-start: 16px;
+      --inner-padding-end: 8px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(128,128,128,0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    
+    .section-title { font-weight: 800; font-size: 16px; color: var(--ion-text-color); margin: 20px 0 10px 10px; }
+  </style>
+</head>
+<body>
+
+  <ion-app>
+    <div class="ion-page">
+      <ion-header class="ion-no-border" style="background: var(--background);">
+        <ion-toolbar style="--background: transparent; padding-top: 5px;">
+          <ion-buttons slot="start">
+            <ion-back-button default-href="dashboard.html" color="primary"></ion-back-button>
+          </ion-buttons>
+          <ion-title style="font-weight: 800; font-size: 16px;">Choose Your Courses</ion-title>
+          <ion-buttons slot="end">
+            <ion-button color="primary" style="font-weight: bold;" onclick="saveCoursesAndExit()">Done</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+        <div style="padding: 0 16px 10px 16px;">
+          <ion-searchbar id="searchBar" placeholder="Search..." style="--border-radius: 12px; padding: 0;"></ion-searchbar>
+        </div>
+      </ion-header>
+
+      <ion-content class="ion-padding" style="--background: var(--background);">
+        
+        <div id="loadingSpinner" style="text-align: center; margin-top: 30px;">
+            <ion-spinner name="crescent" color="primary"></ion-spinner>
+        </div>
+
+        <div id="contentArea" style="display: none;">
+            <div class="section-title">Available Courses</div>
+            <ion-list lines="none" style="background: transparent;" id="availableList"></ion-list>
+
+            <div class="section-title">Added Courses <span id="addedCount" style="color: var(--muted); font-size: 13px; font-weight: normal; margin-left: 5px;">0/13</span></div>
+            <ion-list lines="none" style="background: transparent;" id="addedList"></ion-list>
+        </div>
+
+      </ion-content>
+    </div>
+  </ion-app>
+
+  <script defer src="manage-courses.js"></script>
+</body>
+</html>

@@ -5,19 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
   <title>Scholars Prep — Dashboard</title>
+  <link rel="icon" type="image" href="favicon1.png">
+
   <script>
-    if (localStorage.getItem('sp_theme') === 'dark') {
+    const savedTheme = localStorage.getItem('sp_theme');
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
       document.documentElement.classList.add('dark');
       document.documentElement.style.backgroundColor = '#121212';
     } else {
       document.documentElement.style.backgroundColor = '#f8fafc';
-    }
-  </script>
-  <link rel="icon" type="image" href="favicon1.png">
-
-  <script>
-    if (localStorage.getItem('sp_theme') === 'dark') {
-      document.documentElement.classList.add('dark');
     }
   </script>
   
@@ -36,6 +33,7 @@
       --accent-dark: #02270a;
       --muted: #8f96a3;
       --ion-color-primary: #044908;
+      --ion-color-danger: #d32f2f;
     }
 
     html.dark, html.dark body.dark {
@@ -59,7 +57,6 @@
 
     ion-tab-bar { border-top: 1px solid rgba(128,128,128,0.1); }
 
-    /* ALL BUTTONS: Transparent background, dark green border */
     .green-outline-btn {
       --background: transparent;
       --border-color: var(--accent-dark);
@@ -71,13 +68,34 @@
     }
     html.dark .green-outline-btn { --color: #ffffff; }
 
-    /* COURSE GRID - 3 columns, more spacing */
+    /* CUSTOMIZE DASHBOARD BOX */
+    .customize-box {
+      width: 80%;
+      height: 180px;
+      margin: 20px auto;
+      background: var(--card-bg);
+      border: 2px dashed var(--ion-color-primary);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--ion-color-primary);
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      transition: transform 0.2s;
+    }
+    .customize-box:active { transform: scale(0.95); }
+    .customize-box ion-icon { font-size: 48px; margin-bottom: 10px; }
+    .customize-box span { font-weight: bold; font-size: 15px; }
+
+    /* COURSE GRID */
     .course-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       padding-bottom: 20px;
-      min-height: 180px;
     }
 
     .course-card {
@@ -94,135 +112,95 @@
       justify-content: center;
       transition: transform 0.2s;
       min-height: 180px;
-      min-width: auto;
+      position: relative; /* Needed for the delete badge */
     }
     .course-card:active { transform: scale(0.95); }
-    
-    .course-card ion-icon {
-      font-size: 32px;
-      color: var(--ion-color-primary);
-      margin-bottom: 8px;
+    .course-card ion-icon { font-size: 32px; color: var(--ion-color-primary); margin-bottom: 8px; }
+    .course-card span { font-size: 13px; font-weight: bold; color: var(--ion-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+    /* JIGGLE MODE CSS */
+    @keyframes jiggle {
+      0% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+      100% { transform: rotate(-2deg); }
     }
-    .course-card span {
-      font-size: 13px;
+    .jiggling { animation: jiggle 0.3s infinite; }
+    
+    .delete-badge {
+      display: none;
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--ion-color-danger);
+      color: white;
+      border-radius: 50%;
+      width: 26px;
+      height: 26px;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
       font-weight: bold;
-      color: var(--ion-text-color);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      width: 100%;
+      z-index: 10;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
+    .jiggling .delete-badge { display: flex; }
 
-    /* 90% WIDTH SLIDER CAROUSEL (REDUCED HEIGHT) */
-    .slider-container {
-      width: 90%;
-      margin: 10px auto; 
-      overflow: hidden;
-      border-radius: 12px;
-    }
+    .section-title { font-weight: 800; font-size: 18px; color: var(--ion-text-color); margin: 25px 0 15px 0; }
 
-    .slider-track {
-      display: flex;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
-      gap: 10px;
-      padding-bottom: 5px;
-    }
+    /* SLIDER */
+    .slider-container { width: 90%; margin: 10px auto; overflow: hidden; border-radius: 12px; }
+    .slider-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; gap: 10px; padding-bottom: 5px; }
     .slider-track::-webkit-scrollbar { display: none; }
-
-    .slide-card {
-      min-width: 100%;
-      scroll-snap-align: center;
-      margin: 0;
-      background: var(--card-bg);
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-      border: 1px solid var(--ion-color-primary); 
-      border-radius: 12px;
-      padding: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .slide-card-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .slide-card-left ion-icon {
-      font-size: 32px;
-      color: var(--ion-color-primary);
-    }
-    
+    .slide-card { min-width: 100%; scroll-snap-align: center; margin: 0; background: var(--card-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.08); border: 1px solid var(--ion-color-primary); border-radius: 12px; padding: 12px; display: flex; align-items: center; justify-content: space-between; }
+    .slide-card-left { display: flex; align-items: center; gap: 12px; }
+    .slide-card-left ion-icon { font-size: 32px; color: var(--ion-color-primary); }
     .slide-card-text h3 { margin: 0; font-size: 15px; font-weight: bold; color: var(--ion-text-color); }
     .slide-card-text p { margin: 2px 0 0 0; font-size: 11px; color: var(--muted); }
 
-    /* MODALS & OVERLAYS */
+    /* MODALS */
     .loading-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
     .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
     .overlay-modal { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px); }
     .custom-modal { background: var(--card-bg); border-radius: 14px; padding: 24px; width: min(92vw, 350px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
   </style>
 </head>
-<body>
+<body onclick="cancelJiggleMode()">
 
   <ion-app>
     <ion-menu side="end" content-id="main-content">
-      <ion-header class="ion-no-border">
-        <ion-toolbar>
-          <ion-title>Menu</ion-title>
-        </ion-toolbar>
-      </ion-header>
+      <ion-header class="ion-no-border"><ion-toolbar><ion-title>Menu</ion-title></ion-toolbar></ion-header>
       <ion-content>
         <ion-list lines="none">
-          <ion-item button onclick="window.location.href='profile.html'">
-            <ion-icon name="person-circle-outline" slot="start" color="primary"></ion-icon>
-            <ion-label>Profile</ion-label>
-          </ion-item>
-          <ion-item button onclick="window.location.href='settings.html'">
-            <ion-icon name="settings-outline" slot="start" color="primary"></ion-icon>
-            <ion-label>Settings</ion-label>
-          </ion-item>
-          <ion-item button onclick="window.location.href='feedback.html'">
-            <ion-icon name="bug-outline" slot="start" color="primary"></ion-icon>
-            <ion-label>Report Issue</ion-label>
-          </ion-item>
-          <ion-item button id="themeToggleBtn">
-            <ion-icon name="moon-outline" slot="start" color="primary"></ion-icon>
-            <ion-label>Toggle Dark Mode</ion-label>
-          </ion-item>
-          <ion-item button onclick="openLogoutModal()" style="margin-top: 30px; border: 1px solid var(--accent-dark); border-radius: 8px; margin-inline: 16px;">
-            <ion-icon name="log-out-outline" slot="start" color="primary"></ion-icon>
-            <ion-label color="primary" style="font-weight: bold;">Sign out</ion-label>
-          </ion-item>
+          <ion-item button onclick="window.location.href='profile.html'"><ion-icon name="person-circle-outline" slot="start" color="primary"></ion-icon><ion-label>Profile</ion-label></ion-item>
+          <ion-item button onclick="window.location.href='settings.html'"><ion-icon name="settings-outline" slot="start" color="primary"></ion-icon><ion-label>Settings</ion-label></ion-item>
+          <ion-item button onclick="window.location.href='feedback.html'"><ion-icon name="bug-outline" slot="start" color="primary"></ion-icon><ion-label>Report Issue</ion-label></ion-item>
+          <ion-item button id="themeToggleBtn"><ion-icon name="moon-outline" slot="start" color="primary"></ion-icon><ion-label>Toggle Dark Mode</ion-label></ion-item>
+          <ion-item button onclick="openLogoutModal()" style="margin-top: 30px; border: 1px solid var(--accent-dark); border-radius: 8px; margin-inline: 16px;"><ion-icon name="log-out-outline" slot="start" color="primary"></ion-icon><ion-label color="primary" style="font-weight: bold;">Sign out</ion-label></ion-item>
         </ion-list>
       </ion-content>
     </ion-menu>
 
     <div class="ion-page" id="main-content">
-      
       <ion-header class="ion-no-border" style="background: var(--background);">
         <ion-toolbar style="--background: transparent;">
           <img src="favicon1.png" alt="Logo" style="height: 32px; border-radius: 50%; margin-left: 16px; margin-right: 8px; vertical-align: middle;" slot="start">
           <span slot="start" style="font-weight: 800; color: var(--ion-color-primary); font-size: 15px;">Scholars Prep</span>
           
           <div slot="end" style="display: flex; align-items: center; padding-right: 8px;">
-            <ion-button fill="clear" color="primary" onclick="window.location.href='history.html'">
-              <ion-icon name="time-outline" style="font-size: 24px;"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" color="primary" onclick="window.location.href='notifications.html'">
-              <ion-icon name="notifications-outline" style="font-size: 24px;"></ion-icon>
-            </ion-button>
+            <ion-button fill="clear" color="primary" onclick="window.location.href='history.html'"><ion-icon name="time-outline" style="font-size: 24px;"></ion-icon></ion-button>
+            <ion-button fill="clear" color="primary" onclick="window.location.href='notifications.html'"><ion-icon name="notifications-outline" style="font-size: 24px;"></ion-icon></ion-button>
             <ion-menu-button color="primary"></ion-menu-button>
           </div>
         </ion-toolbar>
 
+        <div style="padding: 0 16px 5px 16px; display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-weight: 800; margin: 0; font-size: 24px; color: var(--ion-text-color);">Welcome, <span id="candidateName">Student</span> 👋</h2>
+          <ion-button fill="clear" color="primary" id="addCourseHeaderBtn" style="display: none;" onclick="window.location.href='manage-courses.html'">
+            <ion-icon name="add-circle" style="font-size: 32px;"></ion-icon>
+          </ion-button>
+        </div>
         <div style="padding: 0 16px 5px 16px;">
-          <h2 style="font-weight: 800; margin-top: 0px; font-size: 24px; color: var(--ion-text-color);">Welcome, <span id="candidateName">Student</span> 👋</h2>
-          <ion-searchbar id="courseSearch" placeholder="Search courses..." style="--border-radius: 12px; padding: 0; margin-top: 10px; --icon-color: var(--accent-dark);"></ion-searchbar>
+            <ion-searchbar id="courseSearch" placeholder="Search courses..." style="--border-radius: 12px; padding: 0; margin-top: 5px; --icon-color: var(--accent-dark);"></ion-searchbar>
         </div>
       </ion-header>
 
@@ -233,125 +211,76 @@
             <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
             <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
             <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
-            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
-            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
-            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
-            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
-            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
-            <ion-skeleton-text animated style="height: 180px; border-radius: 12px;"></ion-skeleton-text>
           </div>
         </div>
 
         <div id="real-ui" style="display: none;">
-          <div class="course-grid" id="courseGridContainer">
-            </div>
+          
+          <div id="customizeBox" class="customize-box" onclick="window.location.href='manage-courses.html'">
+            <ion-icon name="add-circle-outline"></ion-icon>
+            <span>Customize your dashboard<br><small style="font-weight: normal; color: var(--muted);">Add up to 13 courses</small></span>
+          </div>
+
+          <div id="myCoursesWrapper" style="display: none;">
+            <div class="section-title">My Dashboard <span id="courseCountText" style="color: var(--muted); font-size: 13px; font-weight: normal; float: right; margin-top: 4px;"></span></div>
+            <div class="course-grid" id="myCoursesGridContainer"></div>
+          </div>
+
+          <div class="section-title" id="availableTitle">Available Courses</div>
+          <div class="course-grid" id="availableCoursesGridContainer"></div>
+
         </div>
 
       </ion-content>
 
       <ion-footer class="ion-no-border" style="background: var(--background);">
-        
         <div class="slider-container">
           <div class="slider-track" id="sliderTrack">
-            
            <div id="activateAppCard" class="slide-card" onclick="triggerPaystack()" style="cursor: pointer;">
-              <div class="slide-card-left">
-                <ion-icon name="key-outline"></ion-icon>
-                <div class="slide-card-text">
-                  <h3>Activate App</h3>
-                  <p>Unlock full Access & AI.</p>
-                </div>
-              </div>
+              <div class="slide-card-left"><ion-icon name="key-outline"></ion-icon><div class="slide-card-text"><h3>Activate App</h3><p>Unlock full Access & AI.</p></div></div>
               <ion-button class="green-outline-btn" size="small">Activate</ion-button>
             </div>
-
             <div class="slide-card" onclick="window.open('https://whatsapp.com/channel/0029VbBk1jU1CYoaefZvZs3m', '_blank')" style="cursor: pointer;">
-              <div class="slide-card-left">
-                <ion-icon name="logo-whatsapp"></ion-icon>
-                <div class="slide-card-text">
-                  <h3>WhatsApp</h3>
-                  <p>Join for instant updates.</p>
-                </div>
-              </div>
+              <div class="slide-card-left"><ion-icon name="logo-whatsapp"></ion-icon><div class="slide-card-text"><h3>WhatsApp</h3><p>Join for instant updates.</p></div></div>
               <ion-button class="green-outline-btn" size="small">Join</ion-button>
             </div>
-
             <div class="slide-card" onclick="window.location.href='leaderboard.html'" style="cursor: pointer;">
-              <div class="slide-card-left">
-                <ion-icon name="trophy-outline"></ion-icon>
-                <div class="slide-card-text">
-                  <h3>Leaderboard</h3>
-                  <p>View Top Scorers & Prizes.</p>
-                </div>
-              </div>
+              <div class="slide-card-left"><ion-icon name="trophy-outline"></ion-icon><div class="slide-card-text"><h3>Leaderboard</h3><p>View Top Scorers & Prizes.</p></div></div>
               <ion-button class="green-outline-btn" size="small">View</ion-button>
             </div>
-
           </div>
         </div>
 
         <ion-tab-bar id="bottomNavBar">
-          <ion-tab-button tab="home" href="dashboard.html" class="tab-selected">
-            <ion-icon name="home" color="primary"></ion-icon>
-            <ion-label color="primary">Home</ion-label>
+          <ion-tab-button tab="home" href="dashboard.html" class="tab-selected"><ion-icon name="home" color="primary"></ion-icon><ion-label color="primary">Home</ion-label></ion-tab-button>
+          
+          <ion-tab-button tab="nexus" onclick="checkPremiumAccess('chat.html')">
+            <ion-icon name="planet-outline" color="primary"></ion-icon><ion-label color="primary">Nexus</ion-label>
           </ion-tab-button>
-
-          <ion-tab-button tab="nexus" onclick="checkPremiumAccessDirect('chat.html')">
-            <ion-icon name="planet-outline" color="primary"></ion-icon>
-            <ion-label color="primary">Nexus</ion-label>
-          </ion-tab-button>
-
-          <ion-tab-button tab="exam" onclick="window.location.href='mock-exam.html'">
-            <ion-icon name="timer-outline" color="primary"></ion-icon>
-            <ion-label color="primary">Mock Exam</ion-label>
-          </ion-tab-button>
-
-          <ion-tab-button tab="cbt" onclick="window.location.href='cbt.html'">
-            <ion-icon name="laptop-outline" color="primary"></ion-icon>
-            <ion-label color="primary">CBT</ion-label>
-          </ion-tab-button>
+          
+          <ion-tab-button tab="exam" onclick="window.location.href='mock-exam.html'"><ion-icon name="timer-outline" color="primary"></ion-icon><ion-label color="primary">Mock Exam</ion-label></ion-tab-button>
+          <ion-tab-button tab="cbt" onclick="window.location.href='cbt.html'"><ion-icon name="laptop-outline" color="primary"></ion-icon><ion-label color="primary">CBT</ion-label></ion-tab-button>
         </ion-tab-bar>
-        
       </ion-footer>
     </div>
 
-    <div class="loading-overlay" id="globalLoading">
-      <div class="page-loading">
-        <ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner>
-        <div style="font-size: 18px; font-weight: 600; color: white;" id="loadingText">Processing...</div>
-      </div>
-    </div>
+    <div class="loading-overlay" id="globalLoading"><div class="page-loading"><ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner><div style="font-size: 18px; font-weight: 600; color: white;" id="loadingText">Processing...</div></div></div>
 
-    <div class="overlay-modal" id="genericModal">
-      <div class="custom-modal">
-        <ion-icon id="genericModalIcon" name="information-circle-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
-        <h3 id="genericModalTitle" style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Notice</h3>
-        <p id="genericModalMessage" style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">Message</p>
-        <ion-button class="green-outline-btn" expand="block" onclick="document.getElementById('genericModal').style.display='none'">OK</ion-button>
-      </div>
-    </div>
+    <div class="overlay-modal" id="genericModal"><div class="custom-modal"><ion-icon id="genericModalIcon" name="information-circle-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon><h3 id="genericModalTitle" style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Notice</h3><p id="genericModalMessage" style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">Message</p><ion-button class="green-outline-btn" expand="block" onclick="document.getElementById('genericModal').style.display='none'">OK</ion-button></div></div>
 
-    <div class="overlay-modal" id="logoutModal">
-      <div class="custom-modal">
-        <h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Log Out</h3>
-        <p style="margin: 0 0 24px; color: var(--muted); font-size: 15px;">Are you sure you want to log out?</p>
-        <div style="display: flex; justify-content: space-between; gap: 10px;">
-          <ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="document.getElementById('logoutModal').style.display='none'">CANCEL</ion-button>
-          <ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="confirmLogout()">YES</ion-button>
-        </div>
-      </div>
-    </div>
+    <div class="overlay-modal" id="logoutModal"><div class="custom-modal"><h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Log Out</h3><p style="margin: 0 0 24px; color: var(--muted); font-size: 15px;">Are you sure you want to log out?</p><div style="display: flex; justify-content: space-between; gap: 10px;"><ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="document.getElementById('logoutModal').style.display='none'">CANCEL</ion-button><ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="confirmLogout()">YES</ion-button></div></div></div>
 
-    
-    <div class="overlay-modal" id="exitModal">
+    <div class="overlay-modal" id="exitModal"><div class="custom-modal"><ion-icon name="exit-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon><h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Exit App</h3><p style="margin: 0 0 24px; color: var(--muted); font-size: 15px;">Are you sure you want to close Scholars Prep?</p><div style="display: flex; justify-content: space-between; gap: 10px;"><ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="document.getElementById('exitModal').style.display='none'">CANCEL</ion-button><ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="confirmExitApp()">YES</ion-button></div></div></div>
+
+    <div class="overlay-modal" id="accessModal">
       <div class="custom-modal">
-        <ion-icon name="exit-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
-        <h3 style="margin: 0 0 12px; font-weight: bold; font-size: 20px; color: var(--ion-text-color);">Exit App</h3>
-        <p style="margin: 0 0 24px; color: var(--muted); font-size: 15px;">Are you sure you want to close Scholars Prep?</p>
-        <div style="display: flex; justify-content: space-between; gap: 10px;">
-          <ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="document.getElementById('exitModal').style.display='none'">CANCEL</ion-button>
-          <ion-button class="green-outline-btn" expand="block" style="flex:1" onclick="confirmExitApp()">YES</ion-button>
-        </div>
+        <ion-icon name="lock-closed" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
+        <h3 style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Activation Needed</h3>
+        <p style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">You need an active subscription to access the Nexus AI Tutor.</p>
+        <ion-button class="green-outline-btn" expand="block" onclick="triggerPaystack()">
+            <ion-icon name="card-outline" slot="start"></ion-icon> Activate App
+        </ion-button>
+        <ion-button class="green-outline-btn" expand="block" style="margin-top: 10px;" onclick="document.getElementById('accessModal').style.display='none'">Cancel</ion-button>
       </div>
     </div>
 
