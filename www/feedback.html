@@ -1,225 +1,152 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Send Feedback - Scholars Prep</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
+  <title>Report Issue — Scholars Prep</title>
   <link rel="icon" type="image" href="favicon1.png">
-  <style id="iron-cloak">
-    html, body { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-</style>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    (function() {
-        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
+  <script>
+    const savedTheme = localStorage.getItem('sp_theme');
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#121212';
+    } else {
+      document.documentElement.style.backgroundColor = '#f8fafc';
+    }
+  </script>
+  
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        async function strictGuard() {
-            const ua = navigator.userAgent.toLowerCase();
-            const platform = navigator.platform.toLowerCase();
-            
-            // 🛡️ THE TRIPLE THREAT CHECK
-            const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-            const isApp = ua.includes('wv') || window.Capacitor;
-            const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-            
-            // Strictly block if it smells like a PC (Windows, Mac, Linux)
-            const isPC = /win|mac|linux/.test(platform);
-
-            // 1. Instant Desktop Kick (No DB wait)
-            if (isPC && !isApp) {
-                window.location.replace('/');
-                return;
-            }
-
-            // 2. Database Check
-            const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
-
-            // Logic: If mobile mode is ON, only allow REAL mobile devices
-            if (data && data.mobile_only_mode) {
-                if (isMobileOS || isApp || (hasTouch && !isPC)) {
-                    // VALID MOBILE: Unlock the page
-                    unlock();
-                } else {
-                    // BYPASS ATTEMPT: Kick to index
-                    window.location.replace('/');
-                }
-            } else {
-                // MAINTENANCE OFF: Unlock for everyone
-                unlock();
-            }
-        }
-
-        function unlock() {
-            const cloak = document.getElementById('iron-cloak');
-            if (cloak) cloak.remove();
-            document.documentElement.style.display = 'block';
-        }
-
-        strictGuard();
-    })();
-</script>
   <style>
     :root {
-      --primary: #063b08;
-      --secondary: #083502;
-      --accent: #4CAF50;
-      --glass: rgba(255, 255, 255, 0.1);
-      --glass-hover: rgba(255, 255, 255, 0.15);
+      --background: #f8fafc;
+      --card-bg: #ffffff;
+      --accent: #044908;
+      --accent-dark: #02270a;
+      --muted: #8f96a3;
+      --ion-color-primary: #044908;
+      --ion-color-danger: #d32f2f;
     }
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: white;
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
+    html.dark, html.dark body.dark {
+      --background: #121212;
+      --card-bg: #1e1e1e;
+      --ion-text-color: #ffffff;
+      --ion-background-color: #121212;
+      --ion-toolbar-background: #121212;
+      background-color: #121212 !important;
     }
 
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
+    html, body {
+      height: 100%; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background-color: var(--background) !important; 
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: none; 
+      -webkit-tap-highlight-color: transparent; 
     }
 
-    /* Header */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+    .green-outline-btn {
+      --background: transparent;
+      --border-color: var(--accent-dark);
+      --border-style: solid;
+      --border-width: 1.5px;
+      --color: var(--accent-dark);
+      --border-radius: 8px;
+      font-weight: 600;
     }
-
-    .back-btn {
-      background: var(--glass);
-      color: white;
-      text-decoration: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      transition: 0.3s;
-    }
-    .back-btn:hover { background: var(--glass-hover); }
-
-    /* Form Card */
-    .card {
-      background: var(--glass);
-      padding: 30px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.1);
-      margin-bottom: 40px;
-    }
-
-    .form-group { margin-bottom: 20px; }
-    .form-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+    html.dark .green-outline-btn { --color: #ffffff; }
     
-    .form-control {
-      width: 100%;
-      padding: 12px;
-      background: rgba(0,0,0,0.3);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 6px;
-      color: white;
-      box-sizing: border-box;
-    }
-    .form-control:focus { outline: none; border-color: var(--accent); }
+    /* Modals & Loaders */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
+    .overlay-modal { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px); }
+    .custom-modal { background: var(--card-bg); border-radius: 14px; padding: 24px; width: min(92vw, 350px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
 
-    select.form-control option {
-        background: #063b08; /* Fix for dropdown background */
-        color: white;
-    }
-
-    .btn-submit {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      width: 100%;
-      font-size: 16px;
-      transition: 0.3s;
-    }
-    .btn-submit:hover { background: #45a049; }
-    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* History Table */
-    .history-section h3 { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+    /* Form Card Styling */
+    .form-card { background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1.5px solid var(--ion-color-primary); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .form-header { text-align: center; margin-bottom: 20px; }
+    .form-header h2 { margin: 0 0 8px 0; font-weight: bold; color: var(--ion-text-color); }
+    .form-header p { margin: 0; color: var(--muted); font-size: 14px; }
     
-    .history-item {
-        background: rgba(255,255,255,0.05);
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .item-meta { font-size: 12px; color: #ccc; margin-bottom: 4px; }
-    .item-subject { font-weight: bold; font-size: 16px; }
-    
-    .badge {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        text-transform: uppercase;
-        font-weight: bold;
-    }
-    .badge.pending { background: #ffc107; color: black; }
-    .badge.resolved { background: var(--accent); color: white; }
-
-    .empty-state { text-align: center; opacity: 0.6; padding: 20px; }
+    ion-item { --background: transparent; margin-bottom: 15px; --border-radius: 8px; }
   </style>
 </head>
-<body>
-
-<div class="container">
-  <div class="header">
-    <h1>📝 Send Feedback</h1>
-    <a href="dashboard.html" class="back-btn">← Dashboard</a>
-  </div>
-
-  <div class="card">
-    <div class="form-group">
-      <label>Feedback Type</label>
-      <select id="type" class="form-control">
-        <option value="feedback">General Feedback</option>
-        <option value="complaint">Complaint / Issue</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Subject</label>
-      <input type="text" id="subject" class="form-control" placeholder="Brief summary...">
-    </div>
-    <div class="form-group">
-      <label>Message</label>
-      <textarea id="message" class="form-control" rows="5" placeholder="Describe your issue or suggestion..."></textarea>
-    </div>
-    <button id="submitBtn" class="btn-submit" onclick="submitFeedback()">Submit</button>
-  </div>
-
-  <div class="history-section">
-    <h3>My Previous Submissions</h3>
-    <div id="historyList">
-        <div class="empty-state">Loading history...</div>
+<body class="noselect">
+  
+  <div class="loading-overlay" id="globalLoading">
+    <div class="page-loading">
+      <ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner>
+      <div style="font-size: 18px; font-weight: 600; color: white;" id="loadingText">Submitting...</div>
     </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="feedback.js"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js');
-    });
-  }
-</script>
+  <div class="overlay-modal" id="genericModal">
+    <div class="custom-modal">
+      <ion-icon id="genericModalIcon" name="information-circle-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
+      <h3 id="genericModalTitle" style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Notice</h3>
+      <p id="genericModalMessage" style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">Message</p>
+      <div id="genericModalButtons" style="display: flex; justify-content: space-between; gap: 10px;"></div>
+    </div>
+  </div>
 
+  <ion-app>
+    <div class="ion-page">
+      <ion-header class="ion-no-border" style="background: var(--background);">
+        <ion-toolbar style="--background: transparent; padding-top: 5px;">
+          <ion-buttons slot="start">
+            <ion-button color="primary" onclick="handleBackNavigation()"><ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title style="font-weight: 800; font-size: 16px; color: var(--ion-text-color);">Report Issue</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding" style="--background: var(--background);">
+        
+        <div id="formSkeleton">
+            <ion-skeleton-text animated style="height: 120px; border-radius: 12px; margin-bottom: 20px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 60px; border-radius: 8px; margin-bottom: 15px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 150px; border-radius: 8px; margin-bottom: 20px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 50px; border-radius: 10px;"></ion-skeleton-text>
+        </div>
 
+        <div class="form-card" id="formContent" style="display: none;">
+            <div class="form-header">
+                <ion-icon name="bug" style="font-size: 48px; color: var(--ion-color-primary);"></ion-icon>
+                <h2>Want to send feedback/Report a Bug?</h2>
+                <p>Let us know what's wrong so we can fix it immediately.</p>
+            </div>
+
+            <ion-item fill="outline" style="border: 1.5px solid var(--ion-color-primary); border-radius: 8px;">
+                <ion-label position="stacked" style="color: var(--ion-color-primary);">Issue Category</ion-label>
+                <ion-select id="issueCategory" interface="popover" placeholder="Select an option" style="color: var(--ion-text-color);">
+                    <ion-select-option value="Question/Answer Error">Error in Past Question</ion-select-option>
+                    <ion-select-option value="App Bug">App Glitch or Freeze</ion-select-option>
+                    <ion-select-option value="Payment/Subscription">Payment Issue</ion-select-option>
+                    <ion-select-option value="Feedback">Feedback</ion-select-option>
+                    <ion-select-option value="Other">Other</ion-select-option>
+                </ion-select>
+            </ion-item>
+
+            <ion-item fill="outline" style="border: 1.5px solid var(--ion-color-primary); border-radius: 8px;">
+                <ion-label position="stacked" style="color: var(--ion-color-primary);">Detailed Description</ion-label>
+                <ion-textarea id="issueDescription" rows="5" placeholder="Please describe the issue in detail... (If reporting a question error, please include the Subject and Year)" style="color: var(--ion-text-color);"></ion-textarea>
+            </ion-item>
+
+            <ion-button expand="block" color="primary" style="margin-top: 20px; --border-radius: 10px; height: 50px; font-weight: bold;" onclick="submitReport()">
+                Submit Report
+            </ion-button>
+        </div>
+
+      </ion-content>
+    </div>
+  </ion-app>
+
+  <script defer src="report.js"></script>
 </body>
 </html>

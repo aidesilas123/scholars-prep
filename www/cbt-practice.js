@@ -263,7 +263,7 @@ function fixMathText(text) {
 
 async function startExam() {
     
-    showGlobalLoading("Building Exam Engine...");
+    showGlobalLoading("Loading, Please Wait...");
     
     durationSec = parseInt(document.getElementById('examDuration') ? document.getElementById('examDuration').value : 120) * 60;
     maxDurationSec = durationSec;
