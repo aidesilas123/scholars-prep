@@ -262,7 +262,7 @@ function fixMathText(text) {
 }
 
 async function startExam() {
-    // Show global loader without messing up the active view
+    
     showGlobalLoading("Building Exam Engine...");
     
     durationSec = parseInt(document.getElementById('examDuration') ? document.getElementById('examDuration').value : 120) * 60;
