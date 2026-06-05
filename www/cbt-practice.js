@@ -29,7 +29,7 @@ const MAX_COURSES = 13;
 
 let isFreeUser = false;
 let isFastPass = false;
-let globalYearsMap = {}; // Stores all available years for fast lookup
+let globalYearsMap = {}; 
 
 const urlParams = new URLSearchParams(window.location.search);
 const fpCourse = urlParams.get('course');
@@ -42,8 +42,7 @@ if (localStorage.getItem('sp_theme') === 'dark') document.body.classList.add('da
 document.addEventListener('DOMContentLoaded', async () => {
     if (fpAutoStart === 'true' && fpCourse && fpYear) {
         isFastPass = true;
-        document.getElementById('loadingSpinner').style.display = 'block';
-        document.getElementById('loadingText').innerText = "Initializing Fast Pass CBT...";
+        showGlobalLoading("Initializing Fast Pass CBT...");
         
         subjectsData.push({ code: fpCourse, name: fpCourse });
         
@@ -57,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
         document.body.appendChild(fakeCard);
 
+        hideGlobalLoading();
         switchView('view-instructions');
     } else {
         switchView('view-selection');
@@ -87,14 +87,25 @@ function switchView(viewId) {
     document.getElementById(viewId).classList.add('active');
 }
 
+// Full-screen loading overlay to prevent flashes
+function showGlobalLoading(text) {
+    document.getElementById('globalLoadingText').innerText = text;
+    document.getElementById('globalLoading').style.display = 'flex';
+}
+
+function hideGlobalLoading() {
+    document.getElementById('globalLoading').style.display = 'none';
+}
+
 // --- 4. LOAD SUBJECTS (Split Display & Dropdown Fetch) ---
 async function loadSubjects() {
     const savedUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
     
     try {
-        const [coursesRes, profileRes, testRes, examRes] = await Promise.all([
+        // Look up the correct user_custom_courses table
+        const [coursesRes, customCoursesRes, testRes, examRes] = await Promise.all([
             _sb.from('ss_courses').select('*').order('code', { ascending: true }),
-            _sb.from('profiles').select('saved_courses').eq('id', savedUser.id).single(),
+            _sb.from('user_custom_courses').select('course_code').eq('user_id', savedUser.id),
             _sb.from('ss_test_questions').select('course_code, year'),
             _sb.from('ss_exam_questions').select('course_code, year')
         ]);
@@ -102,7 +113,7 @@ async function loadSubjects() {
         if (coursesRes.error) throw coursesRes.error;
 
         subjectsData = coursesRes.data;
-        const userSavedCourses = profileRes.data?.saved_courses || [];
+        const userSavedCourses = customCoursesRes.data ? customCoursesRes.data.map(row => row.course_code) : [];
         
         // Build the Year Map dynamically
         if (testRes.data) {
@@ -180,7 +191,7 @@ async function loadSubjects() {
         document.getElementById('myCoursesTitle').style.display = userSavedCourses.length > 0 ? 'block' : 'none';
         document.getElementById('availableCoursesTitle').style.display = 'block';
         
-        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('inlineLoadingSpinner').style.display = 'none';
         document.getElementById('subjectListContainer').style.display = 'block';
 
     } catch (err) {
@@ -251,12 +262,8 @@ function fixMathText(text) {
 }
 
 async function startExam() {
-    // FIX: Hide the view completely instead of switching to selection view to prevent flash
-    document.getElementById('view-instructions').classList.remove('active'); 
-    document.getElementById('loadingSpinner').style.display = 'block';
-    document.getElementById('loadingText').innerText = "Building Exam Engine...";
-    document.getElementById('subjectListContainer').style.display = 'none'; 
-    document.getElementById('view-selection').classList.add('active'); // Shows the loader on top of the blank setup page
+    // Show global loader without messing up the active view
+    showGlobalLoading("Building Exam Engine...");
     
     durationSec = parseInt(document.getElementById('examDuration') ? document.getElementById('examDuration').value : 120) * 60;
     maxDurationSec = durationSec;
@@ -316,21 +323,19 @@ async function startExam() {
         }
         
         if(!activeSubjectCode) { 
-            document.getElementById('loadingSpinner').style.display = 'none';
-            document.getElementById('subjectListContainer').style.display = 'block';
+            hideGlobalLoading();
             showGenericModal("Error", "No questions found for the selected courses and years. Please adjust your setup.");
             return; 
         }
 
         switchSubject(activeSubjectCode);
         startTimer();
-        document.getElementById('loadingSpinner').style.display = 'none';
+        hideGlobalLoading();
         switchView('view-exam');
 
     } catch (err) {
         console.error(err);
-        document.getElementById('loadingSpinner').style.display = 'none';
-        document.getElementById('subjectListContainer').style.display = 'block';
+        hideGlobalLoading();
         showGenericModal("Error", "Failed to start the exam. Please check your connection.");
     }
 }
@@ -463,15 +468,7 @@ window.confirmDashboardReturn = function() {
 
 async function submitExam(auto) {
     clearInterval(timerId);
-    
-    // FIX: Remove the active class to hide the exam immediately without flashing the selection screen
-    document.getElementById('view-exam').classList.remove('active'); 
-    
-    // Show the loading spinner overlay for the review page compilation
-    document.getElementById('loadingSpinner').style.display = 'block';
-    document.getElementById('loadingText').innerText = "Calculating Score...";
-    document.getElementById('view-selection').classList.add('active'); // We use this container simply to house the spinner
-    document.getElementById('subjectListContainer').style.display = 'none';
+    showGlobalLoading("Calculating Score...");
 
     let reviewHtml = '';
     let summaryTable = `
@@ -490,7 +487,7 @@ async function submitExam(auto) {
     for(const code in examData) {
         const d = examData[code];
         let subScore = 0;
-        let maxPossible = d.type === 'test' ? 40 : 60; // DYNAMIC SCORING BASED ON TYPE
+        let maxPossible = d.type === 'test' ? 40 : 60; // SCORING RULES
         
         const FREE_REVIEW_LIMIT = 10;
         let showPaywall = false;
@@ -573,7 +570,7 @@ async function submitExam(auto) {
             MathJax.typesetPromise().catch(err => console.error(err));
         }
         
-        document.getElementById('loadingSpinner').style.display = 'none';
+        hideGlobalLoading();
         switchView('view-review');
         
         if (auto) showGenericModal('Time Up!', 'Your exam time has elapsed. Your answers have been submitted automatically.');
@@ -597,13 +594,10 @@ window.triggerPaystack = function() {
         ref: 'SP_' + Math.floor((Math.random() * 1000000000) + 1),
         metadata: { user_id: user.id, email: user.email },
         callback: function(response) {
-            document.getElementById('view-selection').classList.add('active');
-            document.getElementById('loadingSpinner').style.display = 'block';
-            document.getElementById('loadingText').innerText = "Activating Account...";
+            showGlobalLoading("Activating Account...");
             _sb.from('profiles').upsert({ id: user.id, subscription_end: '2026-12-31' }).then(() => {
                 isFreeUser = false; 
-                document.getElementById('loadingSpinner').style.display = 'none';
-                document.getElementById('view-selection').classList.remove('active');
+                hideGlobalLoading();
                 showGenericModal("Success", "Payment successful! Your exam is unlocked. You may continue."); 
             });
         },
@@ -612,17 +606,17 @@ window.triggerPaystack = function() {
 };
 
 // --- 8. NEXUS WIDGET ---
-window.toggleNexusWidget = function(subId, qIndex) {
-    const widget = document.getElementById(`nexus-widget-${subId}-${qIndex}`);
+window.toggleNexusWidget = function(code, qIndex) {
+    const widget = document.getElementById(`nexus-widget-${code}-${qIndex}`);
     widget.style.display = widget.style.display === 'block' ? 'none' : 'block';
 };
 
-window.sendToNexus = async function(subId, qIndex, isAutoExplain) {
-    const chatArea = document.getElementById(`nexus-chat-${subId}-${qIndex}`);
-    const inputField = document.getElementById(`nexus-input-${subId}-${qIndex}`);
+window.sendToNexus = async function(code, qIndex, isAutoExplain) {
+    const chatArea = document.getElementById(`nexus-chat-${code}-${qIndex}`);
+    const inputField = document.getElementById(`nexus-input-${code}-${qIndex}`);
     
     let userMessage = inputField.value.trim();
-    const qData = examData[subId].questions[qIndex];
+    const qData = examData[code].questions[qIndex];
     const questionText = qData.q;
     const correctAnswer = qData.opts[qData.ans];
     const optionsList = qData.opts.map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`).join('\n');

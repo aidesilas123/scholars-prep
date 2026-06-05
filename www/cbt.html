@@ -73,6 +73,8 @@
     html.dark .green-outline-btn { --color: #ffffff; }
 
     /* Modals & Loaders */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
     .overlay-modal { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px); }
     .custom-modal { background: var(--card-bg); border-radius: 14px; padding: 24px; width: min(92vw, 350px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
 
@@ -129,6 +131,13 @@
 </head>
 <body class="noselect">
 
+  <div class="loading-overlay" id="globalLoading">
+    <div class="page-loading">
+      <ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner>
+      <div style="font-size: 18px; font-weight: 600; color: white;" id="globalLoadingText">Processing...</div>
+    </div>
+  </div>
+
   <div class="overlay-modal" id="genericModal">
     <div class="custom-modal">
       <ion-icon id="genericModalIcon" name="information-circle-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
@@ -166,9 +175,9 @@
         
         <ion-searchbar id="subjectSearch" placeholder="Search courses..." animated="true" style="padding-inline: 0; --border-radius: 12px; margin-bottom: 10px; --icon-color: var(--accent-dark);" oninput="filterSubjects(event)"></ion-searchbar>
         
-        <div id="loadingSpinner" style="text-align: center; margin-top: 30px;">
+        <div id="inlineLoadingSpinner" style="text-align: center; margin-top: 30px;">
             <ion-spinner name="crescent" color="primary"></ion-spinner>
-            <div style="font-size: 14px; color: var(--muted); margin-top: 10px;" id="loadingText">Loading Courses...</div>
+            <div style="font-size: 14px; color: var(--muted); margin-top: 10px;">Loading Courses...</div>
         </div>
 
         <div id="subjectListContainer" style="display: none; padding-bottom: 60px;">
@@ -197,7 +206,7 @@
         <div style="background: var(--card-bg); border: 1.5px solid var(--ion-color-primary); border-radius: 14px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
             <h2 style="font-weight: bold; margin-top: 0; color: var(--ion-text-color);">Read Carefully</h2>
             <ul style="line-height: 1.8; color: var(--muted); padding-left: 20px;">
-              <li>Your total exam is scaled per course (60 for Exams, 40 for Tests).</li>
+              <li>Your total exam is scaled per course (60 for Exams, 40 for CA/Tests).</li>
               <li>Each subject carries equal weight based on the number of questions.</li>
               <li>Do not refresh your browser during the exam or your progress will be lost.</li>
               <li>Use the built-in calculator for mathematical computations.</li>
@@ -299,6 +308,6 @@
     <div style="padding:10px; font-weight:bold; color: var(--ion-text-color);">Result: <span id="calcOut" style="color: var(--ion-color-primary);">—</span></div>
   </div>
 
-  <script defer src="cbt-practice.js"></script>
+  <script defer src="cbt.js"></script>
 </body>
 </html>
