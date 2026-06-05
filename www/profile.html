@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
+  <title>Profile — Scholars Prep</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <script>
+    const savedTheme = localStorage.getItem('sp_theme');
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#121212';
+    } else {
+      document.documentElement.style.backgroundColor = '#f8fafc';
+    }
+  </script>
+
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --background: #f8fafc;
+      --card-bg: #ffffff;
+      --accent: #044908;
+      --accent-dark: #02270a;
+      --muted: #8f96a3;
+      --ion-color-primary: #044908;
+      --ion-color-danger: #d32f2f;
+      --table-border: rgba(128,128,128,0.2);
+    }
+
+    html.dark, html.dark body.dark {
+      --background: #121212;
+      --card-bg: #1e1e1e;
+      --ion-text-color: #ffffff;
+      --ion-background-color: #121212;
+      --ion-toolbar-background: #121212;
+      --table-border: rgba(255,255,255,0.1);
+      background-color: #121212 !important;
+    }
+
+    html, body {
+      height: 100%; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background-color: var(--background) !important; 
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: none; 
+      -webkit-tap-highlight-color: transparent; 
+    }
+
+    .green-outline-btn {
+      --background: transparent;
+      --border-color: var(--accent-dark);
+      --border-style: solid;
+      --border-width: 1.5px;
+      --color: var(--accent-dark);
+      --border-radius: 8px;
+      font-weight: 600;
+    }
+    html.dark .green-outline-btn { --color: #ffffff; }
+
+    /* Modals & Loaders */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+    .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
+    .overlay-modal { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); z-index: 10000; backdrop-filter: blur(4px); }
+    .custom-modal { background: var(--card-bg); border-radius: 14px; padding: 24px; width: min(92vw, 350px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+
+    /* Navigation Stack */
+    .view-layer { display: none; height: 100%; width: 100%; flex-direction: column; }
+    .view-layer.active { display: flex; animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* Profile Header Styling */
+    .profile-header { display: flex; flex-direction: column; align-items: center; padding: 30px 20px; background: var(--card-bg); border-bottom: 1px solid var(--table-border); }
+    .avatar-circle { width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, var(--ion-color-primary), #10b981); color: white; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: bold; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(4,73,8,0.3); }
+    .profile-name { font-size: 22px; font-weight: bold; margin: 0 0 4px 0; color: var(--ion-text-color); }
+    .profile-email { font-size: 14px; color: var(--muted); margin: 0; }
+
+    /* Cards */
+    .stats-row { display: flex; gap: 12px; padding: 16px; margin-top: 10px; }
+    .stat-card { flex: 1; background: var(--card-bg); border: 1px solid var(--table-border); border-radius: 16px; padding: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; }
+    .stat-title { font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .stat-value { font-size: 18px; font-weight: bold; color: var(--ion-text-color); }
+    .stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    .text-green { color: #10b981 !important; }
+    .text-red { color: var(--ion-color-danger) !important; }
+
+    /* Menu List */
+    .menu-group { background: var(--card-bg); border-radius: 16px; overflow: hidden; border: 1px solid var(--table-border); margin: 16px; }
+    .menu-item { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--table-border); cursor: pointer; transition: 0.2s; }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item:active { background: rgba(128,128,128,0.1); }
+    .menu-label { font-weight: 600; font-size: 16px; color: var(--ion-text-color); flex: 1; margin-left: 12px; }
+    
+    .form-card { background: var(--card-bg); border-radius: 16px; padding: 20px; border: 1px solid var(--table-border); margin-top: 20px; }
+  </style>
+</head>
+<body class="noselect">
+  
+  <div class="loading-overlay" id="globalLoading">
+    <div class="page-loading">
+      <ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner>
+      <div style="font-size: 18px; font-weight: 600; color: white;" id="loadingText">Processing...</div>
+    </div>
+  </div>
+
+  <div class="overlay-modal" id="genericModal">
+    <div class="custom-modal">
+      <ion-icon id="genericModalIcon" name="information-circle-outline" color="primary" style="font-size: 48px; margin-bottom: 10px;"></ion-icon>
+      <h3 id="genericModalTitle" style="margin: 0 0 8px; font-weight: bold; font-size: 22px; color: var(--ion-text-color);">Notice</h3>
+      <p id="genericModalMessage" style="margin: 0 0 20px; color: var(--muted); font-size: 14px;">Message</p>
+      <div id="genericModalButtons" style="display: flex; justify-content: space-between; gap: 10px;"></div>
+    </div>
+  </div>
+
+  <ion-app>
+    <div id="view-profile" class="view-layer active">
+      <ion-header class="ion-no-border" style="background: var(--background);">
+        <ion-toolbar style="--background: transparent; padding-top: 5px;">
+          <ion-buttons slot="start">
+            <ion-button color="primary" onclick="window.location.replace('dashboard.html')"><ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title style="font-weight: 800; font-size: 16px; color: var(--ion-text-color);">My Profile</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content style="--background: var(--background);">
+        <div class="profile-header">
+            <div class="avatar-circle" id="userAvatar">?</div>
+            <h2 class="profile-name" id="userName">Loading...</h2>
+            <p class="profile-email" id="userEmail">Loading...</p>
+        </div>
+
+        <div id="profileSkeleton" style="padding: 16px;">
+            <div style="display: flex; gap: 12px;">
+                <ion-skeleton-text animated style="height: 100px; flex: 1; border-radius: 16px;"></ion-skeleton-text>
+                <ion-skeleton-text animated style="height: 100px; flex: 1; border-radius: 16px;"></ion-skeleton-text>
+            </div>
+        </div>
+
+        <div class="stats-row" id="profileStats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-title"><ion-icon name="shield-checkmark" class="text-green"></ion-icon> Subscription</div>
+                <div class="stat-value" id="subStatus">Free Plan</div>
+                <div class="stat-sub" id="subDates">Expires: N/A</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title"><ion-icon name="flame" style="color: #f97316;"></ion-icon> Study Streak</div>
+                <div class="stat-value" id="studyStreak">0 Days</div>
+                <div class="stat-sub">Keep practicing!</div>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <div class="menu-item" onclick="switchView('view-password')">
+                <ion-icon name="lock-closed-outline" color="primary" style="font-size: 22px;"></ion-icon>
+                <div class="menu-label">Change Password</div>
+                <ion-icon name="chevron-forward" color="medium"></ion-icon>
+            </div>
+            <div class="menu-item" onclick="confirmLogoutUser()">
+                <ion-icon name="log-out-outline" color="danger" style="font-size: 22px;"></ion-icon>
+                <div class="menu-label" style="color: var(--ion-color-danger);">Log Out</div>
+            </div>
+        </div>
+      </ion-content>
+    </div>
+
+    <div id="view-password" class="view-layer">
+      <ion-header class="ion-no-border" style="background: var(--background);">
+        <ion-toolbar style="--background: transparent; padding-top: 5px;">
+          <ion-buttons slot="start">
+            <ion-button color="primary" onclick="history.back()"><ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title style="font-weight: 800; font-size: 16px; color: var(--ion-text-color);">Security</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding" style="--background: var(--background);">
+        <div class="form-card">
+            <h2 style="margin-top: 0; font-weight: bold; color: var(--ion-text-color);">Update Password</h2>
+            <p style="color: var(--muted); font-size: 14px; margin-bottom: 20px;">Enter a new, strong password below.</p>
+            
+            <ion-item fill="outline" style="--border-radius: 8px; margin-bottom: 25px; border: 1.5px solid var(--ion-color-primary); --background: transparent;">
+                <ion-label position="stacked" style="color: var(--ion-color-primary);">New Password</ion-label>
+                <ion-input type="password" id="newPassword" placeholder="Minimum 6 characters" style="color: var(--ion-text-color);"></ion-input>
+            </ion-item>
+
+            <ion-button expand="block" color="primary" style="--border-radius: 10px; height: 50px; font-weight: bold;" onclick="changePassword()">
+                Save Password
+            </ion-button>
+        </div>
+      </ion-content>
+    </div>
+
+  </ion-app>
+
+  <script defer src="profile.js"></script>
+</body>
+</html>

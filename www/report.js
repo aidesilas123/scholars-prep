@@ -95,7 +95,8 @@ window.submitReport = async function() {
         const userObj = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
         const authEmail = userObj.email;
 
-        const { error } = await _sb.from('putme_reports').insert([{
+        // UPDATED: Now pointing to the new 'report' table
+        const { error } = await _sb.from('report').insert([{
             user_email: authEmail,
             category: category,
             description: description
