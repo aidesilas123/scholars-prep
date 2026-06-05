@@ -29,15 +29,14 @@ const MAX_COURSES = 13;
 
 let isFreeUser = false;
 let isFastPass = false;
+let globalYearsMap = {}; // Stores all available years for fast lookup
 
-// URL Params for Fast Pass
 const urlParams = new URLSearchParams(window.location.search);
 const fpCourse = urlParams.get('course');
 const fpYear = urlParams.get('year');
 const fpType = urlParams.get('type') || 'exam';
 const fpAutoStart = urlParams.get('autoStart');
 
-// Theme Sync
 if (localStorage.getItem('sp_theme') === 'dark') document.body.classList.add('dark');
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -46,10 +45,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('loadingSpinner').style.display = 'block';
         document.getElementById('loadingText').innerText = "Initializing Fast Pass CBT...";
         
-        // Push the single course into selection memory, then jump to instructions
         subjectsData.push({ code: fpCourse, name: fpCourse });
         
-        // We artificially select it in the DOM even though it's hidden
         const fakeCard = document.createElement('div');
         fakeCard.className = 'subject-card selected';
         fakeCard.id = `card-${fpCourse}`;
@@ -67,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// --- 3. CUSTOM MODAL ENGINE ---
+// --- 3. CUSTOM MODAL & VIEWS ---
 window.showGenericModal = function(title, message, buttonsHTML = null) {
     document.getElementById('genericModalTitle').innerText = title;
     document.getElementById('genericModalMessage').innerText = message;
@@ -82,7 +79,6 @@ window.showGenericModal = function(title, message, buttonsHTML = null) {
     } else {
         btnContainer.innerHTML = `<ion-button class="green-outline-btn" expand="block" style="width: 100%" onclick="document.getElementById('genericModal').style.display='none'">OK</ion-button>`;
     }
-    
     document.getElementById('genericModal').style.display = 'flex';
 };
 
@@ -91,19 +87,52 @@ function switchView(viewId) {
     document.getElementById(viewId).classList.add('active');
 }
 
-// --- 4. LOAD SUBJECTS (Normal Flow) ---
+// --- 4. LOAD SUBJECTS (Split Display & Dropdown Fetch) ---
 async function loadSubjects() {
+    const savedUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
+    
     try {
-        const { data: courses, error } = await _sb.from('ss_courses').select('*').order('code', { ascending: true });
-        if (error) throw error;
+        const [coursesRes, profileRes, testRes, examRes] = await Promise.all([
+            _sb.from('ss_courses').select('*').order('code', { ascending: true }),
+            _sb.from('profiles').select('saved_courses').eq('id', savedUser.id).single(),
+            _sb.from('ss_test_questions').select('course_code, year'),
+            _sb.from('ss_exam_questions').select('course_code, year')
+        ]);
 
-        const container = document.getElementById('subjectListContainer');
-        container.innerHTML = '';
-        subjectsData = courses;
+        if (coursesRes.error) throw coursesRes.error;
 
-        courses.forEach(sub => {
+        subjectsData = coursesRes.data;
+        const userSavedCourses = profileRes.data?.saved_courses || [];
+        
+        // Build the Year Map dynamically
+        if (testRes.data) {
+            testRes.data.forEach(row => {
+                if(!globalYearsMap[row.course_code]) globalYearsMap[row.course_code] = new Set();
+                globalYearsMap[row.course_code].add(row.year);
+            });
+        }
+        if (examRes.data) {
+            examRes.data.forEach(row => {
+                if(!globalYearsMap[row.course_code]) globalYearsMap[row.course_code] = new Set();
+                globalYearsMap[row.course_code].add(row.year);
+            });
+        }
+
+        const myList = document.getElementById('myCoursesList');
+        const availableList = document.getElementById('availableCoursesList');
+        myList.innerHTML = '';
+        availableList.innerHTML = '';
+
+        subjectsData.forEach(sub => {
             const iconName = sub.icon || 'book-outline';
-            container.innerHTML += `
+            let yearsOptions = '<ion-select-option value="">No Questions</ion-select-option>';
+            
+            if (globalYearsMap[sub.code] && globalYearsMap[sub.code].size > 0) {
+                const sortedYears = Array.from(globalYearsMap[sub.code]).sort((a,b) => b - a);
+                yearsOptions = sortedYears.map(y => `<ion-select-option value="${y}">${y}</ion-select-option>`).join('');
+            }
+
+            const cardHTML = `
             <div class="subject-card" id="card-${sub.code}" onclick="toggleSubject('${sub.code}')">
                 <ion-item lines="none" style="--background: transparent; cursor: pointer;">
                     <ion-icon name="${iconName}" slot="start" color="primary"></ion-icon>
@@ -131,14 +160,28 @@ async function loadSubjects() {
                         </ion-item>
                     </div>
                     <div style="margin-top: 10px;">
-                        <ion-input type="number" id="yr-${sub.code}" placeholder="Enter Year (e.g. 2023)" style="border: 1.5px solid var(--ion-color-primary); border-radius: 8px; padding-left: 10px; color: var(--ion-text-color);"></ion-input>
+                        <ion-item fill="outline" style="--border-radius: 8px; --background: transparent;">
+                            <ion-label position="stacked" style="color: var(--ion-color-primary);">Select Year</ion-label>
+                            <ion-select id="yr-${sub.code}" interface="popover" placeholder="Select Year" style="color: var(--ion-text-color);">
+                                ${yearsOptions}
+                            </ion-select>
+                        </ion-item>
                     </div>
                 </div>
             </div>`;
+
+            if (userSavedCourses.includes(sub.code)) {
+                myList.innerHTML += cardHTML;
+            } else {
+                availableList.innerHTML += cardHTML;
+            }
         });
 
+        document.getElementById('myCoursesTitle').style.display = userSavedCourses.length > 0 ? 'block' : 'none';
+        document.getElementById('availableCoursesTitle').style.display = 'block';
+        
         document.getElementById('loadingSpinner').style.display = 'none';
-        container.style.display = 'block';
+        document.getElementById('subjectListContainer').style.display = 'block';
 
     } catch (err) {
         console.error(err);
@@ -158,15 +201,12 @@ window.toggleSubject = function(code) {
     const card = document.getElementById(`card-${code}`);
     const chk = document.getElementById(`chk-${code}`);
     
-    // Check limit if they are trying to select a new one
     if (!card.classList.contains('selected')) {
-        const selectedCount = document.querySelectorAll('.subject-card.selected').length;
-        if (selectedCount >= MAX_COURSES) {
+        if (document.querySelectorAll('.subject-card.selected').length >= MAX_COURSES) {
             showGenericModal("Limit Reached", `You can only select up to ${MAX_COURSES} courses at once.`);
             return;
         }
     }
-    
     card.classList.toggle('selected');
     chk.checked = card.classList.contains('selected');
 };
@@ -181,7 +221,7 @@ window.goToInstructions = function() {
     for (let card of selectedCards) {
         const code = card.id.replace('card-', '');
         if(!document.getElementById(`yr-${code}`).value) {
-            showGenericModal("Notice", `Please enter a year for ${code}.`);
+            showGenericModal("Notice", `Please select a year for ${code} from the dropdown.`);
             return;
         }
     }
@@ -189,18 +229,14 @@ window.goToInstructions = function() {
 }
 
 window.handleBackFromInstructions = function() {
-    if (isFastPass) {
-        window.location.replace(`course-details.html?course=${fpCourse}`);
-    } else {
-        switchView('view-selection');
-    }
+    if (isFastPass) window.location.replace(`course-details.html?course=${fpCourse}`);
+    else switchView('view-selection');
 }
 
 // --- 5. START EXAM (Data Fetch & Security) ---
 function fixMathText(text) {
     if (!text) return "";
     if (/<\/?[a-z][\s\S]*>/i.test(text)) return text;
-
     let fixed = text;
     const mathWords = ["frac", "sqrt", "int", "lim", "sum", "infty", "times", "div", "pm", "sin", "cos", "tan", "theta", "pi", "alpha"];
     mathWords.forEach(word => {
@@ -208,7 +244,6 @@ function fixMathText(text) {
         fixed = fixed.replace(regex, `\\${word}`);
     });
     fixed = fixed.replace(/\\\\/g, "\\");
-    
     const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
     const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
     if (isMathSymbol && !hasDelimiters && fixed.length < 50) return `\\( ${fixed} \\)`;
@@ -216,9 +251,12 @@ function fixMathText(text) {
 }
 
 async function startExam() {
-    switchView('view-selection'); // Temporary hide while loading
+    // FIX: Hide the view completely instead of switching to selection view to prevent flash
+    document.getElementById('view-instructions').classList.remove('active'); 
     document.getElementById('loadingSpinner').style.display = 'block';
     document.getElementById('loadingText').innerText = "Building Exam Engine...";
+    document.getElementById('subjectListContainer').style.display = 'none'; 
+    document.getElementById('view-selection').classList.add('active'); // Shows the loader on top of the blank setup page
     
     durationSec = parseInt(document.getElementById('examDuration') ? document.getElementById('examDuration').value : 120) * 60;
     maxDurationSec = durationSec;
@@ -231,7 +269,6 @@ async function startExam() {
     const authUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
 
     try {
-        // Master Freemium Check
         const [settingsRes, subRes] = await Promise.all([
             _sb.from('app_settings').select('payment_active').single(),
             _sb.from('profiles').select('subscription_end').eq('id', authUser.id).maybeSingle()
@@ -251,16 +288,15 @@ async function startExam() {
             const type = document.getElementById(`type-${code}`).value;
             const year = document.getElementById(`yr-${code}`).value;
             const limit = parseInt(document.getElementById(`qc-${code}`).value);
-
             const targetTable = type === 'test' ? 'ss_test_questions' : 'ss_exam_questions';
 
-            // Fetch questions sequentially
             const { data: rawData, error } = await _sb.from(targetTable).select('*').eq('course_code', code).eq('year', year).limit(limit);
             if (error) console.error("Fetch error for", code, error);
 
             if (rawData && rawData.length > 0) {
                 examData[code] = {
                     name: code,
+                    type: type,
                     questions: rawData.map(q => {
                         const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
                         return { 
@@ -281,8 +317,8 @@ async function startExam() {
         
         if(!activeSubjectCode) { 
             document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('subjectListContainer').style.display = 'block';
             showGenericModal("Error", "No questions found for the selected courses and years. Please adjust your setup.");
-            switchView('view-instructions');
             return; 
         }
 
@@ -294,8 +330,8 @@ async function startExam() {
     } catch (err) {
         console.error(err);
         document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('subjectListContainer').style.display = 'block';
         showGenericModal("Error", "Failed to start the exam. Please check your connection.");
-        switchView('view-instructions');
     }
 }
 
@@ -363,7 +399,7 @@ window.saveAnswer = function(idx) {
         
         if (!isAlreadyAnswered && totalAnswers >= 10) {
             document.getElementById('examTrapModal').style.display = 'flex';
-            renderQuestion(); // Resets the radio UI
+            renderQuestion(); 
             return; 
         }
     }
@@ -414,42 +450,55 @@ function startTimer() {
 window.confirmSubmit = function() {
     showGenericModal('Submit Exam', 'Are you sure you want to submit? All answers will be finalized.', 
         `<ion-button class="green-outline-btn" style="flex:1" onclick="document.getElementById('genericModal').style.display='none'">Cancel</ion-button>
-         <ion-button color="primary" style="flex:1; font-weight: bold;" onclick="submitExam(false); document.getElementById('genericModal').style.display='none'">Yes, Submit</ion-button>`
+         <ion-button color="danger" fill="solid" style="flex:1; font-weight: bold;" onclick="submitExam(false); document.getElementById('genericModal').style.display='none'">Yes, Submit</ion-button>`
     );
 };
 
 window.confirmDashboardReturn = function() {
     showGenericModal('Quit Exam?', 'Are you sure you want to quit? Your progress will be lost.', 
         `<ion-button class="green-outline-btn" style="flex:1" onclick="document.getElementById('genericModal').style.display='none'">Cancel</ion-button>
-         <ion-button color="danger" style="flex:1; font-weight: bold;" onclick="window.location.href='dashboard.html'">Quit</ion-button>`
+         <ion-button color="danger" fill="solid" style="flex:1; font-weight: bold;" onclick="window.location.href='dashboard.html'">Quit</ion-button>`
     );
 };
 
 async function submitExam(auto) {
     clearInterval(timerId);
-    switchView('view-selection'); // Hide exam
+    
+    // FIX: Remove the active class to hide the exam immediately without flashing the selection screen
+    document.getElementById('view-exam').classList.remove('active'); 
+    
+    // Show the loading spinner overlay for the review page compilation
     document.getElementById('loadingSpinner').style.display = 'block';
     document.getElementById('loadingText').innerText = "Calculating Score...";
-    
-    let totalScore = 0;
-    let totalQs = 0;
+    document.getElementById('view-selection').classList.add('active'); // We use this container simply to house the spinner
+    document.getElementById('subjectListContainer').style.display = 'none';
+
     let reviewHtml = '';
+    let summaryTable = `
+    <h3 style="margin-top: 0; font-weight: bold; color: var(--ion-text-color); text-align: center;">Final Summary</h3>
+    <table style="width: 100%; border-collapse: collapse; text-align: left; margin-top: 15px; font-size: 15px;">
+        <thead>
+            <tr style="border-bottom: 2px solid var(--ion-color-primary); color: var(--ion-text-color);">
+                <th style="padding: 10px 5px;">Course</th>
+                <th style="padding: 10px 5px;">Type</th>
+                <th style="padding: 10px 5px; text-align: center;">Score</th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
     
     for(const code in examData) {
         const d = examData[code];
         let subScore = 0;
-        reviewHtml += `<h4 style="color:var(--ion-color-primary); border-bottom:1.5px solid rgba(128,128,128,0.2); padding-bottom:8px; margin-top:25px;">${d.name}</h4>`;
+        let maxPossible = d.type === 'test' ? 40 : 60; // DYNAMIC SCORING BASED ON TYPE
         
         const FREE_REVIEW_LIMIT = 10;
         let showPaywall = false;
 
         d.questions.forEach((q, i) => {
-            totalQs++;
             const userAns = d.answers[i];
             const correct = userAns === q.ans;
-            if (userAns !== null) {
-                if (correct) subScore++;
-            }
+            if (userAns !== null && correct) subScore++;
             
             if (!isFreeUser || i < FREE_REVIEW_LIMIT) {
                 reviewHtml += `
@@ -457,11 +506,47 @@ async function submitExam(auto) {
                     <p style="color: var(--ion-text-color); line-height: 1.6;"><b>Q${i+1}:</b> ${q.q}</p>
                     <p style="color:${correct?'#10b981':'var(--ion-color-danger)'}; font-weight:bold;">Your Answer: ${userAns!==null ? q.opts[userAns] : 'None'}</p>
                     ${!correct ? `<p style="color:#10b981; font-weight:bold;">Correct: ${q.opts[q.ans]}</p>` : ''}
+                    
+                    <ion-button size="small" class="green-outline-btn" style="margin-top: 15px;" onclick="toggleNexusWidget('${code}', ${i})">
+                        Ask Nexus <img src="Logo.png" alt="Nexus" style="height: 16px; margin-left: 6px; vertical-align: middle;">
+                    </ion-button>
+
+                    <div id="nexus-widget-${code}-${i}" style="display: none; margin-top: 15px; background: var(--card-bg); border: 1.5px solid var(--ion-color-primary); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <div style="background: var(--ion-color-primary); color: white; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: bold; font-size: 13px;">Nexus AI Tutor</span>
+                            <span onclick="toggleNexusWidget('${code}', ${i})" style="cursor: pointer; font-size: 16px;">✖</span>
+                        </div>
+                        <div id="nexus-chat-${code}-${i}" style="padding: 15px; max-height: 250px; overflow-y: auto; font-size: 14px; line-height: 1.6; color: var(--ion-text-color);">
+                            <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below.</div>
+                        </div>
+                        <div style="display: flex; border-top: 1px solid rgba(128,128,128,0.2);">
+                            <input type="text" id="nexus-input-${code}-${i}" placeholder="Ask about this..." style="flex: 1; padding: 12px; border: none; outline: none; background: transparent; color: var(--ion-text-color);">
+                            <button onclick="sendToNexus('${code}', ${i}, false)" style="background: transparent; color: var(--ion-color-primary); border: none; padding: 0 16px; font-weight: bold; cursor: pointer;">Send</button>
+                        </div>
+                    </div>
                 </div>`;
             } else {
                 showPaywall = true;
             }
         });
+
+        // Calculate Final Scaled Score for this course
+        let finalSubScore = Math.round((subScore / d.questions.length) * maxPossible);
+        let isHigh = finalSubScore >= (maxPossible / 2);
+        let scoreColor = isHigh ? '#10b981' : 'var(--ion-color-danger)';
+
+        // Inject Course Total before its review section
+        const reviewHeader = `<h4 style="color:var(--ion-color-primary); border-bottom:1.5px solid rgba(128,128,128,0.2); padding-bottom:8px; margin-top:25px;">${d.name} <span style="float: right; color: ${scoreColor};">${finalSubScore}/${maxPossible}</span></h4>`;
+        reviewHtml = reviewHeader + reviewHtml;
+
+        // Add to Summary Table
+        summaryTable += `
+            <tr style="border-bottom: 1px solid rgba(128,128,128,0.2); color: var(--ion-text-color);">
+                <td style="padding: 12px 5px; font-weight: bold;">${d.name}</td>
+                <td style="padding: 12px 5px; text-transform: capitalize;">${d.type}</td>
+                <td style="padding: 12px 5px; text-align: center; font-weight: bold; color: ${scoreColor};">${finalSubScore}/${maxPossible}</td>
+            </tr>
+        `;
 
         if (showPaywall) {
             const hiddenCount = d.questions.length - FREE_REVIEW_LIMIT;
@@ -469,24 +554,25 @@ async function submitExam(auto) {
             <div style="background: var(--card-bg); border: 2px dashed var(--ion-color-primary); border-radius: 14px; padding: 20px; text-align: center; margin-top: 15px;">
                 <ion-icon name="lock-closed" color="primary" style="font-size: 36px; margin-bottom: 8px;"></ion-icon>
                 <h3 style="margin: 0 0 8px; font-weight: bold; color: var(--ion-text-color);">Free Limit Reached</h3>
-                <p style="margin: 0 0 15px; color: var(--muted); font-size: 14px;">Activate the app to view the remaining <strong>${hiddenCount} questions</strong>.</p>
+                <p style="margin: 0 0 15px; color: var(--muted); font-size: 14px;">Activate the app to view the remaining <strong>${hiddenCount} questions</strong> and Nexus explanations.</p>
                 <ion-button expand="block" color="primary" style="--border-radius: 10px; font-weight: bold;" onclick="triggerPaystack()">
                     <ion-icon name="key-outline" slot="start"></ion-icon> Activate App
                 </ion-button>
             </div>`;
         }
-        totalScore += subScore;
     }
     
-    const finalScaled = Math.round((totalScore / totalQs) * 400);
+    summaryTable += `</tbody></table>`;
     
     setTimeout(() => {
-        document.getElementById('finalScore').innerText = `${finalScaled}/400`;
+        document.getElementById('finalScoreContainer').innerHTML = summaryTable;
         document.getElementById('reviewList').innerHTML = reviewHtml;
+        
         if(window.MathJax) {
             MathJax.typesetClear();
             MathJax.typesetPromise().catch(err => console.error(err));
         }
+        
         document.getElementById('loadingSpinner').style.display = 'none';
         switchView('view-review');
         
@@ -511,11 +597,13 @@ window.triggerPaystack = function() {
         ref: 'SP_' + Math.floor((Math.random() * 1000000000) + 1),
         metadata: { user_id: user.id, email: user.email },
         callback: function(response) {
+            document.getElementById('view-selection').classList.add('active');
             document.getElementById('loadingSpinner').style.display = 'block';
             document.getElementById('loadingText').innerText = "Activating Account...";
             _sb.from('profiles').upsert({ id: user.id, subscription_end: '2026-12-31' }).then(() => {
-                isFreeUser = false; // Disable trap!
+                isFreeUser = false; 
                 document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('view-selection').classList.remove('active');
                 showGenericModal("Success", "Payment successful! Your exam is unlocked. You may continue."); 
             });
         },
@@ -523,7 +611,62 @@ window.triggerPaystack = function() {
     }).openIframe();
 };
 
-// --- 8. CALCULATOR ---
+// --- 8. NEXUS WIDGET ---
+window.toggleNexusWidget = function(subId, qIndex) {
+    const widget = document.getElementById(`nexus-widget-${subId}-${qIndex}`);
+    widget.style.display = widget.style.display === 'block' ? 'none' : 'block';
+};
+
+window.sendToNexus = async function(subId, qIndex, isAutoExplain) {
+    const chatArea = document.getElementById(`nexus-chat-${subId}-${qIndex}`);
+    const inputField = document.getElementById(`nexus-input-${subId}-${qIndex}`);
+    
+    let userMessage = inputField.value.trim();
+    const qData = examData[subId].questions[qIndex];
+    const questionText = qData.q;
+    const correctAnswer = qData.opts[qData.ans];
+    const optionsList = qData.opts.map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`).join('\n');
+
+    let promptToAI = "";
+    if (isAutoExplain) {
+        promptToAI = `Act as an expert tutor. Please explain step-by-step why the correct answer to this question is "${correctAnswer}".\n\nQuestion: ${questionText}\n\nOptions:\n${optionsList}`;
+        chatArea.innerHTML = `<div style="font-weight:bold; margin-bottom:8px;">Explain this question.</div>`;
+    } else {
+        if (!userMessage) return;
+        promptToAI = `Regarding this question: "${questionText}"\n\nOptions:\n${optionsList}\n\n(Correct Answer: ${correctAnswer}).\n\nStudent asks: ${userMessage}`;
+        chatArea.innerHTML += `<div style="font-weight:bold; margin-bottom:8px; margin-top: 15px;">You: ${userMessage}</div>`;
+        inputField.value = '';
+    }
+
+    const responseContainer = document.createElement('div');
+    responseContainer.innerHTML = `<span style="color: var(--ion-color-primary); font-weight: bold;">Nexus is thinking...</span>`;
+    chatArea.appendChild(responseContainer);
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    try {
+        const response = await fetch('https://scholars-prep.vercel.app/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: [{ role: 'user', content: promptToAI }] })
+        });
+        if (!response.ok) throw new Error("Network Error");
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiFullText = "";
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            aiFullText += decoder.decode(value, { stream: true });
+            responseContainer.innerHTML = window.marked ? marked.parse(aiFullText) : aiFullText;
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        if (window.MathJax) MathJax.typesetPromise([responseContainer]).catch(err => console.error(err));
+    } catch (error) {
+        responseContainer.innerHTML = `<span style="color: var(--ion-color-danger);">Connection error. Please try again.</span>`;
+    }
+};
+
+// --- 9. CALCULATOR ---
 window.toggleCalc = () => { const c = document.getElementById('calc'); c.style.display = c.style.display === 'block' ? 'none' : 'block'; };
 window.ins = (ch) => document.getElementById('calcInput').value += ch;
 window.clr = () => { document.getElementById('calcInput').value=''; document.getElementById('calcOut').innerText='—'; };
