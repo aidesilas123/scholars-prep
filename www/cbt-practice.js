@@ -1,650 +1,577 @@
-/***********************
-     * SUPABASE CONFIGURATION - FIXED
-     ***********************/
-    let supabaseClient;
+// --- 1. CORE CONFIG & SECURITY ---
+(function initContentProtection() {
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
+    document.addEventListener('dragstart', e => e.preventDefault());
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F12' || e.keyCode === 123) return e.preventDefault();
+        if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a', 'p', 's', 'u'].includes(e.key.toLowerCase())) return e.preventDefault();
+    }, { capture: true });
+})();
+
+const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
+const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+(function protectPage() {
+    if (!localStorage.getItem('abupq_logged_in_user')) window.location.replace('index.html'); 
+})();
+
+// --- 2. STATE & FAST PASS ENGINE ---
+let subjectsData = [];
+let examData = {}; 
+let activeSubjectCode = null;
+let durationSec = 0;
+let maxDurationSec = 0; 
+let timerId = null;
+const MAX_COURSES = 13;
+
+let isFreeUser = false;
+let isFastPass = false;
+
+// URL Params for Fast Pass
+const urlParams = new URLSearchParams(window.location.search);
+const fpCourse = urlParams.get('course');
+const fpYear = urlParams.get('year');
+const fpType = urlParams.get('type') || 'exam';
+const fpAutoStart = urlParams.get('autoStart');
+
+// Theme Sync
+if (localStorage.getItem('sp_theme') === 'dark') document.body.classList.add('dark');
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (fpAutoStart === 'true' && fpCourse && fpYear) {
+        isFastPass = true;
+        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('loadingText').innerText = "Initializing Fast Pass CBT...";
+        
+        // Push the single course into selection memory, then jump to instructions
+        subjectsData.push({ code: fpCourse, name: fpCourse });
+        
+        // We artificially select it in the DOM even though it's hidden
+        const fakeCard = document.createElement('div');
+        fakeCard.className = 'subject-card selected';
+        fakeCard.id = `card-${fpCourse}`;
+        fakeCard.innerHTML = `
+            <input type="hidden" id="type-${fpCourse}" value="${fpType}">
+            <input type="hidden" id="yr-${fpCourse}" value="${fpYear}">
+            <input type="hidden" id="qc-${fpCourse}" value="50">
+        `;
+        document.body.appendChild(fakeCard);
+
+        switchView('view-instructions');
+    } else {
+        switchView('view-selection');
+        loadSubjects();
+    }
+});
+
+// --- 3. CUSTOM MODAL ENGINE ---
+window.showGenericModal = function(title, message, buttonsHTML = null) {
+    document.getElementById('genericModalTitle').innerText = title;
+    document.getElementById('genericModalMessage').innerText = message;
     
-    // Initialize Supabase safely
-    (function initSupabase() {
-      const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
-      const supabaseKey = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
-      
-      // Always create a fresh client for this page
-      supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-      console.log('Supabase initialized:', !!supabaseClient);
-    })();
-
-    // --- ROBUST MATH FIXER ---
-    // --- ROBUST MATH FIXER ---
-    // --- FINAL ROBUST MATH FIXER ---
-function fixMathText(text) {
-  if (!text) return "";
-  let fixed = text;
-
-  // 1. Safe list of keywords (Removed "in" to prevent Chemistry text bugs)
-  const mathWords = [
-    // Calculus & Algebra
-    "frac", "sqrt", "int", "lim", "sum", "prod", "infty", "times", "div", "pm", "cdot", "partial",
-    // Trig & Log
-    "sin", "cos", "tan", "csc", "sec", "cot", "log", "ln", "exp", "det",
-    // Set Theory & Logic (Removed 'in' because it breaks English sentences)
-    "cup", "cap", "notin", "subset", "subseteq", "forall", "exists", "empty", "union",
-    // Arrows
-    "rightarrow", "leftarrow", "Rightarrow", "Leftarrow", "leftrightarrow", "implies",
-    // Greek Letters
-    "theta", "pi", "alpha", "beta", "gamma", "delta", "lambda", "mu", "sigma", "omega", "Delta", "Sigma", "Omega", "phi", "psi", "rho", "epsilon"
-  ];
-
-  // 2. Apply the fix with WORD BOUNDARIES (\b)
-  // This prevents 'sin' from becoming 's\in'
-  mathWords.forEach(word => {
-      // Regex explanation:
-      // (?<!\\) -> Lookbehind: Ensure it doesn't already have a backslash
-      // \b      -> Word boundary (start of word)
-      // word    -> The keyword
-      // \b      -> Word boundary (end of word)
-      const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'g');
-      fixed = fixed.replace(regex, `\\${word}`);
-  });
-
-  // 3. Clean up accidental double backslashes
-  fixed = fixed.replace(/\\\\/g, "\\");
-
-  // 4. Auto-Wrap in math mode ONLY if it looks like math
-  // Checks for:
-  //  - Backslash commands
-  //  - Math operators (=, ^, _, <, >)
-  //  - BUT we skip wrapping if it looks like a long English sentence (contains many spaces)
-  const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
-  const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
-  
-  // Safety check: If it's very long and has few math symbols, don't wrap it blindly
-  // (This helps prevent other text-squashing issues)
-  const isLongText = fixed.length > 50 && !fixed.includes("="); 
-
-  if (isMathSymbol && !hasDelimiters && !isLongText) {
-      return `\\( ${fixed} \\)`;
-  }
-  
-  return fixed;
-}
-
-// --- SMILES DRAWER SETUP ---
-const smilesOptions = { 
-    width: 250, 
-    height: 250, 
-    bondThickness: 1.5,
-    fontSizeLarge: 6
+    const icon = document.getElementById('genericModalIcon');
+    icon.setAttribute('name', title.toLowerCase().includes('error') || title.toLowerCase().includes('limit') ? 'warning-outline' : 'information-circle-outline');
+    icon.setAttribute('color', title.toLowerCase().includes('error') || title.toLowerCase().includes('limit') ? 'warning' : 'primary');
+    
+    const btnContainer = document.getElementById('genericModalButtons');
+    if (buttonsHTML) {
+        btnContainer.innerHTML = buttonsHTML;
+    } else {
+        btnContainer.innerHTML = `<ion-button class="green-outline-btn" expand="block" style="width: 100%" onclick="document.getElementById('genericModal').style.display='none'">OK</ion-button>`;
+    }
+    
+    document.getElementById('genericModal').style.display = 'flex';
 };
-let smilesDrawerInstance = null;
 
-function parseSmilesTags(text) {
-    if (!text) return { htmlText: "", smilesQueue: [] };
-    let smilesQueue = [];
-    const htmlText = text.replace(/\[SMILES:\s*(.*?)\s*\]/g, (match, smilesString) => {
-        const canvasId = 'smiles-' + Math.random().toString(36).substr(2, 9);
-        smilesQueue.push({ id: canvasId, smiles: smilesString });
-        return `<canvas id="${canvasId}"></canvas>`;
-    });
-    return { htmlText, smilesQueue };
+function switchView(viewId) {
+    document.querySelectorAll('.cbt-view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
 }
 
-function drawMolecules(smilesQueue) {
-    if (smilesQueue.length === 0) return;
-    if (!smilesDrawerInstance) {
-         smilesDrawerInstance = new SmilesDrawer.Drawer(smilesOptions);
-    }
-    smilesQueue.forEach(item => {
-        SmilesDrawer.parse(item.smiles, function(tree) {
-            smilesDrawerInstance.draw(tree, item.id, 'light', false);
-        }, function (err) {
-            console.error("Error drawing SMILES:", err);
+// --- 4. LOAD SUBJECTS (Normal Flow) ---
+async function loadSubjects() {
+    try {
+        const { data: courses, error } = await _sb.from('ss_courses').select('*').order('code', { ascending: true });
+        if (error) throw error;
+
+        const container = document.getElementById('subjectListContainer');
+        container.innerHTML = '';
+        subjectsData = courses;
+
+        courses.forEach(sub => {
+            const iconName = sub.icon || 'book-outline';
+            container.innerHTML += `
+            <div class="subject-card" id="card-${sub.code}" onclick="toggleSubject('${sub.code}')">
+                <ion-item lines="none" style="--background: transparent; cursor: pointer;">
+                    <ion-icon name="${iconName}" slot="start" color="primary"></ion-icon>
+                    <ion-label style="font-weight: bold; color: var(--ion-text-color);">${sub.code}</ion-label>
+                    <ion-checkbox slot="end" id="chk-${sub.code}" style="pointer-events: none;"></ion-checkbox>
+                </ion-item>
+                <div class="config-area" onclick="event.stopPropagation()">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <ion-item fill="outline" style="--border-radius: 8px; --background: transparent; flex: 1;">
+                            <ion-label position="stacked" style="color: var(--ion-color-primary);">Type</ion-label>
+                            <ion-select id="type-${sub.code}" interface="popover" value="exam" style="color: var(--ion-text-color);">
+                                <ion-select-option value="exam">Exam</ion-select-option>
+                                <ion-select-option value="test">Test</ion-select-option>
+                            </ion-select>
+                        </ion-item>
+                        <ion-item fill="outline" style="--border-radius: 8px; --background: transparent; flex: 1;">
+                            <ion-label position="stacked" style="color: var(--ion-color-primary);">Questions</ion-label>
+                            <ion-select id="qc-${sub.code}" interface="popover" value="50" style="color: var(--ion-text-color);">
+                                <ion-select-option value="10">10</ion-select-option>
+                                <ion-select-option value="20">20</ion-select-option>
+                                <ion-select-option value="30">30</ion-select-option>
+                                <ion-select-option value="40">40</ion-select-option>
+                                <ion-select-option value="50">50</ion-select-option>
+                            </ion-select>
+                        </ion-item>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <ion-input type="number" id="yr-${sub.code}" placeholder="Enter Year (e.g. 2023)" style="border: 1.5px solid var(--ion-color-primary); border-radius: 8px; padding-left: 10px; color: var(--ion-text-color);"></ion-input>
+                    </div>
+                </div>
+            </div>`;
         });
-    });
+
+        document.getElementById('loadingSpinner').style.display = 'none';
+        container.style.display = 'block';
+
+    } catch (err) {
+        console.error(err);
+        showGenericModal("Error", "Failed to load subjects. Check your connection.");
+    }
 }
-// ---------------------------
 
-    /***********************
-     * STATE
-     ***********************/
-    let selectedCourse = null;
-    let selectedCourseName = '';
-    let selectedYear = null;
-    let durationSec = 0;
-    let totalQuestions = 0;
-    let timerId = null;
-    let currentIndex = 0;
-    let questions = []; // [{q,opts,ans}]
-    let answers = [];   // user index or null
-    let flags = [];     // boolean
-
-    /***********************
-     * NEW FLOW FUNCTIONS
-     ***********************/
-    function showInstructionsFirst() {
-      document.getElementById('stepInstructions').style.display = 'block';
-      document.getElementById('stepCourse').style.display = 'none';
-      document.getElementById('stepSettings').style.display = 'none';
-      document.getElementById('stepExam').style.display = 'none';
-      document.getElementById('stepResult').style.display = 'none';
-      document.getElementById('stepReview').style.display = 'none';
-    }
-
-    // Make function globally available
-    window.proceedToCourseSelection = function() {
-      showLoading(true);
-      setTimeout(() => {
-        document.getElementById('stepInstructions').style.display = 'none';
-        document.getElementById('stepCourse').style.display = 'block';
-        loadCourses();
-        showLoading(false);
-      }, 500);
-    };
-
-    /***********************
-     * INIT + Email watermark
-     ***********************/
-    document.addEventListener('DOMContentLoaded', function() {
-      const user = (() => {
-        try {
-          const obj = JSON.parse(localStorage.getItem('abupq_logged_in_user')||'null');
-          if (obj && obj.email) return obj.email;
-        } catch(e){}
-        return localStorage.getItem('userEmail') || 'user@example.com';
-      })();
-      document.getElementById('wmText').textContent = user;
-      document.getElementById('userTag').textContent = user;
-
-      // Fill year dropdown (e.g., 2015 → current)
-      const yearSel = document.getElementById('year');
-      const nowY = new Date().getFullYear();
-      for(let y=nowY; y>=2020; y--){
-        const opt=document.createElement('option'); opt.value=String(y); opt.textContent=String(y);
-        yearSel.appendChild(opt);
-      }
-
-      // Show instructions first
-      showInstructionsFirst();
+window.filterSubjects = function(event) {
+    const query = event.target.value.toLowerCase();
+    document.querySelectorAll('.subject-card').forEach(card => {
+        const subjectName = card.querySelector('ion-label').innerText.toLowerCase();
+        card.style.display = subjectName.includes(query) ? 'block' : 'none';
     });
+};
 
-    /***********************
-     * COURSE LOADING FROM SUPABASE
-     ***********************/
-    async function loadCourses() {
-  const courseGrid = document.getElementById('courseGrid');
-  courseGrid.innerHTML = '<div style="padding:20px; text-align:center;">Connecting to database...</div>';
-
-  try {
-    // Check if Supabase is actually ready
-    if (!supabaseClient) {
-      console.error('Supabase not initialized');
-      // Attempt emergency re-init if it's missing
-      const supabaseUrl = 'https://xtmoolyxxylylttugjek.supabase.co';
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // your key
-      supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-    }
-
-    const { data: courses, error } = await supabaseClient
-      .from('courses')
-      .select('*')
-      .order('code');
-
-    if (error) throw error;
-
-    if (!courses || courses.length === 0) {
-      courseGrid.innerHTML = '<div class="network-error">No courses found in database.</div>';
-      return;
-    }
-
-    courseGrid.innerHTML = '';
-    const courseGroups = {};
-    courses.forEach(course => {
-      if (!courseGroups[course.code]) courseGroups[course.code] = [];
-      courseGroups[course.code].push(course);
-    });
-
-    Object.keys(courseGroups).forEach(courseCode => {
-      const courseGroup = courseGroups[courseCode];
-      const examCourse = courseGroup.find(c => c.type === 'exam');
-      const testCourse = courseGroup.find(c => c.type === 'test');
-      
-      const d = document.createElement('div');
-      d.className = 'course';
-      d.innerHTML = `
-        <div style="font-weight:800; font-size:18px">${courseCode}</div>
-        <div style="font-size:14px; margin:4px 0; color:var(--muted)">Select Exam Type:</div>
-        <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap">
-          ${examCourse ? `<button class="btn" onclick="chooseCourse('${examCourse.id}', '${examCourse.name}', 'exam')">Exam</button>` : ''}
-          ${testCourse ? `<button class="btn secondary" onclick="chooseCourse('${testCourse.id}', '${testCourse.name}', 'test')">Test</button>` : ''}
-        </div>
-      `;
-      courseGrid.appendChild(d);
-    });
+window.toggleSubject = function(code) {
+    const card = document.getElementById(`card-${code}`);
+    const chk = document.getElementById(`chk-${code}`);
     
-  } catch (error) {
-    console.error('App Error:', error);
-    courseGrid.innerHTML = `
-      <div class="network-error">
-        <p>Unable to load courses.</p>
-        <button class="btn" onclick="loadCourses()">Retry Connection</button>
-      </div>`;
-  }
+    // Check limit if they are trying to select a new one
+    if (!card.classList.contains('selected')) {
+        const selectedCount = document.querySelectorAll('.subject-card.selected').length;
+        if (selectedCount >= MAX_COURSES) {
+            showGenericModal("Limit Reached", `You can only select up to ${MAX_COURSES} courses at once.`);
+            return;
+        }
+    }
+    
+    card.classList.toggle('selected');
+    chk.checked = card.classList.contains('selected');
+};
+
+window.goToInstructions = function() {
+    const selectedCards = document.querySelectorAll('.subject-card.selected');
+    if(selectedCards.length === 0) {
+        showGenericModal("Notice", "Please select at least one subject.");
+        return;
+    }
+
+    for (let card of selectedCards) {
+        const code = card.id.replace('card-', '');
+        if(!document.getElementById(`yr-${code}`).value) {
+            showGenericModal("Notice", `Please enter a year for ${code}.`);
+            return;
+        }
+    }
+    switchView('view-instructions');
 }
-    // Make chooseCourse globally available
-    window.chooseCourse = async function(courseId, courseName, examType) { // Made Async
-      showLoading(true);
-      
-      selectedCourse = courseId;
-      selectedCourseName = courseName;
-      
-      // --- NEW: Fetch Years for this course ---
-      const yearSelect = document.getElementById('year');
-      yearSelect.innerHTML = '<option>Loading...</option>';
 
-      try {
-        const { data: yearsData, error } = await supabaseClient
-          .from('questions')
-          .select('year')
-          .eq('course_id', courseId);
+window.handleBackFromInstructions = function() {
+    if (isFastPass) {
+        window.location.replace(`course-details.html?course=${fpCourse}`);
+    } else {
+        switchView('view-selection');
+    }
+}
 
-        if (error) throw error;
+// --- 5. START EXAM (Data Fetch & Security) ---
+function fixMathText(text) {
+    if (!text) return "";
+    if (/<\/?[a-z][\s\S]*>/i.test(text)) return text;
 
-        // Get unique years and sort descending (2025, 2024...)
-        const uniqueYears = [...new Set(yearsData.map(y => y.year))].sort((a,b) => b-a);
+    let fixed = text;
+    const mathWords = ["frac", "sqrt", "int", "lim", "sum", "infty", "times", "div", "pm", "sin", "cos", "tan", "theta", "pi", "alpha"];
+    mathWords.forEach(word => {
+        const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'g');
+        fixed = fixed.replace(regex, `\\${word}`);
+    });
+    fixed = fixed.replace(/\\\\/g, "\\");
+    
+    const isMathSymbol = /[\\][a-zA-Z]+/.test(fixed) || /[=^_{}<>]/.test(fixed);
+    const hasDelimiters = fixed.includes("$") || fixed.includes("\\(") || fixed.includes("\\[");
+    if (isMathSymbol && !hasDelimiters && fixed.length < 50) return `\\( ${fixed} \\)`;
+    return fixed;
+}
+
+async function startExam() {
+    switchView('view-selection'); // Temporary hide while loading
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('loadingText').innerText = "Building Exam Engine...";
+    
+    durationSec = parseInt(document.getElementById('examDuration') ? document.getElementById('examDuration').value : 120) * 60;
+    maxDurationSec = durationSec;
+    examData = {};
+    
+    const tabsContainer = document.getElementById('examSubjectTabs');
+    tabsContainer.innerHTML = '';
+    
+    const selectedCards = document.querySelectorAll('.subject-card.selected');
+    const authUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
+
+    try {
+        // Master Freemium Check
+        const [settingsRes, subRes] = await Promise.all([
+            _sb.from('app_settings').select('payment_active').single(),
+            _sb.from('profiles').select('subscription_end').eq('id', authUser.id).maybeSingle()
+        ]);
+
+        let isSwitchActive = settingsRes.data?.payment_active ?? true;
+        let isPremium = false;
+        if (subRes.data && subRes.data.subscription_end) {
+            if (new Date(subRes.data.subscription_end) > new Date()) isPremium = true;
+        }
+        isFreeUser = (isSwitchActive && !isPremium);
+
+        let isFirst = true;
+
+        for(let card of selectedCards) {
+            const code = card.id.replace('card-', '');
+            const type = document.getElementById(`type-${code}`).value;
+            const year = document.getElementById(`yr-${code}`).value;
+            const limit = parseInt(document.getElementById(`qc-${code}`).value);
+
+            const targetTable = type === 'test' ? 'ss_test_questions' : 'ss_exam_questions';
+
+            // Fetch questions sequentially
+            const { data: rawData, error } = await _sb.from(targetTable).select('*').eq('course_code', code).eq('year', year).limit(limit);
+            if (error) console.error("Fetch error for", code, error);
+
+            if (rawData && rawData.length > 0) {
+                examData[code] = {
+                    name: code,
+                    questions: rawData.map(q => {
+                        const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+                        return { 
+                            q: fixMathText(q.question_text || q.question), 
+                            opts: parsedOpts.map(o => fixMathText(o)), 
+                            ans: parseInt(q.answer) 
+                        };
+                    }),
+                    answers: Array(rawData.length).fill(null),
+                    flags: Array(rawData.length).fill(false),
+                    currentQ: 0
+                };
+                
+                if(isFirst) { activeSubjectCode = code; isFirst = false; }
+                tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${code}" onclick="switchSubject('${code}')">${code}</div>`;
+            }
+        }
         
-        yearSelect.innerHTML = '';
-        if(uniqueYears.length === 0) {
-           const opt = document.createElement('option');
-           opt.text = "No Questions Available for the selected Year";
-           yearSelect.appendChild(opt);
-        } else {
-           uniqueYears.forEach(y => {
-             const opt = document.createElement('option');
-             opt.value = y;
-             opt.textContent = y;
-             yearSelect.appendChild(opt);
-           });
+        if(!activeSubjectCode) { 
+            document.getElementById('loadingSpinner').style.display = 'none';
+            showGenericModal("Error", "No questions found for the selected courses and years. Please adjust your setup.");
+            switchView('view-instructions');
+            return; 
         }
 
-        document.getElementById('stepCourse').style.display = 'none';
-        document.getElementById('stepSettings').style.display = 'block';
-
-      } catch(e) {
-        console.error(e);
-        alert("Could not load years for this course.");
-      } finally {
-        showLoading(false);
-      }
-    };
-
-    window.goBackToCourses = function(){
-      showLoading(true);
-      setTimeout(() => {
-        selectedCourse = null;
-        selectedCourseName = '';
-        document.getElementById('stepSettings').style.display = 'none';
-        document.getElementById('stepCourse').style.display = 'block';
-        showLoading(false);
-      }, 500);
-    };
-
-    /***********************
-     * START EXAM - FETCH FROM SUPABASE
-     ***********************/
-    async function startExam() {
-      if (!selectedCourse) return;
-
-      // 1. Read settings
-      const yearEl = document.getElementById('year');
-      selectedYear = yearEl.value;
-      durationSec = parseInt(document.getElementById('duration').value, 10) * 60;
-      totalQuestions = parseInt(document.getElementById('qcount').value, 10);
-
-      // 2. Show Spinner immediately
-      showLoading(true);
-
-      try {
-        // 3. FETCH DATA FIRST (Do not switch screen yet)
-        const { data: questionsData, error } = await supabaseClient
-          .from('questions')
-          .select('*')
-          .eq('course_id', selectedCourse)
-          .eq('year', selectedYear)
-          .limit(totalQuestions);
-
-        if (error) throw error;
-
-        if (!questionsData || questionsData.length === 0) {
-          throw new Error('No questions found for the selected course and year');
-        }
-
-        // 4. Process Data (Apply Math Fixes)
-        questions = questionsData.map(item => {
-          const rawQ = item.question_text || item.question || item.q || 'No question text';
-          const rawOpts = item.options || item.opts || item.choices || [];
-          
-          let answer = item.answer;
-          // Handle 'A','B' or '0','1' format
-          if (typeof answer === 'string') {
-            const map = {'A':0, 'B':1, 'C':2, 'D':3};
-            answer = map[answer.toUpperCase()] !== undefined ? map[answer.toUpperCase()] : (parseInt(answer) || 0);
-          } else {
-            answer = answer || 0;
-          }
-
-          // --- ROBUST MATH FIX ---
-          const fixedQ = fixMathText(rawQ);
-          
-          let parsedOpts = rawOpts;
-          if (typeof parsedOpts === 'string') {
-             try { parsedOpts = JSON.parse(parsedOpts); } catch(e) { parsedOpts = []; }
-          }
-          const fixedOpts = (parsedOpts || []).map(opt => fixMathText(opt));
-
-          return {
-            q: fixedQ,
-            opts: fixedOpts,
-            ans: parseInt(answer)
-          };
-        });
-
-        // 5. Shuffle & Init State
-        shuffle(questions);
-        totalQuestions = questions.length;
-        answers = Array(totalQuestions).fill(null);
-        flags = Array(totalQuestions).fill(false);
-        currentIndex = 0;
-
-        // 6. SWITCH UI NOW (Data is ready, so no "Loading" text needed)
-        document.getElementById('stepSettings').style.display = 'none';
-        document.getElementById('stepExam').style.display = 'block';
-        
-        document.getElementById('courseLabel').textContent = selectedCourseName;
-        document.getElementById('yearLabel').textContent = selectedYear;
-        document.getElementById('totalCount').textContent = totalQuestions;
-
-        // 7. Render
-        buildQGrid();
-        renderQuestion(); // Shows Q1 immediately
+        switchSubject(activeSubjectCode);
         startTimer();
+        document.getElementById('loadingSpinner').style.display = 'none';
+        switchView('view-exam');
 
-      } catch (error) {
-        console.error('Error loading questions:', error);
-        
-        // Handle Error UI
-        document.getElementById('stepExam').style.display = 'none';
-        document.getElementById('stepSettings').style.display = 'block';
-        
-        showModal('Notice', error.message || 'Error loading questions.', hideModal);
-        
-      } finally {
-        // 8. Always hide the spinner at the end
-        showLoading(false);
-      }
+    } catch (err) {
+        console.error(err);
+        document.getElementById('loadingSpinner').style.display = 'none';
+        showGenericModal("Error", "Failed to start the exam. Please check your connection.");
+        switchView('view-instructions');
     }
+}
 
-    // Make startExam globally available
-    window.startExam = startExam;
+// --- 6. EXAM UI LOGIC ---
+window.switchSubject = function(code) {
+    activeSubjectCode = code;
+    document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
+    document.getElementById(`tab-${code}`).classList.add('active');
+    renderGrid();
+    renderQuestion();
+};
 
-    function shuffle(arr){
-      for(let i=arr.length-1;i>0;i--){
-        const j = Math.floor(Math.random()*(i+1));
-        [arr[i],arr[j]]=[arr[j],arr[i]];
-      }
-      return arr;
-    }
-
-    /***********************
-     * TIMER (auto submit)
-     ***********************/
-    function startTimer(){
-      updateTimerLabel();
-      timerId = setInterval(()=>{
-        durationSec--;
-        if(durationSec<=0){
-          clearInterval(timerId);
-          doSubmit(true);
-        }
-        updateTimerLabel();
-      },1000);
-    }
-    function updateTimerLabel(){
-      const m = Math.floor(Math.max(0,durationSec)/60).toString().padStart(2,'0');
-      const s = (Math.max(0,durationSec)%60).toString().padStart(2,'0');
-      document.getElementById('timer').textContent = `${m}:${s}`;
-    }
-
-    /***********************
-     * RENDER + NAVIGATION
-     ***********************/
-    function buildQGrid(){
-      const grid = document.getElementById('qGrid');
-      grid.innerHTML = '';
-      for(let i=0;i<totalQuestions;i++){
-        const b=document.createElement('button');
-        b.className='qbtn';
-        b.textContent= i+1;
-        b.onclick = ()=> gotoQ(i);
-        if(answers[i]!=null) b.classList.add('answered');
-        if(flags[i]) b.classList.add('flag');
-        if(i===currentIndex) b.classList.add('current');
-        grid.appendChild(b);
-      }
-      updateAnsweredCount();
-    }
-    function updateAnsweredCount(){
-      const count = answers.filter(v=>v!=null).length;
-      document.getElementById('answeredCount').textContent = count;
-    }
-
-    function renderQuestion(){
-      const q = questions[currentIndex];
-      const qText = document.getElementById('qText');
-      const qOptions = document.getElementById('qOptions');
-      
-      let currentSmilesQueue = [];
-
-      // Parse Q text
-      const parsedQ = parseSmilesTags(`${currentIndex+1}. ${q.q}`);
-      currentSmilesQueue.push(...parsedQ.smilesQueue);
-      qText.innerHTML = parsedQ.htmlText;
-      
-      // Parse Options
-      qOptions.innerHTML = q.opts.map((t,idx)=>{
-        const checked = answers[currentIndex]===idx ? 'checked' : '';
-        const parsedOpt = parseSmilesTags(t);
-        currentSmilesQueue.push(...parsedOpt.smilesQueue);
-        return `<label class="opt"><input type="radio" name="opt" value="${idx}" ${checked}> <span>${parsedOpt.htmlText}</span></label>`;
-      }).join('');
-      
-      buildQGrid();
-      
-      qOptions.querySelectorAll('input[name="opt"]').forEach(inp=>{
-        inp.addEventListener('change', e=>{
-          answers[currentIndex] = parseInt(e.target.value,10);
-          buildQGrid();
-        });
-      });
-
-      // NEW: Draw molecules!
-      drawMolecules(currentSmilesQueue);
-
-      // TRIGGER MATHJAX
-      if(window.MathJax) {
-          MathJax.typesetPromise([qText, qOptions]).catch(err => console.log(err));
-      }
-    }
-
-    function gotoQ(i){ currentIndex=i; renderQuestion(); }
-    window.prevQ = function(){ if(currentIndex>0){ currentIndex--; renderQuestion(); } }
-    window.nextQ = function(){ if(currentIndex<totalQuestions-1){ currentIndex++; renderQuestion(); } }
-
-    window.toggleFlag = function(){
-      flags[currentIndex] = !flags[currentIndex];
-      buildQGrid();
-    };
-
-    /***********************
-     * SUBMISSION + REVIEW
-     ***********************/
-    window.confirmSubmit = function(){
-      showModal('Submit Exam','Are you sure you want to submit? You cannot change answers after submission.', ()=> doSubmit(false));
-    };
-
-    function doSubmit(auto=false){
-      showLoading(true);
-      if(timerId) clearInterval(timerId);
-      
-      // Calculate score
-      let score=0;
-      questions.forEach((q,i)=>{ if(answers[i]===q.ans) score++; });
-
-      // Show results
-      setTimeout(() => {
-        document.getElementById('stepExam').style.display='none';
-        document.getElementById('stepResult').style.display='block';
-        document.getElementById('scoreLine').innerHTML =
-          `${auto? '⏰ Time up — ':''}You scored <strong>${score}</strong> out of <strong>${totalQuestions}</strong>.`;
-
-        hideModal();
-        showLoading(false);
-      }, 500);
-    }
-
-    window.showReview = function(){
-      showLoading(true);
-      setTimeout(() => {
-        const list = document.getElementById('reviewList');
-        
-        let reviewSmilesQueue = []; // NEW: Track review molecules
-
-        list.innerHTML = questions.map((q,i)=>{
-          const userIdx = answers[i];
-          const ok = userIdx===q.ans;
-          
-          const parsedQ = parseSmilesTags(`Q${i+1}: ${q.q}`);
-          reviewSmilesQueue.push(...parsedQ.smilesQueue);
-
-          let yourText = '<em>No answer</em>';
-          if (userIdx != null) {
-              const yourParsed = parseSmilesTags(q.opts[userIdx]);
-              reviewSmilesQueue.push(...yourParsed.smilesQueue);
-              yourText = yourParsed.htmlText;
-          }
-
-          const correctParsed = parseSmilesTags(q.opts[q.ans]);
-          reviewSmilesQueue.push(...correctParsed.smilesQueue);
-          const correctText = correctParsed.htmlText;
-
-          return `<div class="card" style="background:rgba(255,255,255,0.05)">
-            <div style="font-weight:700; margin-bottom:10px; font-size:16px; line-height:1.5">
-               ${parsedQ.htmlText}
-            </div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <div class="pill" style="width:fit-content; background:${ok?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.25)'}; border:1px solid ${ok?'#10b981':'#ef4444'}">
-                ${ok?'Correct':'Wrong'}
-              </div>
-              <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:6px;">
-                 <span style="color:#aaa; font-size:12px;">YOUR ANSWER:</span><br>
-                 <strong>${yourText}</strong>
-              </div>
-              <div style="background:rgba(16,185,129,0.1); padding:8px; border-radius:6px; border:1px solid rgba(16,185,129,0.2)">
-                 <span style="color:#10b981; font-size:12px;">CORRECT ANSWER:</span><br>
-                 <strong>${correctText}</strong>
-              </div>
-            </div>
-          </div>`;
-        }).join('');
-
-        document.getElementById('stepResult').style.display='none';
-        document.getElementById('stepReview').style.display='block';
-        
-        // NEW: Draw molecules before MathJax
-        drawMolecules(reviewSmilesQueue);
-
-        // --- CRITICAL FIX: WAKE UP MATHJAX ---
-        if(window.MathJax) {
-            MathJax.typesetPromise([list]).then(() => {
-                showLoading(false);
-            });
-        } else {
-            showLoading(false);
-        }
-
-      }, 500);
-    };
+function renderGrid() {
+    const data = examData[activeSubjectCode];
+    const grid = document.getElementById('questionGrid');
+    grid.innerHTML = '';
     
-    window.backToResults = function(){
-      showLoading(true);
-      setTimeout(() => {
-        document.getElementById('stepReview').style.display='none';
-        document.getElementById('stepResult').style.display='block';
-        showLoading(false);
-      }, 500);
-    };
+    for(let i=0; i<data.questions.length; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'qbtn';
+        if(data.answers[i] !== null) btn.classList.add('answered');
+        if(data.flags[i]) btn.classList.add('flag');
+        if(data.currentQ === i) btn.classList.add('current');
+        btn.innerText = i + 1;
+        
+        btn.onclick = () => { 
+            if (isFreeUser && i >= 10) {
+                document.getElementById('examTrapModal').style.display = 'flex';
+                return;
+            }
+            data.currentQ = i; 
+            renderGrid(); 
+            renderQuestion(); 
+        };
+        grid.appendChild(btn);
+    }
+}
 
-    function escapeHtml(s){
-      return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+function renderQuestion() {
+    const data = examData[activeSubjectCode];
+    const q = data.questions[data.currentQ];
+    document.getElementById('qText').innerHTML = `Q${data.currentQ+1}. ${q.q}`;
+    
+    document.getElementById('qOptions').innerHTML = q.opts.map((opt, idx) => `
+        <label class="opt ${data.answers[data.currentQ] === idx ? 'selected' : ''}">
+            <input type="radio" name="cbtopt" value="${idx}" ${data.answers[data.currentQ] === idx ? 'checked' : ''} onchange="saveAnswer(${idx})" style="display: none;">
+            <span>${String.fromCharCode(65 + idx)}) ${opt}</span>
+        </label>
+    `).join('');
+    
+    if(window.MathJax) {
+        MathJax.typesetClear();
+        MathJax.typesetPromise().catch(err => console.error(err));
+    }
+}
+
+window.saveAnswer = function(idx) {
+    if (isFreeUser) {
+        let totalAnswers = 0;
+        for (const code in examData) {
+            totalAnswers += examData[code].answers.filter(a => a !== null).length;
+        }
+        const currentSub = examData[activeSubjectCode];
+        const isAlreadyAnswered = currentSub.answers[currentSub.currentQ] !== null;
+        
+        if (!isAlreadyAnswered && totalAnswers >= 10) {
+            document.getElementById('examTrapModal').style.display = 'flex';
+            renderQuestion(); // Resets the radio UI
+            return; 
+        }
     }
 
-    /***********************
-     * CALCULATOR
-     ***********************/
-    const calc = document.getElementById('calc');
-    window.toggleCalc = function(){ calc.style.display = (calc.style.display==='none'||!calc.style.display)?'block':'none'; }
-    window.ins = function(ch){ document.getElementById('calcInput').value += ch; }
-    window.clr = function(){ document.getElementById('calcInput').value=''; document.getElementById('calcOut').textContent='—'; }
-    window.del1 = function(){
-      const el = document.getElementById('calcInput');
-      el.value = el.value.slice(0,-1);
-    }
-    window.evalCalc = function(){
-      const raw = document.getElementById('calcInput').value.trim();
-      if(!/^[0-9+\-*/().\s%^]+$/.test(raw)){ document.getElementById('calcOut').textContent='Invalid'; return; }
-      const expr = raw.replace(/\^/g,'**');
-      try{
-        const val = Function('"use strict";return('+expr+')')();
-        document.getElementById('calcOut').textContent = String(val);
-      }catch(e){ document.getElementById('calcOut').textContent='Error'; }
-    }
+    examData[activeSubjectCode].answers[examData[activeSubjectCode].currentQ] = idx;
+    renderGrid();
+    renderQuestion(); 
+};
 
-    /***********************
-     * Modal (in-app popup)
-     ***********************/
-    function showModal(title,msg,onOk){
-      document.getElementById('modalTitle').textContent = title;
-      document.getElementById('modalMsg').textContent = msg;
-      const ok = document.getElementById('modalOk');
-      ok.onclick = onOk || (()=>{});
-      document.getElementById('overlay').style.display='flex';
-    }
-    function hideModal(){ document.getElementById('overlay').style.display='none'; }
+window.toggleFlag = function() {
+    const d = examData[activeSubjectCode];
+    d.flags[d.currentQ] = !d.flags[d.currentQ];
+    renderGrid();
+};
 
-    /***********************
-     * LOADING FUNCTION
-     ***********************/
-    function showLoading(show) {
-      document.getElementById('globalLoading').style.display = show ? 'flex' : 'none';
+window.nextQuestion = function() {
+    if (isFreeUser && examData[activeSubjectCode].currentQ + 1 >= 10) {
+        document.getElementById('examTrapModal').style.display = 'flex';
+        return;
     }
-
-    /***********************
-     * Client-side protections (deterrents)
-     ***********************/
-    document.addEventListener('contextmenu', e=> e.preventDefault());
-    document.addEventListener('keydown', e=>{
-      const c = e.ctrlKey || e.metaKey;
-      if(c && ['c','x','s','p','u','a'].includes(e.key.toLowerCase())) e.preventDefault();
-      if(e.key==='PrintScreen' || e.code==='PrintScreen'){ e.preventDefault(); showModal('Blocked','Screenshots are restricted in this demo.', hideModal); }
-    });
-    // prevent selection outside inputs
-    document.addEventListener('selectstart', e=>{
-      if(['INPUT','TEXTAREA'].includes((e.target.tagName||''))) return;
-      e.preventDefault();
-    });
-
-  
-  //Login Protection
-  
-    const logged = JSON.parse(localStorage.getItem('abupq_logged_in_user') || 'null');
-    if (!logged || !logged.email) {
-      window.location.replace('/');
+    if(examData[activeSubjectCode].currentQ < examData[activeSubjectCode].questions.length - 1) {
+        examData[activeSubjectCode].currentQ++;
+        renderGrid(); renderQuestion();
     }
+};
+
+window.prevQuestion = function() {
+    if(examData[activeSubjectCode].currentQ > 0) {
+        examData[activeSubjectCode].currentQ--;
+        renderGrid(); renderQuestion();
+    }
+};
+
+// --- 7. TIMER & SUBMIT ---
+function startTimer() {
+    timerId = setInterval(() => {
+        durationSec--;
+        if(durationSec <= 0) { clearInterval(timerId); submitExam(true); }
+        
+        const h = Math.floor(Math.max(0, durationSec) / 3600).toString().padStart(2, '0');
+        const m = Math.floor((Math.max(0, durationSec) % 3600) / 60).toString().padStart(2, '0');
+        const s = (Math.max(0, durationSec) % 60).toString().padStart(2, '0');
+        
+        document.getElementById('timerDisplay').innerText = h !== '00' ? `${h}:${m}:${s}` : `${m}:${s}`;
+    }, 1000);
+}
+
+window.confirmSubmit = function() {
+    showGenericModal('Submit Exam', 'Are you sure you want to submit? All answers will be finalized.', 
+        `<ion-button class="green-outline-btn" style="flex:1" onclick="document.getElementById('genericModal').style.display='none'">Cancel</ion-button>
+         <ion-button color="primary" style="flex:1; font-weight: bold;" onclick="submitExam(false); document.getElementById('genericModal').style.display='none'">Yes, Submit</ion-button>`
+    );
+};
+
+window.confirmDashboardReturn = function() {
+    showGenericModal('Quit Exam?', 'Are you sure you want to quit? Your progress will be lost.', 
+        `<ion-button class="green-outline-btn" style="flex:1" onclick="document.getElementById('genericModal').style.display='none'">Cancel</ion-button>
+         <ion-button color="danger" style="flex:1; font-weight: bold;" onclick="window.location.href='dashboard.html'">Quit</ion-button>`
+    );
+};
+
+async function submitExam(auto) {
+    clearInterval(timerId);
+    switchView('view-selection'); // Hide exam
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('loadingText').innerText = "Calculating Score...";
+    
+    let totalScore = 0;
+    let totalQs = 0;
+    let reviewHtml = '';
+    
+    for(const code in examData) {
+        const d = examData[code];
+        let subScore = 0;
+        reviewHtml += `<h4 style="color:var(--ion-color-primary); border-bottom:1.5px solid rgba(128,128,128,0.2); padding-bottom:8px; margin-top:25px;">${d.name}</h4>`;
+        
+        const FREE_REVIEW_LIMIT = 10;
+        let showPaywall = false;
+
+        d.questions.forEach((q, i) => {
+            totalQs++;
+            const userAns = d.answers[i];
+            const correct = userAns === q.ans;
+            if (userAns !== null) {
+                if (correct) subScore++;
+            }
+            
+            if (!isFreeUser || i < FREE_REVIEW_LIMIT) {
+                reviewHtml += `
+                <div style="background:var(--card-bg); border: 1.5px solid rgba(128,128,128,0.2); padding:15px; border-radius:12px; margin-bottom:15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                    <p style="color: var(--ion-text-color); line-height: 1.6;"><b>Q${i+1}:</b> ${q.q}</p>
+                    <p style="color:${correct?'#10b981':'var(--ion-color-danger)'}; font-weight:bold;">Your Answer: ${userAns!==null ? q.opts[userAns] : 'None'}</p>
+                    ${!correct ? `<p style="color:#10b981; font-weight:bold;">Correct: ${q.opts[q.ans]}</p>` : ''}
+                </div>`;
+            } else {
+                showPaywall = true;
+            }
+        });
+
+        if (showPaywall) {
+            const hiddenCount = d.questions.length - FREE_REVIEW_LIMIT;
+            reviewHtml += `
+            <div style="background: var(--card-bg); border: 2px dashed var(--ion-color-primary); border-radius: 14px; padding: 20px; text-align: center; margin-top: 15px;">
+                <ion-icon name="lock-closed" color="primary" style="font-size: 36px; margin-bottom: 8px;"></ion-icon>
+                <h3 style="margin: 0 0 8px; font-weight: bold; color: var(--ion-text-color);">Free Limit Reached</h3>
+                <p style="margin: 0 0 15px; color: var(--muted); font-size: 14px;">Activate the app to view the remaining <strong>${hiddenCount} questions</strong>.</p>
+                <ion-button expand="block" color="primary" style="--border-radius: 10px; font-weight: bold;" onclick="triggerPaystack()">
+                    <ion-icon name="key-outline" slot="start"></ion-icon> Activate App
+                </ion-button>
+            </div>`;
+        }
+        totalScore += subScore;
+    }
+    
+    const finalScaled = Math.round((totalScore / totalQs) * 400);
+    
+    setTimeout(() => {
+        document.getElementById('finalScore').innerText = `${finalScaled}/400`;
+        document.getElementById('reviewList').innerHTML = reviewHtml;
+        if(window.MathJax) {
+            MathJax.typesetClear();
+            MathJax.typesetPromise().catch(err => console.error(err));
+        }
+        document.getElementById('loadingSpinner').style.display = 'none';
+        switchView('view-review');
+        
+        if (auto) showGenericModal('Time Up!', 'Your exam time has elapsed. Your answers have been submitted automatically.');
+    }, 1000);
+}
+
+window.forceSubmitFreeExam = function() {
+    document.getElementById('examTrapModal').style.display = 'none';
+    submitExam(false); 
+};
+
+window.triggerPaystack = function() {
+    document.getElementById('examTrapModal').style.display = 'none';
+    const user = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
+    
+    PaystackPop.setup({
+        key: PAYSTACK_KEY,
+        email: user.email,
+        amount: 2500 * 100, 
+        currency: 'NGN', 
+        ref: 'SP_' + Math.floor((Math.random() * 1000000000) + 1),
+        metadata: { user_id: user.id, email: user.email },
+        callback: function(response) {
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('loadingText').innerText = "Activating Account...";
+            _sb.from('profiles').upsert({ id: user.id, subscription_end: '2026-12-31' }).then(() => {
+                isFreeUser = false; // Disable trap!
+                document.getElementById('loadingSpinner').style.display = 'none';
+                showGenericModal("Success", "Payment successful! Your exam is unlocked. You may continue."); 
+            });
+        },
+        onClose: function() { }
+    }).openIframe();
+};
+
+// --- 8. CALCULATOR ---
+window.toggleCalc = () => { const c = document.getElementById('calc'); c.style.display = c.style.display === 'block' ? 'none' : 'block'; };
+window.ins = (ch) => document.getElementById('calcInput').value += ch;
+window.clr = () => { document.getElementById('calcInput').value=''; document.getElementById('calcOut').innerText='—'; };
+window.evalCalc = () => {
+    try { 
+        const input = document.getElementById('calcInput').value;
+        if(!/^[0-9+\-*/().\s]+$/.test(input)) throw new Error();
+        document.getElementById('calcOut').innerText = new Function('return ' + input)(); 
+    } 
+    catch(e) { document.getElementById('calcOut').innerText = 'Error'; }
+};
+
+const calcEl = document.getElementById('calc');
+if (calcEl) {
+    const calcHeader = document.getElementById('calcHeader');
+    let isDragging = false, startX, startY, initialX, initialY;
+
+    calcHeader.addEventListener('mousedown', dragStart);
+    calcHeader.addEventListener('touchstart', dragStart, {passive: false});
+
+    function dragStart(e) {
+        if(e.target.tagName === 'SPAN') return; 
+        isDragging = true;
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        const rect = calcEl.getBoundingClientRect();
+        initialX = rect.left; initialY = rect.top;
+        startX = clientX; startY = clientY;
+        calcEl.style.right = 'auto'; calcEl.style.bottom = 'auto'; calcEl.style.margin = '0';
+        
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, {passive: false});
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchend', dragEnd);
+    }
+    function drag(e) {
+        if (!isDragging) return;
+        e.preventDefault(); 
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+        calcEl.style.left = `${initialX + (clientX - startX)}px`;
+        calcEl.style.top = `${initialY + (clientY - startY)}px`;
+    }
+    function dragEnd() {
+        isDragging = false;
+        document.removeEventListener('mousemove', drag);
+        document.removeEventListener('touchmove', drag);
+        document.removeEventListener('mouseup', dragEnd);
+        document.removeEventListener('touchend', dragEnd);
+    }
+}
