@@ -385,11 +385,11 @@ window.checkPremiumAccess = function(targetPage) {
 }
 
 // --- PAYSTACK TRIGGER (Webhook Handled) ---
+// --- PAYSTACK TRIGGER (Webhook Handled) ---
 window.triggerPutmePaystack = function() {
     const userString = localStorage.getItem('post_utme_logged_in_user');
     if (!userString) return;
     
-    // Grab BOTH email and ID from local storage
     const userObj = JSON.parse(userString);
     const userEmail = userObj.email;
     const userId = userObj.id || ''; 
@@ -402,13 +402,15 @@ window.triggerPutmePaystack = function() {
         const modal = document.getElementById('premiumModal');
         if (modal) modal.style.display = 'none';
         
-        cached.isPremium = true;
-        localStorage.setItem('putme_premium_data', JSON.stringify(cached));
-        
-        alert("Payment successful! Your app is fully activated."); 
+        // Give webhook a 3-second head start
+        setTimeout(() => {
+            cached.isPremium = true;
+            localStorage.setItem('putme_premium_data', JSON.stringify(cached));
+            alert("Payment successful! Your app is fully activated."); 
+            window.location.reload();
+        }, 3000);
     }
 
-    // Initializing and opening Paystack safely
     const handler = PaystackPop.setup({
         key: PAYSTACK_KEY,
         email: userEmail,
@@ -418,7 +420,8 @@ window.triggerPutmePaystack = function() {
         metadata: {
             user_id: userId,
             user_email: userEmail,
-            plan_type: 'Pro Access' 
+            plan_type: 'Pro Access',
+            target_app: 'post_utme' // <--- ROUTES TO POST UTME TABLE
         },
         callback: onPaymentSuccess,
         onClose: function() {

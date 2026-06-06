@@ -1,85 +1,106 @@
- const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// --- AUTH GUARD ---
+(function protectPage() {
+    const user = localStorage.getItem('abupq_logged_in_user');
+    if (!user) window.location.replace('index.html'); 
+})();
 
-  let currentUser = null;
+const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  document.addEventListener('DOMContentLoaded', async () => {
-    // Check User Session
-    const userData = JSON.parse(localStorage.getItem('abupq_logged_in_user') || '{}');
+let alertsData = []; 
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Theme Inheritance
+    if (localStorage.getItem('sp_theme') === 'dark') document.body.classList.add('dark');
     
-    if (!userData.id) {
-        window.location.replace('/');
-        return;
+    // Initialize Navigation Stack
+    history.replaceState({ view: 'view-list' }, '', '');
+    fetchAlerts();
+});
+
+// --- LINEAR NAVIGATION ENGINE ---
+function switchView(viewId, pushToHistory = true) {
+    document.querySelectorAll('.view-layer').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    if (pushToHistory) history.pushState({ view: viewId }, '', '');
+}
+
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.view) {
+        switchView(e.state.view, false);
+    } else {
+        window.location.replace('dashboard.html');
     }
-    currentUser = userData;
+});
 
-    await loadNotifications();
-  });
+// --- DATA FETCHING ---
+async function fetchAlerts() {
+    try {
+        const { data, error } = await _sb.from('notifications')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-  async function loadNotifications() {
-    const listEl = document.getElementById('notifList');
-    const loadingEl = document.getElementById('loading');
+        if (error) throw error;
 
-    // Fetch notifications for this user
-    const { data, error } = await supabaseClient
-        .from('notifications')
-        .select('*')
-        .eq('receiver_id', currentUser.id)
-        .order('created_at', { ascending: false });
+        if (!data || data.length === 0) {
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
 
-    loadingEl.style.display = 'none';
+        alertsData = data;
+        renderAlertsList();
 
-    if (error) {
-        console.error(error);
-        listEl.innerHTML = '<div class="empty-state">Error loading notifications</div>';
-        return;
-    }
+        // Save the latest alert ID to local storage so the Dashboard knows the user has "seen" them
+        localStorage.setItem('abupq_last_seen_alert', data[0].id);
 
-    if (!data || data.length === 0) {
-        listEl.innerHTML = `
-            <div class="empty-state">
-                <h3>All caught up!</h3>
-                <p>You have no notifications at the moment.</p>
-            </div>`;
-        return;
-    }
-
-    // Render list
-    listEl.innerHTML = data.map(n => {
-        const date = new Date(n.created_at).toLocaleDateString() + ' ' + new Date(n.created_at).toLocaleTimeString();
-        const unreadClass = n.is_read ? '' : 'unread';
-        const newBadge = n.is_read ? '' : '<span class="badge-new">NEW</span>';
-
-        return `
-            <div class="notif-card ${unreadClass}">
-                <div class="notif-header">
-                    <div class="notif-title">${escapeHtml(n.title)} ${newBadge}</div>
-                    <div class="notif-time">${date}</div>
-                </div>
-                <div class="notif-body">${escapeHtml(n.message)}</div>
-            </div>
+    } catch (err) {
+        console.error("Failed to load alerts:", err);
+        const emptyState = document.getElementById('emptyState');
+        emptyState.style.display = 'block';
+        emptyState.innerHTML = `
+            <ion-icon name="warning-outline" style="font-size: 64px; opacity: 0.5; color: #ef4444;"></ion-icon>
+            <p style="margin-top: 16px; font-size: 16px;">Failed to load notifications.<br>Check your connection.</p>
         `;
-    }).join('');
-
-    // Mark all as read after loading (Simple approach)
-    // In a complex app, you might want to mark them read only when clicked
-    markAsRead(data);
-  }
-
-  async function markAsRead(notifications) {
-    const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
-    
-    if (unreadIds.length > 0) {
-        await supabaseClient
-            .from('notifications')
-            .update({ is_read: true })
-            .in('id', unreadIds);
+    } finally {
+        document.getElementById('alertSkeleton').style.display = 'none';
     }
-  }
+}
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+function renderAlertsList() {
+    const container = document.getElementById('alertListContainer');
+    container.innerHTML = '';
+
+    alertsData.forEach((alert, index) => {
+        const dateObj = new Date(alert.created_at);
+        const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+        container.innerHTML += `
+        <div class="alert-card" onclick="openDetail(${index})">
+            <div class="alert-icon-box">
+                <ion-icon name="notifications"></ion-icon>
+            </div>
+            <div class="alert-content">
+                <h3 class="alert-title">${alert.title}</h3>
+                <div class="alert-preview">${alert.message.replace(/<[^>]*>?/gm, '')}</div>
+                <span class="alert-time">${formattedDate}, ${formattedTime}</span>
+            </div>
+            <ion-icon name="chevron-forward-outline" style="color: var(--muted);"></ion-icon>
+        </div>`;
+    });
+}
+
+// --- DETAIL VIEW RENDERING ---
+window.openDetail = function(index) {
+    const alert = alertsData[index];
+    const dateObj = new Date(alert.created_at);
+    
+    document.getElementById('detailDate').innerText = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' at ' + dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('detailTitle').innerText = alert.title;
+    
+    // Parse Markdown safely
+    document.getElementById('detailMessage').innerHTML = window.marked ? marked.parse(alert.message) : alert.message;
+
+    switchView('view-details');
+};

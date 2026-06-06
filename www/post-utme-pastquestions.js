@@ -446,46 +446,49 @@ window.showAccessModal = function(intent = 'locked_feature') {
     if (modal) modal.style.display = 'flex';
 }
 
+// --- 7. PAYSTACK INTEGRATION ---
 window.triggerPutmePaystack = function() {
+    document.getElementById('premiumModal').style.display = 'none';
     const userString = localStorage.getItem('post_utme_logged_in_user');
     if (!userString) return;
+    const user = JSON.parse(userString);
     
-    const userObj = JSON.parse(userString);
-    const userEmail = userObj.email;
-    const userId = userObj.id || ''; 
-    
+    // Get final price checking for discounts
     const cached = JSON.parse(localStorage.getItem('putme_premium_data') || '{}');
     const finalPrice = (cached && cached.discountEarned === true) ? 5000 : 5500;
-
-    function onPaymentSuccess(response) {
-        console.log("Payment Ref:", response.reference);
-        const modal = document.getElementById('premiumModal');
-        if (modal) modal.style.display = 'none';
-        
-        // Optimistically unlock the UI
-        cached.isPremium = true;
-        localStorage.setItem('putme_premium_data', JSON.stringify(cached));
-        
-        alert("Payment successful! Your app is fully activated."); 
-        
-        // Seamlessly reload the questions so the 30-limit vanishes instantly!
-        loadPastQuestions();
-    }
-
+    
     PaystackPop.setup({
         key: PAYSTACK_KEY,
-        email: userEmail,
+        email: user.email,
         amount: finalPrice * 100, 
         currency: 'NGN', 
         ref: 'PUTME_' + Math.floor((Math.random() * 1000000000) + 1),
-        metadata: {
-            user_id: userId,
-            user_email: userEmail,
-            plan_type: 'Pro Access' 
+        metadata: { 
+            user_id: user.id, 
+            email: user.email,
+            plan_type: 'Pro Access',
+            target_app: 'post_utme' // <--- ROUTES TO POST UTME TABLE
         },
-        callback: onPaymentSuccess,
-        onClose: function() {
-            console.log('Payment window closed.');
-        }
+        callback: function(response) {
+            showLoading(true, 'Verifying payment securely...');
+            
+            setTimeout(() => {
+                showLoading(false);
+                
+                // Optimistically update the cache
+                cached.isPremium = true;
+                localStorage.setItem('putme_premium_data', JSON.stringify(cached));
+                
+                alert("Payment successful! Your app is fully activated."); 
+                
+                // Refresh the questions dynamically to clear the limit
+                fetchQuestionsEngine(
+                    activeSubjectCode || document.querySelector('.subject-card.selected')?.id.split('-')[1], 
+                    document.getElementById(`yr-${activeSubjectCode || document.querySelector('.subject-card.selected')?.id.split('-')[1]}`).value, 
+                    document.getElementById(`type-${activeSubjectCode || document.querySelector('.subject-card.selected')?.id.split('-')[1]}`).value
+                );
+            }, 3000);
+        },
+        onClose: function() { console.log('Payment window closed.'); }
     }).openIframe();
-}
+};

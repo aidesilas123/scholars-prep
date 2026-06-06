@@ -361,10 +361,13 @@ window.sendToNexus = async function(qIndex) {
     }
 };
 
+
 // --- 7. PAYSTACK INTEGRATION ---
 window.triggerPutmePaystack = function() {
     document.getElementById('premiumModal').style.display = 'none';
-    const user = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
+    const userString = localStorage.getItem('abupq_logged_in_user');
+    if (!userString) return;
+    const user = JSON.parse(userString);
     
     PaystackPop.setup({
         key: PAYSTACK_KEY,
@@ -372,17 +375,22 @@ window.triggerPutmePaystack = function() {
         amount: 2500 * 100, 
         currency: 'NGN', 
         ref: 'SP_' + Math.floor((Math.random() * 1000000000) + 1),
-        metadata: { user_id: user.id, email: user.email },
+        metadata: { 
+            user_id: user.id, 
+            email: user.email,
+            plan_type: 'semester' 
+        },
         callback: function(response) {
-            showLoading(true, 'Activating...');
-            _sb.from('profiles').upsert({ id: user.id, subscription_end: '2026-12-31' }).then(() => {
+            showLoading(true, 'Verifying payment securely...');
+            
+            // Wait 3 seconds for the Webhook to update the DB, then reload
+            setTimeout(() => {
                 showLoading(false);
                 alert("Payment successful! Your app is fully activated."); 
-                // Refresh the questions dynamically to clear the limit
-                fetchQuestionsEngine(activeSubjectCode, fpYear || document.getElementById(`yr-${activeSubjectCode}`).value, fpType || document.getElementById(`type-${activeSubjectCode}`).value);
-            });
+                window.location.reload(); 
+            }, 3000);
         },
-        onClose: function() { }
+        onClose: function() { console.log('Payment window closed.'); }
     }).openIframe();
 };
 

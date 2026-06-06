@@ -592,16 +592,22 @@ window.triggerPaystack = function() {
         amount: 2500 * 100, 
         currency: 'NGN', 
         ref: 'SP_' + Math.floor((Math.random() * 1000000000) + 1),
-        metadata: { user_id: user.id, email: user.email },
+        metadata: { 
+            user_id: user.id, 
+            email: user.email,
+            plan_type: 'semester' // Added for the webhook
+        },
         callback: function(response) {
-            showGlobalLoading("Activating Account...");
-            _sb.from('profiles').upsert({ id: user.id, subscription_end: '2026-12-31' }).then(() => {
-                isFreeUser = false; 
+            showGlobalLoading("Verifying Payment Securely...");
+            
+            // Wait 3 seconds for the Webhook to update the DB
+            setTimeout(() => {
+                isFreeUser = false; // Disable the trap locally so they can continue
                 hideGlobalLoading();
                 showGenericModal("Success", "Payment successful! Your exam is unlocked. You may continue."); 
-            });
+            }, 3000);
         },
-        onClose: function() { }
+        onClose: function() { console.log('Payment window closed.'); }
     }).openIframe();
 };
 

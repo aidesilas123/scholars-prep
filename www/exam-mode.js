@@ -603,7 +603,6 @@ window.forceSubmitFreeExam = function() {
     document.getElementById('examTrapModal').style.display = 'none';
     submitExam(false); 
 };
-
 window.triggerPutmePaystack = function() {
     if (typeof PaystackPop === 'undefined') {
         alert("Payment gateway blocked. Please disable your browser's adblocker or tracking prevention and refresh the page.");
@@ -620,12 +619,18 @@ window.triggerPutmePaystack = function() {
     function onPaymentSuccess(response) {
         console.log("Payment Ref:", response.reference);
         document.getElementById('examTrapModal').style.display = 'none';
+        showLoading(true, "Verifying payment securely...");
         
-        isFreeUser = false; 
-        cached.isPremium = true;
-        localStorage.setItem('putme_premium_data', JSON.stringify(cached));
-        
-        alert("Payment successful! Your exam is unlocked. You may continue."); 
+        // Wait for webhook, then unlock UI without reloading the page
+        setTimeout(() => {
+            isFreeUser = false; // Turn off the trap!
+            cached.isPremium = true;
+            localStorage.setItem('putme_premium_data', JSON.stringify(cached));
+            
+            showLoading(false);
+            alert("Payment successful! Your exam is unlocked. You may continue."); 
+            startTimer(); // Resume the clock!
+        }, 3000);
     }
 
     let handler = PaystackPop.setup({
@@ -637,7 +642,8 @@ window.triggerPutmePaystack = function() {
         metadata: {
             user_id: userId,
             user_email: userEmail,
-            plan_type: 'Pro Access' 
+            plan_type: 'Pro Access',
+            target_app: 'post_utme' // <--- ROUTES TO POST UTME TABLE
         },
         callback: onPaymentSuccess,
         onClose: function() { console.log('Payment window closed.'); }

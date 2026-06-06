@@ -12,14 +12,44 @@ export default async function handler(req, res) {
     const event = req.body;
 
     if (event.event === 'charge.success') {
-      const { user_id, plan_type, email } = event.data.metadata;
-      const expiryDate = (plan_type === 'semester') ? '2026-06-30' : '2026-12-31';
-
+      // 1. Unpack the metadata
+      const { user_id, email, target_app } = event.data.metadata;
+      
       const supabaseUrl = process.env.SUPABASE_URL;
       const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      let fetchUrl = '';
+      let payloadBody = {};
 
-      // Use POST with resolution=merge-duplicates to handle new OR existing rows
-      const response = await fetch(`${supabaseUrl}/rest/v1/profiles`, {
+      // 2. ROUTER: Post UTME vs Main App
+      if (target_app === 'post_utme') {
+          // --- POST UTME APP LOGIC ---
+          // Using ?on_conflict=user_email to ensure we update existing emails rather than duplicating
+          fetchUrl = `${supabaseUrl}/rest/v1/putme_subscriptions?on_conflict=user_email`;
+          
+          const today = new Date().toISOString().split('T')[0]; // Gets YYYY-MM-DD
+          
+          payloadBody = {
+              user_email: email,
+              plan_name: 'Pro Access',
+              status: 'Active',
+              start_date: today,
+              end_date: '2026-12-31'
+          };
+      } else {
+          // --- MAIN APP (SEMESTER) LOGIC ---
+          fetchUrl = `${supabaseUrl}/rest/v1/profiles`;
+          
+          payloadBody = {
+              id: user_id,
+              email: email,
+              plan_type: 'semester',
+              subscription_end: '2026-11-30T23:59:59Z'
+          };
+      }
+
+      // 3. Execute the Supabase Upsert
+      const response = await fetch(fetchUrl, {
         method: 'POST', 
         headers: {
           'Content-Type': 'application/json',
@@ -27,15 +57,13 @@ export default async function handler(req, res) {
           'Authorization': `Bearer ${serviceKey}`,
           'Prefer': 'resolution=merge-duplicates' 
         },
-        body: JSON.stringify({
-          id: user_id,
-          email: email,
-          plan_type: plan_type,
-          subscription_end: expiryDate
-        })
+        body: JSON.stringify(payloadBody)
       });
 
-      if (!response.ok) throw new Error('Failed to upsert to Supabase');
+      if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Supabase Upsert Failed: ${errorText}`);
+      }
     }
 
     return res.status(200).send('Success');

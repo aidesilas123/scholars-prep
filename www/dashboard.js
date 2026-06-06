@@ -208,28 +208,36 @@ window.checkPremiumAccess = function(targetPage) {
     document.getElementById('accessModal').style.display = 'flex';
 };
 
+// --- PAYSTACK INTEGRATION ---
 window.triggerPaystack = function() {
     document.getElementById('accessModal').style.display = 'none';
-    const user = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
+    const userString = localStorage.getItem('abupq_logged_in_user');
+    if (!userString) return;
+    const user = JSON.parse(userString);
     
-    const handler = PaystackPop.setup({
+    PaystackPop.setup({
         key: PAYSTACK_KEY,
         email: user.email,
         amount: 2500 * 100, 
         currency: 'NGN', 
         ref: 'SP_' + Math.floor((Math.random() * 1000000000) + 1),
-        metadata: { user_id: user.id, email: user.email },
+        metadata: { 
+            user_id: user.id, 
+            email: user.email,
+            plan_type: 'semester' // Added for the webhook
+        },
         callback: function(response) {
-            showLoading('Activating Account...');
-            supabaseClient.from('profiles').upsert({ id: user.id, subscription_end: '2026-12-31' }).then(() => {
+            showLoading('Verifying payment securely...');
+            
+            // Wait 3 seconds for the Webhook to update the DB
+            setTimeout(() => {
                 hideLoading();
                 showGenericModal("Success", "Payment successful! Your app is fully activated."); 
                 setTimeout(() => window.location.reload(), 2000);
-            });
+            }, 3000);
         },
-        onClose: function() { }
-    });
-    handler.openIframe();
+        onClose: function() { console.log('Payment window closed.'); }
+    }).openIframe();
 };
 
 window.showGenericModal = function(title, message, isError = false) {
