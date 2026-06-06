@@ -309,23 +309,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 // --- NOTIFICATION BADGE ENGINE ---
 async function updateNotificationBadge() {
-    // 1. Get the ID of the last notification the user viewed (default to 0 for new users)
     const lastSeenId = parseInt(localStorage.getItem('abupq_last_seen_alert') || '0', 10);
 
     try {
-        // 2. Ask Supabase to COUNT how many rows have an ID strictly greater than the lastSeenId
-        const { count, error } = await _sb
+        
+        const { count, error } = await supabaseClient
             .from('notifications')
             .select('*', { count: 'exact', head: true })
-            .gt('id', lastSeenId); // "gt" means Greater Than
+            .gt('id', lastSeenId); 
 
         if (error) throw error;
 
-        // 3. Update the UI
         const badge = document.getElementById('notifBadge');
         if (badge) {
             if (count && count > 0) {
-                // If more than 9, show "9+" to keep the UI circle perfectly round
                 badge.innerText = count > 9 ? '9+' : count;
                 badge.style.display = 'block';
             } else {
@@ -336,7 +333,6 @@ async function updateNotificationBadge() {
         console.error("Failed to load notification badge count:", err);
     }
 }
-
 // Call this function when the dashboard loads
 document.addEventListener('DOMContentLoaded', () => {
     updateNotificationBadge();
