@@ -348,7 +348,7 @@ function renderCbtGrid() {
     grid.innerHTML = '';
     for(let i=0; i<cbtData.questions.length; i++) {
         const btn = document.createElement('button');
-        btn.className = 'qbtn';
+        btn.className = 'qbtn';calculateAndShowResults
         if(cbtData.answers[i] !== null) btn.classList.add('answered');
         if(cbtData.flags[i]) btn.classList.add('flag'); 
         if(cbtData.currentQ === i) btn.classList.add('current');
@@ -447,7 +447,7 @@ async function processSubmission(isAuto) {
 }
 
 // --- 8. CALCULATE GPA ---
-// --- REPLACE ONLY YOUR calculateAndShowResults FUNCTION ---
+// ---calculateAndShowResults FUNCTION ---
 window.calculateAndShowResults = async function() {
     showLoading(true, "Calculating GPA...");
     try {
@@ -456,25 +456,35 @@ window.calculateAndShowResults = async function() {
 
         hubData.forEach(row => {
             const credits = settings?.find(s => s.course_code === row.course_code)?.credit_units || 2;
-            const testVal = parseFloat(row.test_score) || 0;
-            const examVal = parseFloat(row.exam_score) || 0;
+            
+            // Check the mode and grab only the relevant scores
+            const testVal = row.mode === 'exam' ? 0 : (parseFloat(row.test_score) || 0);
+            const examVal = row.mode === 'test' ? 0 : (parseFloat(row.exam_score) || 0);
+            
+            // Determine max score and calculate percentage
             const totalScore = testVal + examVal;
+            const maxScore = row.mode === 'both' ? 100 : (row.mode === 'test' ? 40 : 60);
+            const percentage = (totalScore / maxScore) * 100;
             
             let grade = 'F', points = 0;
-            if (totalScore >= 70) { grade = 'A'; points = 5; }
-            else if (totalScore >= 60) { grade = 'B'; points = 4; }
-            else if (totalScore >= 50) { grade = 'C'; points = 3; }
-            else if (totalScore >= 45) { grade = 'D'; points = 2; }
-            else if (totalScore >= 40) { grade = 'E'; points = 1; }
+            if (percentage >= 70) { grade = 'A'; points = 5; }
+            else if (percentage >= 60) { grade = 'B'; points = 4; }
+            else if (percentage >= 50) { grade = 'C'; points = 3; }
+            else if (percentage >= 45) { grade = 'D'; points = 2; }
+            else if (percentage >= 40) { grade = 'E'; points = 1; }
 
             totalQualityPoints += (points * credits);
             totalCredits += credits;
 
+            // Format UI so skipped phases show a dash instead of a zero
+            let testDisplay = row.mode === 'exam' ? '-' : testVal;
+            let examDisplay = row.mode === 'test' ? '-' : examVal;
+
             tableHTML += `<tr>
                 <td style="font-weight:bold; text-align:left;">${row.course_code}</td>
-                <td>${testVal}</td>
-                <td>${examVal}</td>
-                <td style="font-weight:bold;">${totalScore}</td>
+                <td>${testDisplay}</td>
+                <td>${examDisplay}</td>
+                <td style="font-weight:bold;">${totalScore}/${maxScore}</td>
                 <td style="font-weight:bold; color:${points >= 3 ? '#10b981' : '#d32f2f'}">${grade}</td>
             </tr>`;
         });
@@ -483,7 +493,7 @@ window.calculateAndShowResults = async function() {
         const gpaPercent = (finalGPA / 5.0) * 100;
         const gpaColor = finalGPA >= 2.5 ? '#10b981' : '#d32f2f';
 
-        // SAFE DOM UPDATES (Prevents crashing if HTML IDs don't perfectly match)
+        // SAFE DOM UPDATES
         const gpaTextEl = document.getElementById('gpaText');
         if (gpaTextEl) {
             gpaTextEl.innerText = finalGPA;
@@ -506,7 +516,6 @@ window.calculateAndShowResults = async function() {
     }
     showLoading(false);
 };
-
 // --- CALCULATOR & DRAG ---
 window.toggleCalc = () => { const c = document.getElementById('calc'); c.style.display = c.style.display === 'block' ? 'none' : 'block'; };
 window.ins = (ch) => document.getElementById('calcInput').value += ch;
