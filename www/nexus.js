@@ -23,8 +23,7 @@ const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey
 
 // --- AI THINKING PHASES LOGIC ---
 const thinkingPhases = [
-    "Analyzing prompt...",
-    "Scanning academic database...",
+    "Analyzing...",
     "Structuring response...",
     "Refining final details..."
 ];

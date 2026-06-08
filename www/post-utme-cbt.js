@@ -277,7 +277,7 @@ async function startExam() {
         }
     }
 
-    showLoading(true, "Preparing Exam...");
+    showLoading(true, "Loading...");
     durationSec = parseInt(document.getElementById('examDuration').value) * 60;
     maxDurationSec = durationSec;
     const selectedCards = document.querySelectorAll('.subject-card.selected');

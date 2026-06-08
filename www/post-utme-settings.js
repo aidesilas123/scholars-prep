@@ -55,7 +55,7 @@ const settingsData = {
         title: "Privacy Policy",
         html: `<h2>Your Privacy Matters</h2>
                <p>At Scholars Prep, we collect essential data such as your name, email, and exam scores strictly to provide you with personalized learning analytics and progress tracking.</p>
-               <p>We do not share, sell, or distribute your personal data to any third-party advertisers. All passwords and session tokens are securely encrypted via Supabase.</p>`
+               <p>We do not share, sell, or distribute your personal data to any third-party advertisers. All passwords and session tokens are securely encrypted via our Database.</p>`
     },
     terms: {
         title: "Terms & Conditions",

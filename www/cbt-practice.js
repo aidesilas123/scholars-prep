@@ -265,7 +265,7 @@ async function startExam() {
     
     showGlobalLoading("Loading, Please Wait...");
     
-    durationSec = parseInt(document.getElementById('examDuration') ? document.getElementById('examDuration').value : 120) * 60;
+    durationSec = parseInt(document.getElementById('examDuration') ? document.getElementById('examDuration').value : 60) * 60;
     maxDurationSec = durationSec;
     examData = {};
     
