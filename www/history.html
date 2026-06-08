@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Mock History — Scholars Prep</title>
+  <link rel="icon" type="image" href="favicon1.png">
+  
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --ion-color-primary: #044908;
+      --panel: #ffffff;
+      --muted: #8f96a3;
+      --page-bg: #f3f4f6;
+      --table-header: rgba(4,73,8,0.1);
+      --table-border: rgba(128,128,128,0.2);
+    }
+
+    body.dark, html.dark {
+      --ion-background-color: #121212; 
+      --ion-text-color: #ffffff; 
+      --panel: #1e1e1e;
+      --page-bg: #121212;
+      --table-header: rgba(255,255,255,0.05);
+      --table-border: rgba(255,255,255,0.1);
+      background-color: #121212;
+    }
+
+    body { background: var(--page-bg); font-family: Inter, sans-serif; }
+    
+    ion-app.hydrated { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
+    
+    /* Linear Navigation Stack Animations */
+    .view-layer { display: none; height: 100%; width: 100%; flex-direction: column; }
+    .view-layer.active { display: flex; animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* History List Card */
+    .history-card {
+        background: var(--panel); border: 1.5px solid var(--table-border);
+        border-radius: 12px; padding: 16px; margin-bottom: 12px;
+        display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.03); cursor: pointer; color: var(--ion-text-color);
+    }
+    
+    /* Donut Charts */
+    .summary-charts { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+    .chart-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .donut { 
+        width: 140px; height: 140px; border-radius: 50%; 
+        display: flex; justify-content: center; align-items: center; 
+        background: conic-gradient(var(--ion-color-primary) 0%, #d1d5db 0);
+        position: relative; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .donut::after { content: ''; position: absolute; width: 100px; height: 100px; background: var(--panel); border-radius: 50%; }
+    .donut-text { position: absolute; z-index: 10; font-size: 24px; font-weight: bold; color: var(--ion-text-color); }
+    
+    /* Summary Tables */
+    .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--panel); border-radius: 12px; overflow: hidden; border: 1.5px solid var(--table-border); color: var(--ion-text-color); }
+    .summary-table th { background: var(--table-header); padding: 12px; font-weight: bold; text-align: center; border-bottom: 2px solid var(--table-border); color: var(--ion-color-primary); }
+    .summary-table td { padding: 12px; text-align: center; border-bottom: 1px solid var(--table-border); font-weight: bold; }
+    .summary-table tr:last-child td { border-bottom: none; }
+    
+    .text-green { color: #10b981; }
+    .text-red { color: #ef4444; }
+  </style>
+</head>
+<body class="noselect">
+  <ion-app>
+    
+    <div id="view-list" class="view-layer active">
+      <ion-header class="ion-no-border">
+        <ion-toolbar style="--background: transparent;">
+          <ion-buttons slot="start">
+            <ion-button color="primary" onclick="window.location.replace('dashboard.html')"><ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title style="font-weight: 800;">Mock History</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding" style="--background: var(--page-bg);">
+        <div id="historySkeleton">
+            <ion-skeleton-text animated style="height: 70px; border-radius: 12px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 12px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 12px; margin-bottom: 12px;"></ion-skeleton-text>
+        </div>
+        
+        <div id="emptyState" style="display: none; text-align: center; padding-top: 40px; color: var(--muted);">
+            <ion-icon name="document-text-outline" style="font-size: 64px; opacity: 0.5;"></ion-icon>
+            <p style="margin-top: 16px; font-size: 16px;">You haven't completed any mock sessions yet.</p>
+        </div>
+
+        <div id="historyListContainer"></div>
+      </ion-content>
+    </div>
+
+    <div id="view-details" class="view-layer">
+      <ion-header class="ion-no-border">
+        <ion-toolbar style="--background: transparent;">
+          <ion-buttons slot="start">
+            <ion-button color="primary" onclick="history.back()"><ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title style="font-weight: 800;">Transcript</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding" style="--background: var(--page-bg);">
+        
+        <div class="summary-charts">
+            <div class="chart-box">
+                <div class="donut" id="gpaDonutChart">
+                    <span class="donut-text" id="gpaDonutText">0.00</span>
+                </div>
+                <div style="font-weight: bold; color: var(--muted); margin-top: 8px;">Final GPA</div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 30px; border-bottom: 2px solid var(--table-border); padding-bottom: 8px; color: var(--ion-text-color);">Detail Breakdown</h3>
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Course</th>
+                    <th>Test</th>
+                    <th>Exam</th>
+                    <th>Total</th>
+                    <th>Grade</th>
+                </tr>
+            </thead>
+            <tbody id="detailsTableBody">
+            </tbody>
+        </table>
+
+      </ion-content>
+    </div>
+
+  </ion-app>
+
+  <script defer src="history.js"></script>
+  
+</body>
+</html>
