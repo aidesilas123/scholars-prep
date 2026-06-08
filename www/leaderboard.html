@@ -1,252 +1,199 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leaderboard - Scholars Prep</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8fafc" id="theme-color-meta" />
+  <title>Leaderboard — Scholars Prep</title>
   <link rel="icon" type="image" href="favicon1.png">
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    (function() {
-        const _sb = supabase.createClient('https://xtmoolyxxylylttugjek.supabase.co', 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG');
-
-        async function strictGuard() {
-            const ua = navigator.userAgent.toLowerCase();
-            const platform = navigator.platform.toLowerCase();
-            
-            // 🛡️ THE TRIPLE THREAT CHECK
-            const isMobileOS = /android|iphone|ipad|ipod/.test(ua);
-            const isApp = ua.includes('wv') || window.Capacitor;
-            const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-            
-            // Strictly block if it smells like a PC (Windows, Mac, Linux)
-            const isPC = /win|mac|linux/.test(platform);
-
-            // 1. Instant Desktop Kick (No DB wait)
-            if (isPC && !isApp) {
-                window.location.replace('/');
-                return;
-            }
-
-            // 2. Database Check
-            const { data } = await _sb.from('site_settings').select('mobile_only_mode').eq('id', 1).single();
-
-            // Logic: If mobile mode is ON, only allow REAL mobile devices
-            if (data && data.mobile_only_mode) {
-                if (isMobileOS || isApp || (hasTouch && !isPC)) {
-                    // VALID MOBILE: Unlock the page
-                    unlock();
-                } else {
-                    // BYPASS ATTEMPT: Kick to index
-                    window.location.replace('/');
-                }
-            } else {
-                // MAINTENANCE OFF: Unlock for everyone
-                unlock();
-            }
-        }
-
-        
-    })();
-</script>
   
+  <script>
+    const savedTheme = localStorage.getItem('sp_theme');
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.backgroundColor = '#121212';
+    } else {
+      document.documentElement.style.backgroundColor = '#f8fafc';
+    }
+  </script>
+
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    /* Mobile Table Styles */
-    @media (max-width: 768px) {
-      .scores-table thead { display: none; }
-      .scores-table tbody tr {
-        display: block;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px; margin-bottom: 12px; padding: 12px;
-      }
-      .scores-table tbody td {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
-        text-align: right;
-      }
-      .scores-table tbody td:last-child { border-bottom: none; }
-      
-      /* Only show labels on mobile */
-      .scores-table tbody td::before {
-        content: attr(data-label);
-        font-weight: 700; color: var(--muted); margin-right: 10px;
-      }
-    }
-    /* Global Styles */
     :root {
-      --grad: linear-gradient(135deg, #051f01, #063b08);
-      --card: rgba(14, 224, 28, 0.12);
-      --panel: rgba(121, 22, 22, 0.18);
-      --text: #eef2ff;
-      --muted: #cbd5e1;
-      --accent: #3f66ff;
-      --accent-dark: #2f4ed7;
-      --radius: 16px;
+      --ion-color-primary: #044908;
+      --panel: #ffffff;
+      --muted: #8f96a3;
+      --page-bg: #f8fafc;
+      --table-header: rgba(4,73,8,0.1);
+      --table-border: rgba(128,128,128,0.2);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
-      background: var(--grad); color: var(--text);
-      min-height: 100vh; -webkit-font-smoothing: antialiased;
-    }
-    a { color: inherit; text-decoration: none; }
-
-    /* --- MOBILE RESPONSIVE TABLE CSS --- */
-    @media screen and (max-width: 768px) {
-      .scores-table thead { display: none; }
-      .scores-table tbody tr {
-        display: block;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px; margin-bottom: 15px; padding: 10px;
-      }
-      .scores-table tbody td {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        text-align: right; font-size: 0.95rem;
-      }
-      .scores-table tbody td:last-child { border-bottom: none; }
-
-      /* Labels for Mobile */
-      .scores-table td:nth-of-type(1)::before { content: "Rank"; font-weight: bold; color: var(--muted); }
-      .scores-table td:nth-of-type(2)::before { content: "Student"; font-weight: bold; color: var(--muted); }
-      .scores-table td:nth-of-type(3)::before { content: "GPA"; font-weight: bold; color: var(--muted); }
-      .scores-table td:nth-of-type(4)::before { content: "Score"; font-weight: bold; color: var(--muted); }
-      .scores-table td:nth-of-type(5)::before { content: "Date"; font-weight: bold; color: var(--muted); }
-
-      /* Special styling for Rank/Avatar row on mobile */
-      .scores-table tbody td:nth-of-type(2) {
-        justify-content: flex-end; /* Align user info to right */
-      }
+    html.dark, html.dark body.dark {
+      --ion-background-color: #121212; 
+      --ion-text-color: #ffffff; 
+      --panel: #1e1e1e;
+      --page-bg: #121212;
+      --table-header: rgba(255,255,255,0.05);
+      --table-border: rgba(255,255,255,0.1);
+      background-color: #121212 !important;
     }
 
-    /* Regular Styles */
-    .topbar {
-      position: fixed; top: 0; left: 0; right: 0; height: 64px;
-      z-index: 9999; display: flex; align-items: center; justify-content: space-between;
-      padding: 0 16px; background: rgba(6, 59, 8, 0.95);
-      backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    .brand { font-weight: 800; font-size: 18px; color: #fff; cursor: pointer; }
-    .btn-back {
-      background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px;
-      font-size: 14px; font-weight: 600; transition: 0.2s;
-    }
+    body { background: var(--page-bg) !important; font-family: Inter, sans-serif; height: 100%; margin: 0; overscroll-behavior-y: none; }
+    
+    ion-app.hydrated { visibility: visible; opacity: 1; transition: opacity 0.3s ease; }
+    
+    /* Navigation Animations */
+    .view-layer { display: none; height: 100%; width: 100%; flex-direction: column; }
+    .view-layer.active { display: flex; animation: slideInRight 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
 
-    .main-content {
-      margin-top: 80px; padding: 20px; max-width: 1000px; margin-left: auto; margin-right: auto;
+    /* Leaderboard Cards */
+    .rank-card {
+        background: var(--panel); border: 1.5px solid var(--table-border);
+        border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;
+        display: flex; align-items: center; justify-content: space-between;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.03); cursor: pointer; color: var(--ion-text-color);
+        transition: transform 0.2s;
     }
+    .rank-card:active { transform: scale(0.98); }
+    
+    /* Highlight the current user */
+    .rank-card.is-me { border: 2px solid var(--ion-color-primary); background: rgba(4, 73, 8, 0.05); }
 
-    .header-card {
-      text-align: center; margin-bottom: 30px;
-      padding: 30px 20px; background: var(--panel); border-radius: var(--radius);
-      border: 1px solid rgba(255,255,255,0.1);
+    .rank-left { display: flex; align-items: center; gap: 12px; }
+    .rank-badge {
+        width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; 
+        justify-content: center; font-weight: bold; font-size: 14px; background: var(--page-bg); color: var(--muted);
     }
-    h1 {
-      background: linear-gradient(135deg, #4CAF50, #81c784);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      font-size: 2rem; margin-bottom: 10px;
-    }
+    
+    /* Top 3 Colors */
+    .rank-1 .rank-badge { background: #FFD700; color: #856404; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+    .rank-2 .rank-badge { background: #C0C0C0; color: #383d41; }
+    .rank-3 .rank-badge { background: #CD7F32; color: #4a3014; }
 
-    /* Podium */
-    .podium-section {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
-      margin-bottom: 40px; align-items: end;
-    }
-    @media (max-width: 600px) { .podium-section { grid-template-columns: 1fr; } }
-
-    .podium-item {
-      background: var(--card); border-radius: var(--radius); padding: 20px;
-      text-align: center; position: relative; border: 2px solid transparent;
-    }
-    .podium-item.first { height: 260px; border-color: #FFD700; background: linear-gradient(145deg, #FFD700 0%, #B8860B 100%); order: 2; color: #000; }
-    .podium-item.second { height: 230px; border-color: #C0C0C0; background: linear-gradient(145deg, #C0C0C0 0%, #808080 100%); order: 1; color: #000; }
-    .podium-item.third { height: 200px; border-color: #CD7F32; background: linear-gradient(145deg, #CD7F32 0%, #8B4513 100%); order: 3; color: #000; }
-
-    .rank-num { font-size: 40px; font-weight: 900; opacity: 0.5; }
-    .podium-gpa { font-size: 32px; font-weight: 800; margin: 10px 0; }
-    .podium-name { font-weight: 700; font-size: 18px; }
-
-    /* Table */
-    .scores-table {
-      width: 100%; border-collapse: collapse; margin-top: 20px;
-    }
-    .scores-table th {
-      text-align: left; padding: 15px; color: var(--muted); border-bottom: 1px solid rgba(255,255,255,0.2);
-    }
-    .scores-table td {
-      padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
     .avatar-circle {
-      width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.2);
-      display: inline-flex; align-items: center; justify-content: center; margin-right: 10px;
-      font-size: 12px; font-weight: bold;
-    }
-    .gpa-cell { color: #10b981; font-weight: bold; font-size: 1.1rem; }
-
-    /* Refresh Btn */
-    .refresh-btn {
-      display: block; margin: 30px auto; padding: 12px 30px;
-      background: var(--accent); color: white; border: none; border-radius: 10px;
-      font-weight: bold; cursor: pointer;
+        width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; 
+        justify-content: center; font-size: 18px; font-weight: bold; color: white;
+        background: linear-gradient(135deg, var(--ion-color-primary), #10b981);
     }
 
-    .loading-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
-      display: none; align-items: center; justify-content: center; z-index: 2000;
+    .user-info { display: flex; flex-direction: column; }
+    .user-name { font-weight: bold; font-size: 15px; color: var(--ion-text-color); margin: 0; }
+    .user-tag { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .score-box { text-align: right; }
+    .score-val { font-size: 18px; font-weight: 800; color: #10b981; }
+    .score-total { font-size: 12px; color: var(--muted); }
+
+    /* Transcript Detail View (Matches History Page) */
+    .summary-charts { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+    .chart-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .donut { 
+        width: 140px; height: 140px; border-radius: 50%; 
+        display: flex; justify-content: center; align-items: center; 
+        background: conic-gradient(var(--ion-color-primary) 0%, #d1d5db 0);
+        position: relative; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1);
     }
-    .spinner {
-      width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
-      border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .donut::after { content: ''; position: absolute; width: 100px; height: 100px; background: var(--panel); border-radius: 50%; }
+    .donut-text { position: absolute; z-index: 10; font-size: 24px; font-weight: bold; color: var(--ion-text-color); }
+    
+    .summary-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: var(--panel); border-radius: 12px; overflow: hidden; border: 1.5px solid var(--table-border); color: var(--ion-text-color); }
+    .summary-table th { background: var(--table-header); padding: 12px; font-weight: bold; text-align: center; border-bottom: 2px solid var(--table-border); color: var(--ion-color-primary); }
+    .summary-table td { padding: 12px; text-align: center; border-bottom: 1px solid var(--table-border); font-weight: bold; }
+    .summary-table tr:last-child td { border-bottom: none; }
+    
+    .text-green { color: #10b981; }
+    .text-red { color: #ef4444; }
   </style>
 </head>
-<body>
+<body class="noselect">
+  <ion-app>
+    
+    <div id="view-list" class="view-layer active">
+      <ion-header class="ion-no-border" style="background: var(--page-bg);">
+        <ion-toolbar style="--background: transparent; padding-top: 5px;">
+          <ion-buttons slot="start">
+            <ion-button color="primary" onclick="history.back()"><ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title style="font-weight: 800; font-size: 16px; color: var(--ion-text-color);">Top Undergrads</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding" style="--background: var(--page-bg);">
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <ion-icon name="trophy" style="font-size: 50px; color: #FFD700;"></ion-icon>
+            <p style="color: var(--muted); margin-top: 5px; font-size: 14px;">Ranking based on highest overall GPA from Mock Sessions.</p>
+        </div>
 
-  <div class="loading-overlay" id="loader">
-    <div class="spinner"></div>
-  </div>
+        <div id="leaderboardSkeleton">
+            <ion-skeleton-text animated style="height: 70px; border-radius: 14px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 14px; margin-bottom: 12px;"></ion-skeleton-text>
+            <ion-skeleton-text animated style="height: 70px; border-radius: 14px; margin-bottom: 12px;"></ion-skeleton-text>
+        </div>
+        
+        <div id="emptyState" style="display: none; text-align: center; padding-top: 40px; color: var(--muted);">
+            <ion-icon name="bar-chart-outline" style="font-size: 64px; opacity: 0.3;"></ion-icon>
+            <p style="margin-top: 16px; font-size: 16px;">No exams have been completed yet.<br>Be the first to secure a spot!</p>
+        </div>
 
-  <header class="topbar">
-    <div class="brand" onclick="location.href='dashboard.html'">🏆 Scholars Prep</div>
-    <a href="dashboard.html" class="btn-back">Dashboard</a>
-  </header>
-
-  <div class="main-content">
-    <div class="header-card">
-      <h1>Top Scholars</h1>
-      <p style="color: var(--muted)">Ranking by highest GPA achieved.</p>
+        <div id="leaderboardContainer"></div>
+        
+      </ion-content>
     </div>
 
-    <div class="podium-section" id="podium">
-      </div>
+    <div id="view-details" class="view-layer">
+      <ion-header class="ion-no-border" style="background: var(--page-bg);">
+        <ion-toolbar style="--background: transparent; padding-top: 5px;">
+          <ion-buttons slot="start">
+            <ion-button color="primary" onclick="history.back()"><ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon></ion-button>
+          </ion-buttons>
+          <ion-title style="font-weight: 800; font-size: 16px; color: var(--ion-text-color);">Competitor Transcript</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content class="ion-padding" style="--background: var(--page-bg);">
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div class="avatar-circle" id="detailAvatar" style="margin: 0 auto; width: 60px; height: 60px; font-size: 24px;">?</div>
+            <h2 id="detailName" style="margin: 10px 0 0; font-weight: bold; color: var(--ion-text-color);">Aspirant</h2>
+        </div>
 
-    <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 16px;">
-      <h3 style="margin-bottom: 15px;">All High Scores</h3>
-      <table class="scores-table">
-        <thead>
-          <tr>
-            <th width="10%">Rank</th>
-            <th width="40%">Student</th>
-            <th width="20%">GPA</th>
-            <th width="15%">Score</th>
-            <th width="15%">Date</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          </tbody>
-      </table>
+        <div class="summary-charts">
+            <div class="chart-box">
+                <div class="donut" id="gpaDonutChart">
+                    <span class="donut-text" id="gpaDonutText">0.00</span>
+                </div>
+                <div style="font-weight: bold; color: var(--muted); margin-top: 8px;">Highest GPA</div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 30px; border-bottom: 2px solid var(--table-border); padding-bottom: 8px; color: var(--ion-text-color);">Detail Breakdown</h3>
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Course</th>
+                    <th>Test</th>
+                    <th>Exam</th>
+                    <th>Total</th>
+                    <th>Grade</th>
+                </tr>
+            </thead>
+            <tbody id="detailsTableBody">
+            </tbody>
+        </table>
+
+      </ion-content>
     </div>
 
-    <button class="refresh-btn" onclick="loadLeaderboard()">Refresh Board</button>
-  </div>
+  </ion-app>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="leaderboard.js"></script>
+  <script defer src="leaderboard.js"></script>
   
 </body>
 </html>

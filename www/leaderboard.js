@@ -1,143 +1,214 @@
+// --- AUTH GUARD ---
+let authUser = null;
+(function protectPage() {
+    const userString = localStorage.getItem('abupq_logged_in_user');
+    if (!userString) window.location.replace('index.html'); 
+    authUser = JSON.parse(userString);
+})();
 
-    const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    document.addEventListener('DOMContentLoaded', () => {
-        loadLeaderboard();
-    });
+// We store the best session for each user globally so we can render it later
+let bestSessionsData = {}; 
 
-    async function loadLeaderboard() {
-      document.getElementById('loader').style.display = 'flex';
-      
-      try {
-        // 1. Fetch directly from the unique final_gpa table
-        // No need to fetch 50 and filter - the DB ensures 1 record per user
-        const { data: results, error } = await supabaseClient
-          .from('final_gpa')
-          .select('*')
-          .order('gpa', { ascending: false })
-          .limit(20);
+document.addEventListener('DOMContentLoaded', () => {
+    // Theme Inheritance
+    if (localStorage.getItem('sp_theme') === 'dark') document.body.classList.add('dark');
+    
+    history.replaceState({ view: 'view-list' }, '', '');
+    fetchLeaderboard();
+});
 
-        if (error) throw error;
+// --- LINEAR NAVIGATION ENGINE ---
+function switchView(viewId, pushToHistory = true) {
+    document.querySelectorAll('.view-layer').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    if (pushToHistory) history.pushState({ view: viewId }, '', '');
+}
 
-        // 2. Fetch User Profiles
-        const authIds = results.map(r => r.auth_id);
-        const { data: profiles } = await supabaseClient
-          .from('user_profiles') // Ensure this table/view exists
-          .select('id, display_name, email')
-          .in('id', authIds);
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.view) {
+        switchView(e.state.view, false);
+    } else {
+        window.location.replace('dashboard.html');
+    }
+});
 
-        const profileMap = {};
-        if (profiles) profiles.forEach(p => profileMap[p.id] = p);
+// --- DATA CRUNCHING LOGIC ---
+async function fetchLeaderboard() {
+    try {
+        // Fetch ALL completed sessions and course settings
+        const [historyRes, settingsRes, profilesRes] = await Promise.all([
+            _sb.from('mock_sessions').select('session_id, user_id, course_code, mode, test_score, exam_score').eq('is_active', false),
+            _sb.from('course_settings').select('course_code, credit_units'),
+            _sb.from('profiles').select('id, full_name') // Fetch user names securely
+        ]);
 
-        // 3. Map Data
-        const leaderboardData = results.map((r, index) => {
-          const p = profileMap[r.auth_id] || {};
-          let name = p.display_name || 'Anonymous';
-          if (name === 'Anonymous' && p.email) name = p.email.split('@')[0];
-          
-          return {
-            rank: index + 1,
-            name: name,
-            gpa: r.gpa,
-            score: r.total_score,
-            date: new Date(r.updated_at).toLocaleDateString()
-          };
+        if (historyRes.error) throw historyRes.error;
+        const data = historyRes.data;
+        const settings = settingsRes.data;
+        const profiles = profilesRes.data || [];
+
+        if (!data || data.length === 0) {
+            document.getElementById('emptyState').style.display = 'block';
+            return;
+        }
+
+        // STEP 1: Group by session_id to calculate the GPA for EVERY session
+        const sessionGPAs = {};
+        data.forEach(row => {
+            if (!sessionGPAs[row.session_id]) {
+                sessionGPAs[row.session_id] = {
+                    user_id: row.user_id,
+                    totalQualityPoints: 0,
+                    totalCredits: 0,
+                    courses: []
+                };
+            }
+            
+            const credits = settings?.find(s => s.course_code === row.course_code)?.credit_units || 2;
+            const testVal = row.mode === 'exam' ? 0 : (parseFloat(row.test_score) || 0);
+            const examVal = row.mode === 'test' ? 0 : (parseFloat(row.exam_score) || 0);
+            
+            const totalScore = testVal + examVal;
+            const maxScore = row.mode === 'both' ? 100 : (row.mode === 'test' ? 40 : 60);
+            const percentage = (totalScore / maxScore) * 100;
+            
+            let grade = 'F', points = 0;
+            if (percentage >= 70) { grade = 'A'; points = 5; }
+            else if (percentage >= 60) { grade = 'B'; points = 4; }
+            else if (percentage >= 50) { grade = 'C'; points = 3; }
+            else if (percentage >= 45) { grade = 'D'; points = 2; }
+            else if (percentage >= 40) { grade = 'E'; points = 1; }
+
+            sessionGPAs[row.session_id].totalQualityPoints += (points * credits);
+            sessionGPAs[row.session_id].totalCredits += credits;
+
+            sessionGPAs[row.session_id].courses.push({
+                code: row.course_code,
+                testScore: row.mode === 'exam' ? '-' : testVal,
+                examScore: row.mode === 'test' ? '-' : examVal,
+                total: `${totalScore}/${maxScore}`,
+                grade: grade,
+                points: points
+            });
         });
 
-        render(leaderboardData);
+        // STEP 2: Group by user to find their MAX GPA
+        Object.values(sessionGPAs).forEach(session => {
+            const finalGPA = session.totalCredits > 0 ? (session.totalQualityPoints / session.totalCredits) : 0.00;
+            const uId = session.user_id;
 
-      } catch (err) {
-        console.error(err);
-      } finally {
-        document.getElementById('loader').style.display = 'none';
-      }
-    }
+            if (!bestSessionsData[uId] || finalGPA > bestSessionsData[uId].gpa) {
+                // Attach the profile name if available, otherwise fallback to "Student"
+                const userProfile = profiles.find(p => p.id === uId);
+                const rawName = userProfile ? userProfile.full_name : 'Student';
+                
+                // Capitalize first letters securely
+                let displayName = rawName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+                displayName = displayName.replace(/\b\w/g, l => l.toUpperCase()); 
+                if (displayName.length > 15) displayName = displayName.substring(0, 15) + '...';
 
-    function render(data) {
-      const podium = document.getElementById('podium');
-      const tbody = document.getElementById('tableBody');
-      
-      podium.innerHTML = '';
-      tbody.innerHTML = '';
+                bestSessionsData[uId] = {
+                    gpa: finalGPA,
+                    displayName: displayName,
+                    courses: session.courses
+                };
+            }
+        });
 
-      if (data.length === 0) {
+        // STEP 3: Convert to Array, Sort Descending, and Limit to Top 20
+        const leaderboardArray = Object.keys(bestSessionsData).map(uId => ({
+            userId: uId,
+            name: bestSessionsData[uId].displayName,
+            gpa: bestSessionsData[uId].gpa
+        }))
+        .sort((a, b) => b.gpa - a.gpa)
+        .slice(0, 20);
+
+        renderLeaderboard(leaderboardArray);
+
+    } catch (err) {
+        console.error("Failed to load leaderboard:", err);
         document.getElementById('emptyState').style.display = 'block';
-        return;
-      }
-
-      // Top 3 Podium
-      const top3 = data.slice(0, 3);
-      const classes = ['first', 'second', 'third'];
-
-      top3.forEach((u, i) => {
-        const div = document.createElement('div');
-        div.className = `podium-item ${classes[i]}`;
-        div.innerHTML = `
-          <div class="rank-num">#${u.rank}</div>
-          <div class="podium-gpa">${Number(u.gpa).toFixed(2)}</div>
-          <div class="podium-name">${u.name}</div>
-        `;
-        podium.appendChild(div);
-      });
-
-      // Full Table (Mobile Responsive Cards)
-      data.forEach(u => {
-        const row = document.createElement('tr');
-        // We use data-label attributes for mobile CSS to grab
-        row.innerHTML = `
-          <td data-label="Rank">#${u.rank}</td>
-          <td data-label="Student">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span class="avatar-circle">${u.name.charAt(0).toUpperCase()}</span>
-              ${u.name}
-            </div>
-          </td>
-          <td data-label="GPA" class="gpa-cell">${Number(u.gpa).toFixed(2)}</td>
-          <td data-label="Score">${u.score || 0}</td>
-          <td data-label="Date">${u.date}</td>
-        `;
-        tbody.appendChild(row);
-      });
+        document.getElementById('emptyState').innerHTML = `<p>Failed to load data. Check connection.</p>`;
+    } finally {
+        document.getElementById('leaderboardSkeleton').style.display = 'none';
     }
-    function render(data) {
-      const podium = document.getElementById('podium');
-      const tbody = document.getElementById('tableBody');
-      
-      podium.innerHTML = '';
-      tbody.innerHTML = '';
+}
 
-      // Top 3 Podium
-      const top3 = data.slice(0, 3);
-      const classes = ['first', 'second', 'third'];
+// --- RENDER UI ---
+function renderLeaderboard(rankedUsers) {
+    const container = document.getElementById('leaderboardContainer');
+    container.innerHTML = '';
 
-      top3.forEach((u, i) => {
-        const div = document.createElement('div');
-        div.className = `podium-item ${classes[i]}`;
-        div.innerHTML = `
-          <div class="rank-num">#${u.rank}</div>
-          <div class="podium-gpa">${Number(u.gpa).toFixed(2)}</div>
-          <div class="podium-name">${u.name}</div>
-        `;
-        podium.appendChild(div);
-      });
+    rankedUsers.forEach((user, index) => {
+        const rank = index + 1;
+        let rankClass = '';
+        if (rank === 1) rankClass = 'rank-1';
+        if (rank === 2) rankClass = 'rank-2';
+        if (rank === 3) rankClass = 'rank-3';
 
-      // Full Table
-      data.forEach(u => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>#${u.rank}</td>
-          <td>
-            <div style="display:flex; align-items:center">
-              <span class="avatar-circle">${u.name.charAt(0).toUpperCase()}</span>
-              ${u.name}
+        const isMeClass = (user.userId === authUser.id) ? 'is-me' : '';
+        const initial = user.name.charAt(0).toUpperCase() || 'S';
+        const displayGPA = user.gpa.toFixed(2);
+
+        container.innerHTML += `
+        <div class="rank-card ${rankClass} ${isMeClass}" onclick="openCompetitorTranscript('${user.userId}')">
+            <div class="rank-left">
+                <div class="rank-badge">${rank}</div>
+                <div class="avatar-circle">${initial}</div>
+                <div class="user-info">
+                    <p class="user-name">${user.name}</p>
+                    <p class="user-tag">${user.userId === authUser.id ? 'You' : 'Undergraduate'}</p>
+                </div>
             </div>
-          </td>
-          <td class="gpa-cell">${Number(u.gpa).toFixed(2)}</td>
-          <td>${u.score}</td>
-          <td>${u.date}</td>
+            <div class="score-box">
+                <div class="score-val">${displayGPA}</div>
+                <div class="score-total">GPA</div>
+            </div>
+        </div>`;
+    });
+}
+
+// --- DETAIL VIEW RENDERING (The Transcript) ---
+window.openCompetitorTranscript = function(userId) {
+    const sessionData = bestSessionsData[userId];
+    if (!sessionData) return;
+
+    // 1. Update Header Info
+    document.getElementById('detailAvatar').innerText = sessionData.displayName.charAt(0).toUpperCase();
+    document.getElementById('detailName').innerText = sessionData.displayName;
+
+    // 2. Render GPA Donut Chart
+    const gpaPercent = (sessionData.gpa / 5.0) * 100;
+    const gpaColor = sessionData.gpa >= 2.5 ? '#10b981' : '#ef4444'; 
+    
+    const gpaChart = document.getElementById('gpaDonutChart');
+    const gpaText = document.getElementById('gpaDonutText');
+    gpaChart.style.background = `conic-gradient(${gpaColor} ${gpaPercent}%, #d1d5db 0)`;
+    gpaText.innerText = sessionData.gpa.toFixed(2);
+    gpaText.style.color = gpaColor;
+
+    // 3. Render Subject Breakdown Table
+    const tableBody = document.getElementById('detailsTableBody');
+    tableBody.innerHTML = '';
+    
+    sessionData.courses.forEach(course => {
+        const gradeColor = course.points >= 3 ? 'text-green' : 'text-red';
+        tableBody.innerHTML += `
+            <tr>
+                <td style="text-align: left; color: var(--muted);">${course.code}</td>
+                <td>${course.testScore}</td>
+                <td>${course.examScore}</td>
+                <td style="font-weight: bold;">${course.total}</td>
+                <td style="font-weight: bold;" class="${gradeColor}">${course.grade}</td>
+            </tr>
         `;
-        tbody.appendChild(row);
-      });
-    }
+    });
+
+    // Slide into view
+    switchView('view-details');
+};
