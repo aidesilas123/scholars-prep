@@ -113,7 +113,14 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
 
   showLoading();
   const { data, error } = await supabaseClient.auth.signUp({
-    email, password: pw, options: { data: { full_name: name } }
+    email, 
+    password: pw, 
+    options: { 
+        data: { 
+            full_name: name,
+            app_type: 'main' 
+        } 
+    }
   });
   
   await hideLoading();
