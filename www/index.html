@@ -125,15 +125,21 @@
 </head>
 <body>
 
-<!-- UPDATED HEADER: Login & Sign Up moved here as Ionic Native Buttons -->
+
 <header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); min-height: 60px;">
     <div class="logo" style="font-size: 20px; font-weight: bold; color: #063b08; flex-shrink: 0;">Scholars Prep</div>
 
     <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
        
-        <ion-button fill="clear" style="--color: #063b08; font-weight: bold;" href="login.html" class="loading-trigger auth-hide">Login</ion-button>
-        <ion-button fill="solid" style="--background: #053006; --color: white; font-weight: bold; --border-radius: 8px;" href="post-utme-login.html" class="loading-trigger auth-hide">PUTME</ion-button>
-    </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+    <ion-button fill="clear" style="--color: #063b08; font-weight: bold;" href="login.html" class="loading-trigger auth-hide">
+        Student Login
+    </ion-button>
+
+    <ion-button fill="solid" style="--background: #053006; --color: white; font-weight: bold; --border-radius: 8px;" href="post-utme-login.html" class="loading-trigger auth-hide">
+        Post UTME
+    </ion-button>
+</div>
 </header>
 
   <ul class="slideshow">
