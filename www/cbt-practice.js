@@ -261,6 +261,19 @@ function fixMathText(text) {
     return fixed;
 }
 
+// Added Shuffle Engine
+function shuffleArray(array) {
+    let curId = array.length;
+    while (0 !== curId) {
+        let randId = Math.floor(Math.random() * curId);
+        curId -= 1;
+        let tmp = array[curId];
+        array[curId] = array[randId];
+        array[randId] = tmp;
+    }
+    return array;
+}
+
 async function startExam() {
     
     showGlobalLoading("Loading, Please Wait...");
@@ -297,14 +310,18 @@ async function startExam() {
             const limit = parseInt(document.getElementById(`qc-${code}`).value);
             const targetTable = type === 'test' ? 'ss_test_questions' : 'ss_exam_questions';
 
-            const { data: rawData, error } = await _sb.from(targetTable).select('*').eq('course_code', code).eq('year', year).limit(limit);
+            // Removed .limit() from the DB query so we fetch the entire bank for that year
+            const { data: rawData, error } = await _sb.from(targetTable).select('*').eq('course_code', code).eq('year', year);
             if (error) console.error("Fetch error for", code, error);
 
             if (rawData && rawData.length > 0) {
+                // Shuffle the entire pool, then grab the exact number requested
+                const randomizedQuestions = shuffleArray(rawData).slice(0, limit);
+
                 examData[code] = {
                     name: code,
                     type: type,
-                    questions: rawData.map(q => {
+                    questions: randomizedQuestions.map(q => {
                         const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
                         return { 
                             q: fixMathText(q.question_text || q.question), 
@@ -312,8 +329,8 @@ async function startExam() {
                             ans: parseInt(q.answer) 
                         };
                     }),
-                    answers: Array(rawData.length).fill(null),
-                    flags: Array(rawData.length).fill(false),
+                    answers: Array(randomizedQuestions.length).fill(null),
+                    flags: Array(randomizedQuestions.length).fill(false),
                     currentQ: 0
                 };
                 

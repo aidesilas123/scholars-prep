@@ -96,7 +96,8 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
       data: { 
           full_name: `${surname} ${lastname}`, 
           role: 'post_utme',
-          referrer_email: referrerEmail 
+          referrer_email: referrerEmail,
+          app_type: 'post_utme'
       }
     }
   });
