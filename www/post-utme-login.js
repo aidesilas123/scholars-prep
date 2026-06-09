@@ -84,11 +84,16 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
       else { hideLoading(); showModal('Invalid Code', 'The referral code does not exist. Leave blank or try again.'); return; }
   }
 
-  // Prevent duplicate signups overriding existing data
-  const { data: existingUser } = await supabaseClient.from('post-utme-users').select('id').eq('email', email).single();
+  // FIXED: Changed .single() to .maybeSingle() to stop the 406 Error
+  const { data: existingUser } = await supabaseClient.from('post-utme-users').select('id').eq('email', email).maybeSingle();
   if(existingUser) { hideLoading(); showModal('Error', 'This email is already registered. Please log in.'); return; }
   
-  // Creates user and triggers the email with the 6-digit code
+  // FIXED: Generate the referral code HERE so the SQL trigger can use it
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let myNewRefCode = '';
+  for (let i = 0; i < 8; i++) myNewRefCode += chars.charAt(Math.floor(Math.random() * chars.length));
+
+  // Creates user and triggers the SQL Database Insert automatically
   const { data: authData, error: authError } = await supabaseClient.auth.signUp({
     email: email,
     password: pw,
@@ -97,7 +102,8 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
           full_name: `${surname} ${lastname}`, 
           role: 'post_utme',
           referrer_email: referrerEmail,
-          app_type: 'post_utme'
+          app_type: 'post_utme',         // Triggers the Post UTME routing
+          referral_code: myNewRefCode    // Prevents the 500 error!
       }
     }
   });
@@ -130,22 +136,9 @@ document.getElementById('verifyBtn').addEventListener('click', async () => {
       hideLoading(); showModal('Invalid Code', 'The code is incorrect or has expired. Please try again.'); return;
   }
 
-  // Verification Success! securely insert them into the database
+  // Verification Success! 
   const user = verifyData.user;
   const metadata = user.user_metadata;
-
-  // Generate permanent Referral Code
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let myNewRefCode = '';
-  for (let i = 0; i < 8; i++) myNewRefCode += chars.charAt(Math.floor(Math.random() * chars.length));
-
-  // Save to POST UTME Database
-  await supabaseClient.from('post-utme-users').insert([{
-      user_id: user.id,
-      full_name: metadata.full_name,
-      email: user.email,
-      referral_code: myNewRefCode
-  }]);
 
   // Reward the Referrer (If they used a code)
   if (metadata.referrer_email) {
@@ -158,7 +151,9 @@ document.getElementById('verifyBtn').addEventListener('click', async () => {
   // Finalize Session & Go to Dashboard
   const userObj = { id: user.id, email: user.email, name: metadata.full_name || 'Candidate', loggedAt: Date.now() };
   localStorage.setItem('post_utme_logged_in_user', JSON.stringify(userObj));
-  localStorage.setItem('my_referral_code', myNewRefCode);
+  
+  // FIXED: Read the referral code directly from metadata
+  localStorage.setItem('my_referral_code', metadata.referral_code);
 
   hideLoading();
   showModal('Success!', 'Account verified! Redirecting to dashboard...', {autoClose: 1500});
