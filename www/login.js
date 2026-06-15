@@ -84,22 +84,6 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// GLOBAL AUTH LISTENER (Handles automatic redirect upon signup/login)
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-        const userObj = {
-            id: session.user.id,
-            email: session.user.email,
-            name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
-            loggedAt: Date.now()
-        };
-        localStorage.setItem('abupq_logged_in_user', JSON.stringify(userObj));
-        localStorage.setItem('isLoggedIn', 'true');
-        
-        await hideLoading();
-        window.location.href = 'dashboard.html';
-    }
-});
 
 // SIGNUP
 document.getElementById('signupBtn').addEventListener('click', async () => {
@@ -131,15 +115,59 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
     await hideLoading();
     showModal('Error', error.message); 
   } else {
-    // Check if user already exists based on identities array
     if (data.user && data.user.identities && data.user.identities.length === 0) {
        await hideLoading();
        showModal('Error', 'This email is already in use. Please log in.');
     } else {
-       // Successful signup - onAuthStateChange will take over and redirect
-       showModal('Success!', 'Account created! Redirecting...', {autoClose: 2000});
+       // FIXED: Explicitly handle session saving and redirecting
+       const user = data.user;
+       const userObj = {
+           id: user.id,
+           email: user.email,
+           name: user.user_metadata?.full_name || 'User',
+           loggedAt: Date.now()
+       };
+       localStorage.setItem('abupq_logged_in_user', JSON.stringify(userObj));
+       localStorage.setItem('isLoggedIn', 'true');
+
+       await hideLoading();
+       showModal('Success!', 'Account created! Redirecting...', {autoClose: 1500});
+       setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
     }
   }
+});
+
+// LOGIN
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pw = document.getElementById('loginPassword').value;
+
+  if(!email || !pw){ showModal('Error', 'Please enter email and password'); return; }
+
+  showLoading();
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pw });
+
+  if(error){ 
+    await hideLoading(); 
+    showModal('Incorrect', error.message); 
+    return;
+  }
+  
+  // FIXED: Explicitly handle session saving and redirecting
+  const user = data.user;
+  const userObj = {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || 'User',
+      loggedAt: Date.now()
+  };
+  localStorage.setItem('abupq_logged_in_user', JSON.stringify(userObj));
+  localStorage.setItem('isLoggedIn', 'true');
+
+  await hideLoading();
+  showModal('Success', 'Redirecting to dashboard...', {autoClose: 1000});
+  setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
 });
 
 // RESET EMAIL
@@ -160,26 +188,6 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
         showModal('Success', 'Check your email for the reset link!');
         setTimeout(() => { navigateTo('login'); }, 3000);
     }
-});
-
-// LOGIN
-document.getElementById('loginBtn').addEventListener('click', async () => {
-  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pw = document.getElementById('loginPassword').value;
-
-  if(!email || !pw){ showModal('Error', 'Please enter email and password'); return; }
-
-  showLoading();
-
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pw });
-
-  if(error){ 
-    await hideLoading(); 
-    showModal('Incorrect', error.message); 
-    return;
-  }
-  
-  // Success! onAuthStateChange listener will redirect the user.
 });
 
 // RESTORE SESSION VISUALS

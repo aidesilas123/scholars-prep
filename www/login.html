@@ -24,14 +24,14 @@
     }
 
     html, body {
-      height: 100%; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      /* FIXED: Changed to min-height and allowed scrolling */
+      min-height: 100vh; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
       background: var(--background) no-repeat center center fixed; background-size: cover; 
       -webkit-font-smoothing: antialiased;
       
-      /* WEBVIEW LOCKS */
-      overscroll-behavior-y: none; 
+      overflow-x: hidden;
+      overflow-y: auto; 
       -webkit-tap-highlight-color: transparent; 
-      touch-action: pan-x pan-y; 
     }
 
     .watermark {
@@ -39,14 +39,11 @@
     }
 
     .container {
-      min-height: 100%; display: flex; align-items: center; justify-content: center; z-index: 10; position: relative;
-      padding-top: calc(40px + env(safe-area-inset-top));
-      padding-bottom: calc(40px + env(safe-area-inset-bottom));
-      padding-left: calc(20px + env(safe-area-inset-left));
-      padding-right: calc(20px + env(safe-area-inset-right));
+      /* FIXED: Changed to min-height and adjusted padding for safe scrolling */
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; z-index: 10; position: relative;
+      padding: calc(60px + env(safe-area-inset-top)) 20px calc(60px + env(safe-area-inset-bottom)) 20px;
     }
     
-    /* MATCHED UI DESIGN FROM FIRST FILE */
     .card {
       width: 420px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 18px; padding: 34px; box-shadow: 0 10px 30px rgba(12, 20, 40, 0.25); z-index: 20; position: relative;
     }
