@@ -84,7 +84,7 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// GLOBAL AUTH LISTENER (Handles automatic redirect upon signup/login)
+// GLOBAL AUTH LISTENER
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
         const userObj = {
@@ -103,16 +103,13 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
 
 // SIGNUP
 document.getElementById('signupBtn').addEventListener('click', async () => {
-  const surname = document.getElementById('signupSurname').value.trim();
-  const lastname = document.getElementById('signupLastname').value.trim();
+  const name = document.getElementById('signupName').value.trim();
   const email = document.getElementById('signupEmail').value.trim().toLowerCase();
   const pw = document.getElementById('signupPassword').value;
   const confirmPw = document.getElementById('confirmPassword').value;
-  const refCode = document.getElementById('signupReferral').value.trim().toUpperCase();
 
-  if(!surname || !lastname || !email || !pw) { showModal('Error', 'Please fill all required fields'); return; }
+  if(!name || !email || !pw) { showModal('Error', 'Please fill all fields'); return; }
   if(pw !== confirmPw) { showModal('Error', 'Passwords do not match'); return; }
-  if(pw.length < 6) { showModal('Error', 'Password must be at least 6 characters'); return; }
 
   showLoading();
   const { data, error } = await supabaseClient.auth.signUp({
@@ -120,24 +117,22 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
     password: pw, 
     options: { 
         data: { 
-            full_name: `${surname} ${lastname}`,
-            app_type: 'main',
-            referral_code: refCode
+            full_name: name,
+            app_type: 'main' 
         } 
     }
   });
   
+  await hideLoading();
+
   if(error){ 
-    await hideLoading();
     showModal('Error', error.message); 
   } else {
-    // Check if user already exists based on identities array
     if (data.user && data.user.identities && data.user.identities.length === 0) {
-       await hideLoading();
-       showModal('Error', 'This email is already in use. Please log in.');
+       showModal('Error', 'This email is already in use.');
     } else {
-       // Successful signup - onAuthStateChange will take over and redirect
-       showModal('Success!', 'Account created! Redirecting...', {autoClose: 2000});
+       showModal('Verify Email', 'Account created! Please check your email inbox to verify your account.', {autoClose: 5000});
+       setTimeout(() => { navigateTo('login'); }, 3000);
     }
   }
 });
@@ -175,14 +170,15 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
 
   if(error){ 
     await hideLoading(); 
-    showModal('Incorrect', error.message); 
+    if(error.message.includes("Email not confirmed")) {
+        showModal('Verification Required', 'Please check your email and click the verification link before logging in.');
+    } else {
+        showModal('Incorrect', error.message); 
+    }
     return;
   }
-  
-  // Success! onAuthStateChange listener will redirect the user.
 });
 
-// RESTORE SESSION VISUALS
 const stored = localStorage.getItem('abupq_logged_in_user');
 if(stored) {
     try {

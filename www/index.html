@@ -6,10 +6,9 @@
   <title>Welcome to Scholars Prep</title>
   <link rel="icon" type="image" href="favicon1.png">
 
-  <!-- PHASE 1: IONIC FRAMEWORK INJECTION -->
   <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
-<script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
-<link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
   <script defer src="app-init.js"></script>
 
   <style id="desktop-guard-css">
@@ -38,9 +37,12 @@
 
     /* --- RESET & LAYOUT --- */
     html, body {
-      height: 100%; margin: 0;
+      min-height: 100%; margin: 0;
       font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      background: #02040a; overflow: hidden;
+      background: #02040a; 
+      /* FIXED: Replaced overflow: hidden to allow scrolling if content overflows on short screens */
+      overflow-x: hidden; 
+      overflow-y: auto; 
       color: var(--text-main); -webkit-font-smoothing: antialiased;
     }
 
@@ -71,9 +73,11 @@
     }
 
     .container {
-      height: 100%; display: flex; flex-direction: column;
+      /* FIXED: Account for the 60px header and added padding so nothing is cropped */
+      min-height: calc(100vh - 60px); 
+      display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      text-align: center; padding: 0 20px; position: relative; z-index: 10; 
+      text-align: center; padding: 40px 20px; position: relative; z-index: 10; 
     }
 
     .logo-img { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 24px; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; }
@@ -125,21 +129,18 @@
 </head>
 <body>
 
-
-<header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); min-height: 60px;">
+<header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); min-height: 60px; flex-wrap: wrap; gap: 10px;">
     <div class="logo" style="font-size: 20px; font-weight: bold; color: #063b08; flex-shrink: 0;">Scholars Prep</div>
 
-    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-       
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-    <ion-button fill="clear" style="--color: #063b08; font-weight: bold;" href="login.html" class="loading-trigger auth-hide">
-        Student Login
-    </ion-button>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap;">
+      <ion-button fill="clear" style="--color: #063b08; font-weight: bold;" href="login.html" class="loading-trigger auth-hide">
+          Student Login
+      </ion-button>
 
-    <ion-button fill="solid" style="--background: #053006; --color: white; font-weight: bold; --border-radius: 8px;" href="post-utme-login.html" class="loading-trigger auth-hide">
-        Post UTME
-    </ion-button>
-</div>
+      <ion-button fill="solid" style="--background: #053006; --color: white; font-weight: bold; --border-radius: 8px;" href="post-utme-login.html" class="loading-trigger auth-hide">
+          Post UTME
+      </ion-button>
+    </div>
 </header>
 
   <ul class="slideshow">
@@ -151,9 +152,6 @@
     <h1>Ace Your Exams<span class="highlight">Scholars Prep</span></h1>
     <p class="lead">Ignite your potentials with world-class learning resources, Join our community today</p>
     
-    
-
-    <!-- UPDATED CENTER CONTENT: Download button moved here, using Ionic -->
     <div class="btn-group locked-blur" id="mainAuthGroup">
       <ion-button id="center-download-btn" fill="solid" style="--background: var(--accent); --color: #13421d; font-weight: bold; --border-radius: 50px; --padding-start: 24px; --padding-end: 24px;" href="https://github.com/aidesilas123/scholars-prep/releases/download/v6.1.5/Scholars-Prep.apk">
         <ion-icon name="logo-android" slot="start" style="font-size: 20px;"></ion-icon>

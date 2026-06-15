@@ -28,7 +28,7 @@
       background: var(--background) no-repeat center center fixed; background-size: cover; 
       -webkit-font-smoothing: antialiased;
       
-      /* WEBVIEW LOCKS */
+      /* WEBVIEW LOCKS: Kills browser bounce, tap highlights, and zoom */
       overscroll-behavior-y: none; 
       -webkit-tap-highlight-color: transparent; 
       touch-action: pan-x pan-y; 
@@ -40,26 +40,40 @@
 
     .container {
       min-height: 100%; display: flex; align-items: center; justify-content: center; z-index: 10; position: relative;
+      /* DYNAMIC SAFE AREA PADDING: Prevents UI from hiding under the iOS notch or Android status bar */
       padding-top: calc(40px + env(safe-area-inset-top));
       padding-bottom: calc(40px + env(safe-area-inset-bottom));
       padding-left: calc(20px + env(safe-area-inset-left));
       padding-right: calc(20px + env(safe-area-inset-right));
     }
     
-    /* MATCHED UI DESIGN FROM FIRST FILE */
     .card {
-      width: 420px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 18px; padding: 34px; box-shadow: 0 10px 30px rgba(12, 20, 40, 0.25); z-index: 20; position: relative;
+      width: 420px; 
+      
+      /* The Glass Effect */
+      background: rgba(255, 255, 255, 0.15); 
+      backdrop-filter: blur(16px); 
+      -webkit-backdrop-filter: blur(16px); 
+      
+      border-top: 1px solid rgba(255, 255, 255, 0.5); 
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25); 
+      /* Structure */
+      border-radius: 18px; 
+      padding: 34px; 
+      z-index: 20; 
+      position: relative;
     }
-
     h1 { text-align: center; margin: 0 0 8px; color: #07520e; font-size: 32px; font-weight: bold; }
     p.lead { margin: 0 0 20px; text-align: center; color: #4a5568; font-size: 14px; }
 
+    /* Ionic Overrides */
     ion-item { --background: transparent; --border-color: #cbd5e1; margin-bottom: 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
     ion-input { font-size: 15px; }
+    .btn-submit { margin-top: 16px; font-weight: bold; --border-radius: 10px; --background: linear-gradient(180deg, var(--accent), var(--accent-dark)); }
 
-    .btn-submit { margin-top: 16px; font-weight: bold; --border-radius: 10px; }
     .toggle { cursor: pointer; color: var(--accent-dark); font-weight: 600; text-decoration: underline; }
 
+    /* Modals & Loading */
     .modal-overlay { position: fixed; inset: 0; background: rgba(6,12,34,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal { background: #fff; border-radius: 10px; padding: 18px 20px; width: 380px; box-shadow: 0 10px 30px rgba(12,20,40,0.25); }
     .modal h3 { margin: 0 0 8px; font-size: 18px; color: #21324a; }
@@ -104,10 +118,7 @@
 
       <div id="view-signup" style="display: none;">
         <ion-item>
-          <ion-input id="signupSurname" type="text" label="Surname" label-placement="floating"></ion-input>
-        </ion-item>
-        <ion-item>
-          <ion-input id="signupLastname" type="text" label="Last Name" label-placement="floating"></ion-input>
+          <ion-input id="signupName" type="text" label="Full Name" label-placement="floating"></ion-input>
         </ion-item>
         <ion-item>
           <ion-input id="signupEmail" type="email" label="Email Address" label-placement="floating"></ion-input>
@@ -118,10 +129,6 @@
         <ion-item>
           <ion-input id="confirmPassword" type="password" label="Confirm Password" label-placement="floating"></ion-input>
         </ion-item>
-        <ion-item>
-          <ion-input id="signupReferral" type="text" label="Referral Code (Optional)" label-placement="floating" autocapitalize="characters" style="text-transform: uppercase; font-weight: bold; color: var(--ion-color-primary);"></ion-input>
-        </ion-item>
-
         <ion-button expand="block" class="btn-submit" id="signupBtn">Create Account</ion-button>
         <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
           Already have an account? <span class="toggle" onclick="navigateTo('login')">Log In</span>

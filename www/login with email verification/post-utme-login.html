@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Scholars Prep — Login</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>POST UTME Practice — Login</title>
   <link rel="icon" type="image" href="favicon1.png">
   
   <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
   <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
   <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer src="app-init.js"></script>
 
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="app-init.js"></script>
 
   <style>
     :root {
@@ -24,14 +24,8 @@
     }
 
     html, body {
-      height: 100%; margin: 0; font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      background: var(--background) no-repeat center center fixed; background-size: cover; 
-      -webkit-font-smoothing: antialiased;
-      
-      /* WEBVIEW LOCKS */
-      overscroll-behavior-y: none; 
-      -webkit-tap-highlight-color: transparent; 
-      touch-action: pan-x pan-y; 
+      height: 100%; margin: 0; font-family: Inter, sans-serif;
+      background: var(--background) no-repeat center center fixed; background-size: cover; -webkit-font-smoothing: antialiased;
     }
 
     .watermark {
@@ -39,14 +33,9 @@
     }
 
     .container {
-      min-height: 100%; display: flex; align-items: center; justify-content: center; z-index: 10; position: relative;
-      padding-top: calc(40px + env(safe-area-inset-top));
-      padding-bottom: calc(40px + env(safe-area-inset-bottom));
-      padding-left: calc(20px + env(safe-area-inset-left));
-      padding-right: calc(20px + env(safe-area-inset-right));
+      min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px 20px; z-index: 10; position: relative;
     }
     
-    /* MATCHED UI DESIGN FROM FIRST FILE */
     .card {
       width: 420px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 18px; padding: 34px; box-shadow: 0 10px 30px rgba(12, 20, 40, 0.25); z-index: 20; position: relative;
     }
@@ -67,7 +56,9 @@
     
     .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
     .page-loading { display: flex; flex-direction: column; align-items: center; gap: 20px; background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); }
-    
+    .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s ease-in-out infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     @media (max-width: 480px) { .card { width: 100%; padding: 24px; } }
   </style>
 </head>
@@ -76,15 +67,15 @@
   
   <div class="loading-overlay" id="globalLoading">
     <div class="page-loading">
-      <ion-spinner name="crescent" style="width: 40px; height: 40px; color: #044908;"></ion-spinner>
-      <div style="font-size: 18px; font-weight: 600; color: white;">Authenticating...</div>
+      <div class="loading-spinner"></div>
+      <div style="font-size: 18px; font-weight: 600; color: white;">Processing...</div>
     </div>
   </div>
 
   <div class="container">
     <div class="card" id="authCard">
-      <h1 id="formTitle">Welcome Back</h1>
-      <p class="lead" id="formSubtitle">Sign in to access your study resources</p>
+      <h1 id="formTitle">POST UTME Practice Login</h1>
+      <p class="lead" id="formSubtitle">Sign in to your post utme practice dashboard</p>
 
       <div id="view-login">
         <ion-item>
@@ -98,7 +89,7 @@
         </div>
         <ion-button expand="block" class="btn-submit" id="loginBtn">Log In</ion-button>
         <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
-          Don't have an account? <span class="toggle" onclick="navigateTo('signup')">Sign up here</span>
+          New candidate? <span class="toggle" onclick="navigateTo('signup')">Sign Up</span>
         </div>
       </div>
 
@@ -124,7 +115,17 @@
 
         <ion-button expand="block" class="btn-submit" id="signupBtn">Create Account</ion-button>
         <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
-          Already have an account? <span class="toggle" onclick="navigateTo('login')">Log In</span>
+          have an account? <span class="toggle" onclick="navigateTo('login')">Log In</span>
+        </div>
+      </div>
+
+      <div id="view-verify" style="display: none;">
+        <ion-item>
+          <ion-input id="verifyCode" type="number" label="6-Digit Code" label-placement="floating" placeholder="e.g. 123456"></ion-input>
+        </ion-item>
+        <ion-button expand="block" class="btn-submit" id="verifyBtn">Verify & Login</ion-button>
+        <div style="text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);">
+          Didn't receive it? Check your spam folder or <span class="toggle" onclick="navigateTo('login')">Return to Login</span>
         </div>
       </div>
 
@@ -143,6 +144,6 @@
   
   <div id="modalRoot" style="display:none;"></div>
 
-  <script defer src="login.js"></script>
+  <script defer src="post-utme-login.js"></script>
 </body>
 </html>
