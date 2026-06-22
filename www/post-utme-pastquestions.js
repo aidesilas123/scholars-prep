@@ -265,62 +265,63 @@ window.loadPastQuestions = async function() {
                 showPaywallBlock = true;
             }
 
-            questionsToRender.forEach((q, idx) => {
-                
-               let parsedOpts = [];
+           questionsToRender.forEach((q, idx) => {
+    let parsedOpts = [];
 
-try {
-    parsedOpts = Array.isArray(q.options)
-        ? q.options
-        : JSON.parse(q.options);
-
+    try {
+        parsedOpts = Array.isArray(q.options)
+            ? q.options
+            : JSON.parse(q.options);
+    } catch (e) {
+        console.error("OPTIONS PARSE FAILED:", q.options);
+        console.error(e);
+        return;
+    }
     
+    // FIX 1: Actually process the text through your math function!
+    const fixedQText = fixMathText(q.question_text);
+    const correctAnsIdx = parseInt(q.answer);
+    
+    currentPQData.push({
+        qText: fixedQText,
+        correctText: parsedOpts[correctAnsIdx], // Keep raw for the AI prompt
+        allOpts: parsedOpts
+    });
 
-} catch (e) {
-    console.error("OPTIONS PARSE FAILED:", q.options);
-    console.error(e);
-    return;
-}
-               const fixedQText = q.question_text;
-                const correctAnsIdx = parseInt(q.answer);
-                
-                currentPQData.push({
-                    qText: fixedQText,
-                   correctText: parsedOpts[correctAnsIdx],
-                    allOpts: parsedOpts
-                });
+    // FIX 1 (Continued): Process each option through the math function before rendering
+    const optsHtml = parsedOpts.map((opt, i) => {
+        const isCorrect = (i === correctAnsIdx);
+        const fixedOpt = fixMathText(opt); 
+        return `<div class="pq-opt ${isCorrect ? 'correct' : ''}">${fixedOpt}</div>`;
+    }).join('');
 
-                const optsHtml = parsedOpts.map((opt, i) => {
-                    const isCorrect = (i === correctAnsIdx);
-                    return `<div class="pq-opt ${isCorrect ? 'correct' : ''}">${opt}</div>`;
-                }).join('');
+    // FIX 2: Swapped <h3> for <div> and explicitly set font-size to 16px
+    htmlBlock += `
+    <div class="pq-card">
+        <div style="margin-top: 0; font-weight: bold; line-height: 1.5; font-size: 16px; margin-bottom: 12px;">
+            Q${idx + 1}. ${fixedQText}
+        </div>
+        <div>${optsHtml}</div>
+        
+        <ion-button size="small" fill="outline" color="primary" style="margin-top: 15px;" onclick="toggleNexusWidget(${idx})">
+            Ask Nexus <img src="Logo.png" alt="Nexus" style="height: 16px; margin-left: 6px; vertical-align: middle;">
+        </ion-button>
 
-                htmlBlock += `
-                <div class="pq-card">
-                    <h3 style="margin-top: 0; font-weight: bold; line-height: 1.5;">Q${idx + 1}. ${fixedQText}</h3>
-                    <div>${optsHtml}</div>
-                    
-                    <ion-button size="small" fill="outline" color="primary" style="margin-top: 15px;" onclick="toggleNexusWidget(${idx})">
-                        Ask Nexus <img src="Logo.png" alt="Nexus" style="height: 16px; margin-left: 6px; vertical-align: middle;">
-                    </ion-button>
-
-                    <div id="nexus-widget-${idx}" class="nexus-inline-widget">
-                        <div class="nexus-header">
-                            <span style="font-weight: bold; font-size: 13px;">Nexus AI Tutor</span>
-                            <span onclick="toggleNexusWidget(${idx})" style="cursor: pointer; font-size: 16px;">✖</span>
-                        </div>
-                        <div id="nexus-chat-${idx}" class="nexus-chat-area">
-                            <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below.</div>
-                        </div>
-                        <div class="nexus-input-area">
-                            <input type="text" id="nexus-input-${idx}" placeholder="Ask about this..." autocomplete="off">
-                            <button onclick="sendToNexus(${idx}, false)">Send</button>
-                            
-                        </div>
-                    </div>
-                </div>`;
-            });
-
+        <div id="nexus-widget-${idx}" class="nexus-inline-widget">
+            <div class="nexus-header">
+                <span style="font-weight: bold; font-size: 13px;">Nexus AI Tutor</span>
+                <span onclick="toggleNexusWidget(${idx})" style="cursor: pointer; font-size: 16px;">✖</span>
+            </div>
+            <div id="nexus-chat-${idx}" class="nexus-chat-area">
+                <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below.</div>
+            </div>
+            <div class="nexus-input-area">
+                <input type="text" id="nexus-input-${idx}" placeholder="Ask about this..." autocomplete="off">
+                <button onclick="sendToNexus(${idx}, false)">Send</button>
+            </div>
+        </div>
+    </div>`;
+});
             // --- INJECT THE INLINE PAYWALL BLOCK ---
             if (showPaywallBlock) {
                 const hiddenCount = rawData.length - FREE_LIMIT;
@@ -467,7 +468,7 @@ window.triggerPutmePaystack = function() {
             user_id: user.id, 
             email: user.email,
             plan_type: 'Pro Access',
-            target_app: 'post_utme' // <--- ROUTES TO POST UTME TABLE
+            target_app: 'post_utme' //
         },
         callback: function(response) {
             showLoading(true, 'Verifying payment securely...');
