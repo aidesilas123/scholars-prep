@@ -217,6 +217,12 @@
       </ion-header>
 
       <ion-content class="ion-padding" style="--background: var(--background);">
+        <ion-refresher slot="fixed" id="dashboard-refresher">
+          <ion-refresher-content
+            pulling-icon="arrow-down-outline"
+            refreshing-spinner="crescent">
+          </ion-refresher-content>
+        </ion-refresher>
         
         <div id="skeleton-ui">
           <div class="course-grid">

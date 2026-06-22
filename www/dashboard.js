@@ -310,9 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- NOTIFICATION BADGE ENGINE ---
 async function updateNotificationBadge() {
     const lastSeenId = parseInt(localStorage.getItem('abupq_last_seen_alert') || '0', 10);
-
     try {
-        
         const { count, error } = await supabaseClient
             .from('notifications')
             .select('*', { count: 'exact', head: true })
@@ -333,7 +331,49 @@ async function updateNotificationBadge() {
         console.error("Failed to load notification badge count:", err);
     }
 }
-// Call this function when the dashboard loads
-document.addEventListener('DOMContentLoaded', () => {
-    updateNotificationBadge();
+
+// --- MAIN INITIALIZATION (Consolidated) ---
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Show skeleton UI initially
+    document.getElementById('skeleton-ui').style.display = 'block';
+    document.getElementById('real-ui').style.display = 'none';
+
+    // 2. Fetch all initial data concurrently
+    await Promise.all([ 
+        checkAppStatus(), 
+        fetchAndRenderCourses(),
+        updateNotificationBadge() // Moved this here!
+    ]);
+
+    // 3. Transition to real UI
+    setTimeout(() => {
+        document.getElementById('skeleton-ui').style.display = 'none';
+        const realUI = document.getElementById('real-ui');
+        realUI.style.display = 'block';
+        realUI.style.opacity = '0';
+        realUI.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => { realUI.style.opacity = '1'; }, 50);
+        
+        startCarousel(); 
+    }, 1200); 
+
+    // 4. Attach Pull-to-Refresh Logic
+    const refresher = document.getElementById('dashboard-refresher');
+    if (refresher) {
+        refresher.addEventListener('ionRefresh', async (event) => {
+            try {
+                // Re-fetch all necessary dashboard data silently in the background
+                await Promise.all([
+                    checkAppStatus(),
+                    fetchAndRenderCourses(),
+                    updateNotificationBadge()
+                ]);
+            } catch (error) {
+                console.error("Dashboard refresh failed:", error);
+            } finally {
+                // This required method tells the UI to hide the spinner once data is loaded
+                event.detail.complete();
+            }
+        });
+    }
 });
