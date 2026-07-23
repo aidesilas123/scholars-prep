@@ -3,10 +3,12 @@ const SUPABASE_URL = 'https://xtmoolyxxylylttugjek.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_Z-w3oC1ZID4SCOnfnFuAjw_CDow4UHG';
 const PAYSTACK_KEY = 'pk_live_c7136c9839d252047b28fc27b04dac19ffb3f377'; 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let globalCourses = []; 
 let userSavedCourses = [];
 let isJiggling = false; // Tracks if we are in delete mode
 let longPressTimer;
+
 (function protectPage() {
     const savedUser = localStorage.getItem('abupq_logged_in_user');
     if (!savedUser) window.location.replace('index.html'); 
@@ -16,19 +18,23 @@ let longPressTimer;
         const nameDisplay = document.getElementById('candidateName');
         if(nameDisplay && user.name) nameDisplay.textContent = user.name.split(' ')[0];
 
-        // Background Supabase session check (non-blocking, catches revoked/expired sessions)
-        supabaseClient.auth.getSession().then(({ data }) => {
-            if (!data.session) {
-                localStorage.removeItem('abupq_logged_in_user');
-                localStorage.removeItem('lastDashboard');
-                window.location.replace('welcome.html');
-            }
-        });
+        // Background Supabase session check (Delayed by 2 seconds to prioritize course loading)
+        setTimeout(() => {
+            supabaseClient.auth.getSession().then(({ data }) => {
+                if (!data.session) {
+                    localStorage.removeItem('abupq_logged_in_user');
+                    localStorage.removeItem('lastDashboard');
+                    window.location.replace('welcome.html');
+                }
+            });
+        }, 2000);
     }
 })();
+
 // --- 2. PREMIUM CACHING LOGIC ---
 let isPremium = false;
 let isSwitchActive = true;
+
 async function checkAppStatus() {
     const savedUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
     try {
@@ -49,6 +55,7 @@ async function checkAppStatus() {
         console.error("Status Check Error", err);
     }
 }
+
 // --- 3. DYNAMIC COURSE FETCHING (Split Dashboard) ---
 async function fetchAndRenderCourses() {
     const savedUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
@@ -60,6 +67,7 @@ async function fetchAndRenderCourses() {
             supabaseClient.from('user_custom_courses').select('course_code').eq('user_id', savedUser.id)
         ]);
         if (coursesRes.error) throw coursesRes.error;
+        
         globalCourses = coursesRes.data;
         userSavedCourses = customCoursesRes.data ? customCoursesRes.data.map(row => row.course_code) : [];
         renderCourseGrids(globalCourses);
@@ -68,6 +76,7 @@ async function fetchAndRenderCourses() {
         showGenericModal('Error', 'Failed to load courses. Please check your connection.', true);
     } 
 }
+
 function renderCourseGrids(courseArray) {
     const myGrid = document.getElementById('myCoursesGridContainer');
     const availableGrid = document.getElementById('availableCoursesGridContainer');
@@ -76,6 +85,7 @@ function renderCourseGrids(courseArray) {
     availableGrid.innerHTML = '';
     const myCoursesData = [];
     const availableCoursesData = [];
+    
     // Split the global list based on what the user has saved
     courseArray.forEach(course => {
         if (userSavedCourses.includes(course.code)) {
@@ -84,11 +94,13 @@ function renderCourseGrids(courseArray) {
             availableCoursesData.push(course);
         }
     });
+
     // --- UI TOGGLES BASED ON SAVED COURSES ---
     const customizeBox = document.getElementById('customizeBox');
     const myCoursesWrapper = document.getElementById('myCoursesWrapper');
     const addHeaderBtn = document.getElementById('addCourseHeaderBtn');
     const countText = document.getElementById('courseCountText');
+    
     if (userSavedCourses.length === 0) {
         customizeBox.style.display = 'flex';
         myCoursesWrapper.style.display = 'none';
@@ -102,6 +114,7 @@ function renderCourseGrids(courseArray) {
         
         myCoursesData.forEach(course => myGrid.appendChild(createCourseCard(course, true)));
     }
+    
     // Render remaining
     if (availableCoursesData.length > 0) {
         availableCoursesData.forEach(course => availableGrid.appendChild(createCourseCard(course, false)));
@@ -109,10 +122,12 @@ function renderCourseGrids(courseArray) {
         availableGrid.innerHTML = `<p style="grid-column: span 3; text-align: center; color: var(--muted); font-size: 13px;">No other courses available.</p>`;
     }
 }
+
 function createCourseCard(course, isMyCourse) {
     const card = document.createElement('div');
     card.className = 'course-card';
     const iconName = course.icon || 'book-outline';
+    
     card.innerHTML = `
         <div class="delete-badge" onclick="event.stopPropagation(); removeCourse('${course.code}')">
             <ion-icon name="close"></ion-icon>
@@ -120,6 +135,7 @@ function createCourseCard(course, isMyCourse) {
         <ion-icon name="${iconName}"></ion-icon>
         <span>${course.code}</span>
     `;
+    
     if (isMyCourse) {
         card.addEventListener('touchstart', (e) => {
             longPressTimer = setTimeout(() => triggerJiggleMode(), 500);
@@ -129,27 +145,30 @@ function createCourseCard(course, isMyCourse) {
         card.onclick = (event) => {
             event.stopPropagation();
             if (!isJiggling) {
-                // FIX: Route using ID instead of course code
+                // Route using ID instead of course code
                 window.location.href = `course-details.html?id=${course.id}`;
             }
         };
     } else {
-        // FIX: Route using ID instead of course code
+        // Route using ID instead of course code
         card.onclick = () => window.location.href = `course-details.html?id=${course.id}`;
     }
     return card;
 }
+
 // --- JIGGLE ENGINE (Delete Mode) ---
 function triggerJiggleMode() {
     isJiggling = true;
     navigator.vibrate(100); // Small haptic feedback if supported
     document.querySelectorAll('.course-card').forEach(card => card.classList.add('jiggling'));
 }
+
 window.cancelJiggleMode = function() {
     if (!isJiggling) return;
     isJiggling = false;
     document.querySelectorAll('.course-card').forEach(card => card.classList.remove('jiggling'));
 }
+
 window.removeCourse = async function(courseCode) {
     showLoading('Removing...');
     const savedUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
@@ -173,12 +192,14 @@ window.removeCourse = async function(courseCode) {
         showGenericModal('Error', 'Failed to remove course.', true);
     }
 }
+
 // Search Logic
 document.getElementById('courseSearch')?.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
     const filtered = globalCourses.filter(c => c.code && c.code.toLowerCase().includes(term));
     renderCourseGrids(filtered);
 });
+
 // --- 4. MODALS & PAYSTACK ---
 window.checkPremiumAccess = function(targetPage) {
     if (!isSwitchActive || isPremium) {
@@ -187,6 +208,7 @@ window.checkPremiumAccess = function(targetPage) {
     }
     document.getElementById('accessModal').style.display = 'flex';
 };
+
 // --- PAYSTACK INTEGRATION ---
 window.triggerPaystack = function() {
     document.getElementById('accessModal').style.display = 'none';
@@ -218,6 +240,7 @@ window.triggerPaystack = function() {
         onClose: function() { console.log('Payment window closed.'); }
     }).openIframe();
 };
+
 window.showGenericModal = function(title, message, isError = false) {
     document.getElementById('genericModalTitle').innerText = title;
     document.getElementById('genericModalMessage').innerText = message;
@@ -226,11 +249,12 @@ window.showGenericModal = function(title, message, isError = false) {
     icon.setAttribute('color', isError ? 'danger' : 'primary');
     document.getElementById('genericModal').style.display = 'flex';
 };
-// ... (Utility functions for loading and logout remain the same) ...
+
 function showLoading(text = 'Processing...') { const loader = document.getElementById('globalLoading'); document.getElementById('loadingText').innerText = text; if (loader) loader.style.display = 'flex'; }
 function hideLoading() { return new Promise((resolve) => { const loader = document.getElementById('globalLoading'); if (loader) { loader.style.display = 'none'; requestAnimationFrame(() => requestAnimationFrame(() => resolve())); } else resolve(); }); }
 window.openLogoutModal = function() { document.getElementById('logoutModal').style.display = 'flex'; };
 window.confirmLogout = async function() { document.getElementById('logoutModal').style.display = 'none'; showLoading('Signing out...'); await supabaseClient.auth.signOut(); localStorage.removeItem('abupq_logged_in_user'); window.location.replace('index.html'); };
+
 // Slider
 function startCarousel() {
     const track = document.getElementById('sliderTrack');
@@ -240,6 +264,7 @@ function startCarousel() {
         else track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
     }, 5000); 
 }
+
 document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
     const htmlElement = document.documentElement;
     htmlElement.classList.toggle('dark');
@@ -248,6 +273,7 @@ document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
     localStorage.setItem('sp_theme', isDark ? 'dark' : 'light');
     document.getElementById('theme-color-meta').setAttribute('content', isDark ? '#121212' : '#f8fafc');
 });
+
 // Hardware traps
 document.addEventListener('backbutton', (e) => {
     const modals = ['accessModal', 'logoutModal', 'genericModal', 'exitModal'];
@@ -258,25 +284,13 @@ document.addEventListener('backbutton', (e) => {
     });
     if (!modalClosed) document.getElementById('exitModal').style.display = 'flex';
 }, false);
+
 window.confirmExitApp = function() {
     if (navigator.app) navigator.app.exitApp();
     else if (navigator.device) navigator.device.exitApp();
     else window.close();
 };
-document.addEventListener('DOMContentLoaded', async () => {
-    document.getElementById('skeleton-ui').style.display = 'block';
-    document.getElementById('real-ui').style.display = 'none';
-    await Promise.all([ checkAppStatus(), fetchAndRenderCourses() ]);
-    setTimeout(() => {
-        document.getElementById('skeleton-ui').style.display = 'none';
-        const realUI = document.getElementById('real-ui');
-        realUI.style.display = 'block';
-        realUI.style.opacity = '0';
-        realUI.style.transition = 'opacity 0.4s ease';
-        setTimeout(() => { realUI.style.opacity = '1'; }, 50);
-        startCarousel(); 
-    }, 1200); 
-});
+
 // --- NOTIFICATION BADGE ENGINE ---
 async function updateNotificationBadge() {
     const lastSeenId = parseInt(localStorage.getItem('abupq_last_seen_alert') || '0', 10);
@@ -299,17 +313,20 @@ async function updateNotificationBadge() {
         console.error("Failed to load notification badge count:", err);
     }
 }
+
 // --- MAIN INITIALIZATION (Consolidated) ---
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Show skeleton UI initially
     document.getElementById('skeleton-ui').style.display = 'block';
     document.getElementById('real-ui').style.display = 'none';
+    
     // 2. Fetch all initial data concurrently
     await Promise.all([ 
         checkAppStatus(), 
         fetchAndRenderCourses(),
-        updateNotificationBadge() // Moved this here!
+        updateNotificationBadge()
     ]);
+    
     // 3. Transition to real UI
     setTimeout(() => {
         document.getElementById('skeleton-ui').style.display = 'none';
@@ -321,6 +338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         startCarousel(); 
     }, 1200); 
+    
     // 4. Attach Pull-to-Refresh Logic
     const refresher = document.getElementById('dashboard-refresher');
     if (refresher) {

@@ -235,15 +235,18 @@ if (isDark) {
   var page = document.getElementById(target === 'student' ? 'student-page' : 'putme-page');
   page.classList.add('active');
 
+  // Force a synchronous layout/paint calculation. rAF-based timing is not
+  // reliable on Android WebView (it can skip compositing before the next
+  // task runs), which is what was causing the white/dark blank screen.
+  void page.offsetHeight;
+
   var destination = target === 'student' ? 'dashboard.html' : 'post-utme-dashboard.html';
 
-  // Guarantee the skeleton is actually painted for one frame before we
-  // navigate away, so there is no blank/white gap during the transition.
-  requestAnimationFrame(function () {
-    requestAnimationFrame(function () {
-      location.replace(destination);
-    });
-  });
+  // A real timeout (not rAF) gives the WebView's compositor enough time to
+  // actually flush this frame to the screen before we navigate away.
+  setTimeout(function () {
+    location.replace(destination);
+  }, 60);
 })();
 </script>
 </body>
