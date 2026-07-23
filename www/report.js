@@ -11,7 +11,7 @@ if (localStorage.getItem('sp_theme') === 'dark') document.body.classList.add('da
 
 // URL Params for Fast Pass Pre-filling
 const urlParams = new URLSearchParams(window.location.search);
-const fpCourse = urlParams.get('course');
+const fpCourseId = urlParams.get('id');
 const fpYear = urlParams.get('year');
 const fpType = urlParams.get('type') || 'exam';
 const fpAutoStart = urlParams.get('autoStart');
@@ -25,15 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('formContent').style.display = 'block';
         
         // Fast Pass Auto-Fill Logic
-        if (fpAutoStart === 'true' && fpCourse) {
+        if (fpAutoStart === 'true' && fpCourseId) {
             isFastPass = true;
             document.getElementById('issueCategory').value = 'Question/Answer Error';
             
-            let autoText = `Reporting an error regarding:\nCourse: ${fpCourse}\nType: ${fpType}\n`;
-            if (fpYear) autoText += `Year: ${fpYear}\n`;
-            autoText += `\nDescription of the error:\n`;
-            
-            document.getElementById('issueDescription').value = autoText;
+            // Fetch Course Code to nicely populate the UI description text box
+            _sb.from('ss_courses').select('code').eq('id', fpCourseId).single().then(({data}) => {
+                const courseCodeText = data ? data.code : `Course ID ${fpCourseId}`;
+                let autoText = `Reporting an error regarding:\nCourse: ${courseCodeText}\nType: ${fpType}\n`;
+                if (fpYear) autoText += `Year: ${fpYear}\n`;
+                autoText += `\nDescription of the error:\n`;
+                
+                document.getElementById('issueDescription').value = autoText;
+            });
         }
         
     }, 400);
@@ -43,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.handleBackNavigation = function() {
     if (isFastPass) {
         // Return exactly to the Course Details hub they came from
-        window.location.replace(`course-details.html?course=${fpCourse}`);
+        window.location.replace(`course-details.html?id=${fpCourseId}`);
     } else {
         // Return to the dashboard
         window.location.replace('dashboard.html');
@@ -95,7 +99,6 @@ window.submitReport = async function() {
         const userObj = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
         const authEmail = userObj.email;
 
-        // UPDATED: Now pointing to the new 'report' table
         const { error } = await _sb.from('report').insert([{
             user_email: authEmail,
             category: category,
@@ -107,7 +110,7 @@ window.submitReport = async function() {
         document.getElementById('globalLoading').style.display = 'none';
         
         // Define redirect based on where they came from
-        const targetRedirect = isFastPass ? `course-details.html?course=${fpCourse}` : 'dashboard.html';
+        const targetRedirect = isFastPass ? `course-details.html?id=${fpCourseId}` : 'dashboard.html';
         
         showGenericModal('Success!', 'Thank you! Your message has been submitted. Our team will review it shortly.', false, targetRedirect);
 

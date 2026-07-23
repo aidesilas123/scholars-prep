@@ -21,7 +21,7 @@ const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // --- 2. STATE & FAST PASS ENGINE ---
 let subjectsData = [];
 let examData = {}; 
-let activeSubjectCode = null;
+let activeSubjectId = null;
 let durationSec = 0;
 let maxDurationSec = 0; 
 let timerId = null;
@@ -32,7 +32,7 @@ let isFastPass = false;
 let globalYearsMap = {}; 
 
 const urlParams = new URLSearchParams(window.location.search);
-const fpCourse = urlParams.get('course');
+const fpCourseId = urlParams.get('id');
 const fpYear = urlParams.get('year');
 const fpType = urlParams.get('type') || 'exam';
 const fpAutoStart = urlParams.get('autoStart');
@@ -40,19 +40,22 @@ const fpAutoStart = urlParams.get('autoStart');
 if (localStorage.getItem('sp_theme') === 'dark') document.body.classList.add('dark');
 
 document.addEventListener('DOMContentLoaded', async () => {
-    if (fpAutoStart === 'true' && fpCourse && fpYear) {
+    if (fpAutoStart === 'true' && fpCourseId && fpYear) {
         isFastPass = true;
         showGlobalLoading("Initializing Fast Pass CBT...");
         
-        subjectsData.push({ code: fpCourse, name: fpCourse });
+        // Fetch the exact course code for UI population during Fast Pass
+        const { data: cData } = await _sb.from('ss_courses').select('*').eq('id', fpCourseId).single();
+        const courseCode = cData ? cData.code : `Course ${fpCourseId}`;
+        subjectsData.push({ id: fpCourseId, code: courseCode });
         
         const fakeCard = document.createElement('div');
         fakeCard.className = 'subject-card selected';
-        fakeCard.id = `card-${fpCourse}`;
+        fakeCard.id = `card-${fpCourseId}`;
         fakeCard.innerHTML = `
-            <input type="hidden" id="type-${fpCourse}" value="${fpType}">
-            <input type="hidden" id="yr-${fpCourse}" value="${fpYear}">
-            <input type="hidden" id="qc-${fpCourse}" value="50">
+            <input type="hidden" id="type-${fpCourseId}" value="${fpType}">
+            <input type="hidden" id="yr-${fpCourseId}" value="${fpYear}">
+            <input type="hidden" id="qc-${fpCourseId}" value="50">
         `;
         document.body.appendChild(fakeCard);
 
@@ -102,12 +105,12 @@ async function loadSubjects() {
     const savedUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
     
     try {
-        // Look up the correct user_custom_courses table
+        // Look up the correct user_custom_courses table and fetch questions mapped by course_id
         const [coursesRes, customCoursesRes, testRes, examRes] = await Promise.all([
             _sb.from('ss_courses').select('*').order('code', { ascending: true }),
             _sb.from('user_custom_courses').select('course_code').eq('user_id', savedUser.id),
-            _sb.from('ss_test_questions').select('course_code, year'),
-            _sb.from('ss_exam_questions').select('course_code, year')
+            _sb.from('ss_test_questions').select('course_id, year'),
+            _sb.from('ss_exam_questions').select('course_id, year')
         ]);
 
         if (coursesRes.error) throw coursesRes.error;
@@ -115,17 +118,17 @@ async function loadSubjects() {
         subjectsData = coursesRes.data;
         const userSavedCourses = customCoursesRes.data ? customCoursesRes.data.map(row => row.course_code) : [];
         
-        // Build the Year Map dynamically
+        // Build the Year Map dynamically mapped by ID
         if (testRes.data) {
             testRes.data.forEach(row => {
-                if(!globalYearsMap[row.course_code]) globalYearsMap[row.course_code] = new Set();
-                globalYearsMap[row.course_code].add(row.year);
+                if(!globalYearsMap[row.course_id]) globalYearsMap[row.course_id] = new Set();
+                globalYearsMap[row.course_id].add(row.year);
             });
         }
         if (examRes.data) {
             examRes.data.forEach(row => {
-                if(!globalYearsMap[row.course_code]) globalYearsMap[row.course_code] = new Set();
-                globalYearsMap[row.course_code].add(row.year);
+                if(!globalYearsMap[row.course_id]) globalYearsMap[row.course_id] = new Set();
+                globalYearsMap[row.course_id].add(row.year);
             });
         }
 
@@ -138,30 +141,30 @@ async function loadSubjects() {
             const iconName = sub.icon || 'book-outline';
             let yearsOptions = '<ion-select-option value="">No Questions</ion-select-option>';
             
-            if (globalYearsMap[sub.code] && globalYearsMap[sub.code].size > 0) {
-                const sortedYears = Array.from(globalYearsMap[sub.code]).sort((a,b) => b - a);
+            if (globalYearsMap[sub.id] && globalYearsMap[sub.id].size > 0) {
+                const sortedYears = Array.from(globalYearsMap[sub.id]).sort((a,b) => b - a);
                 yearsOptions = sortedYears.map(y => `<ion-select-option value="${y}">${y}</ion-select-option>`).join('');
             }
 
             const cardHTML = `
-            <div class="subject-card" id="card-${sub.code}" onclick="toggleSubject('${sub.code}')">
+            <div class="subject-card" id="card-${sub.id}" onclick="toggleSubject('${sub.id}')">
                 <ion-item lines="none" style="--background: transparent; cursor: pointer;">
                     <ion-icon name="${iconName}" slot="start" color="primary"></ion-icon>
                     <ion-label style="font-weight: bold; color: var(--ion-text-color);">${sub.code}</ion-label>
-                    <ion-checkbox slot="end" id="chk-${sub.code}" style="pointer-events: none;"></ion-checkbox>
+                    <ion-checkbox slot="end" id="chk-${sub.id}" style="pointer-events: none;"></ion-checkbox>
                 </ion-item>
                 <div class="config-area" onclick="event.stopPropagation()">
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <ion-item fill="outline" style="--border-radius: 8px; --background: transparent; flex: 1;">
                             <ion-label position="stacked" style="color: var(--ion-color-primary);">Type</ion-label>
-                            <ion-select id="type-${sub.code}" interface="popover" value="exam" style="color: var(--ion-text-color);">
+                            <ion-select id="type-${sub.id}" interface="popover" value="exam" style="color: var(--ion-text-color);">
                                 <ion-select-option value="exam">Exam</ion-select-option>
                                 <ion-select-option value="test">Test</ion-select-option>
                             </ion-select>
                         </ion-item>
                         <ion-item fill="outline" style="--border-radius: 8px; --background: transparent; flex: 1;">
                             <ion-label position="stacked" style="color: var(--ion-color-primary);">Questions</ion-label>
-                            <ion-select id="qc-${sub.code}" interface="popover" value="50" style="color: var(--ion-text-color);">
+                            <ion-select id="qc-${sub.id}" interface="popover" value="50" style="color: var(--ion-text-color);">
                                 <ion-select-option value="10">10</ion-select-option>
                                 <ion-select-option value="20">20</ion-select-option>
                                 <ion-select-option value="30">30</ion-select-option>
@@ -173,7 +176,7 @@ async function loadSubjects() {
                     <div style="margin-top: 10px;">
                         <ion-item fill="outline" style="--border-radius: 8px; --background: transparent;">
                             <ion-label position="stacked" style="color: var(--ion-color-primary);">Select Year</ion-label>
-                            <ion-select id="yr-${sub.code}" interface="popover" placeholder="Select Year" style="color: var(--ion-text-color);">
+                            <ion-select id="yr-${sub.id}" interface="popover" placeholder="Select Year" style="color: var(--ion-text-color);">
                                 ${yearsOptions}
                             </ion-select>
                         </ion-item>
@@ -208,9 +211,9 @@ window.filterSubjects = function(event) {
     });
 };
 
-window.toggleSubject = function(code) {
-    const card = document.getElementById(`card-${code}`);
-    const chk = document.getElementById(`chk-${code}`);
+window.toggleSubject = function(id) {
+    const card = document.getElementById(`card-${id}`);
+    const chk = document.getElementById(`chk-${id}`);
     
     if (!card.classList.contains('selected')) {
         if (document.querySelectorAll('.subject-card.selected').length >= MAX_COURSES) {
@@ -230,9 +233,10 @@ window.goToInstructions = function() {
     }
 
     for (let card of selectedCards) {
-        const code = card.id.replace('card-', '');
-        if(!document.getElementById(`yr-${code}`).value) {
-            showGenericModal("Notice", `Please select a year for ${code} from the dropdown.`);
+        const id = card.id.replace('card-', '');
+        const courseCodeForAlert = subjectsData.find(s => s.id == id)?.code || "this course";
+        if(!document.getElementById(`yr-${id}`).value) {
+            showGenericModal("Notice", `Please select a year for ${courseCodeForAlert} from the dropdown.`);
             return;
         }
     }
@@ -240,7 +244,7 @@ window.goToInstructions = function() {
 }
 
 window.handleBackFromInstructions = function() {
-    if (isFastPass) window.location.replace(`course-details.html?course=${fpCourse}`);
+    if (isFastPass) window.location.replace(`course-details.html?id=${fpCourseId}`);
     else switchView('view-selection');
 }
 
@@ -304,22 +308,46 @@ async function startExam() {
         let isFirst = true;
 
         for(let card of selectedCards) {
-            const code = card.id.replace('card-', '');
-            const type = document.getElementById(`type-${code}`).value;
-            const year = document.getElementById(`yr-${code}`).value;
-            const limit = parseInt(document.getElementById(`qc-${code}`).value);
+            const courseId = card.id.replace('card-', '');
+            const type = document.getElementById(`type-${courseId}`).value;
+            const year = document.getElementById(`yr-${courseId}`).value;
+            const limit = parseInt(document.getElementById(`qc-${courseId}`).value);
             const targetTable = type === 'test' ? 'ss_test_questions' : 'ss_exam_questions';
 
-            // Removed .limit() from the DB query so we fetch the entire bank for that year
-            const { data: rawData, error } = await _sb.from(targetTable).select('*').eq('course_code', code).eq('year', year);
-            if (error) console.error("Fetch error for", code, error);
+            // Find course code for UI display
+            const courseObj = subjectsData.find(s => s.id == courseId);
+            const courseCodeText = courseObj ? courseObj.code : `Course ${courseId}`;
+
+            // --- NETWORK RETRY & ORDERING WRAPPER ---
+            let rawData = null;
+            let fetchError = null;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const { data, error } = await _sb.from(targetTable)
+                        .select('*')
+                        .eq('course_id', courseId)
+                        .eq('year', year)
+                        .order('id', { ascending: true }); // PREVENTS GLITCH
+
+                    if (error) throw error;
+                    rawData = data;
+                    fetchError = null;
+                    break;
+                } catch (err) {
+                    fetchError = err;
+                    if (attempt === 3) console.error("Fetch error for", courseId, err);
+                    await new Promise(res => setTimeout(res, 1000));
+                }
+            }
+
+            if (fetchError) continue; // Skip if it consistently fails so other subjects still load
 
             if (rawData && rawData.length > 0) {
                 // Shuffle the entire pool, then grab the exact number requested
                 const randomizedQuestions = shuffleArray(rawData).slice(0, limit);
 
-                examData[code] = {
-                    name: code,
+                examData[courseId] = {
+                    name: courseCodeText,
                     type: type,
                     questions: randomizedQuestions.map(q => {
                         const parsedOpts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
@@ -334,18 +362,18 @@ async function startExam() {
                     currentQ: 0
                 };
                 
-                if(isFirst) { activeSubjectCode = code; isFirst = false; }
-                tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${code}" onclick="switchSubject('${code}')">${code}</div>`;
+                if(isFirst) { activeSubjectId = courseId; isFirst = false; }
+                tabsContainer.innerHTML += `<div class="tab-pill" id="tab-${courseId}" onclick="switchSubject('${courseId}')">${courseCodeText}</div>`;
             }
         }
         
-        if(!activeSubjectCode) { 
+        if(!activeSubjectId) { 
             hideGlobalLoading();
             showGenericModal("Error", "No questions found for the selected courses and years. Please adjust your setup.");
             return; 
         }
 
-        switchSubject(activeSubjectCode);
+        switchSubject(activeSubjectId);
         startTimer();
         hideGlobalLoading();
         switchView('view-exam');
@@ -358,16 +386,16 @@ async function startExam() {
 }
 
 // --- 6. EXAM UI LOGIC ---
-window.switchSubject = function(code) {
-    activeSubjectCode = code;
+window.switchSubject = function(id) {
+    activeSubjectId = id;
     document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
-    document.getElementById(`tab-${code}`).classList.add('active');
+    document.getElementById(`tab-${id}`).classList.add('active');
     renderGrid();
     renderQuestion();
 };
 
 function renderGrid() {
-    const data = examData[activeSubjectCode];
+    const data = examData[activeSubjectId];
     const grid = document.getElementById('questionGrid');
     grid.innerHTML = '';
     
@@ -393,7 +421,7 @@ function renderGrid() {
 }
 
 function renderQuestion() {
-    const data = examData[activeSubjectCode];
+    const data = examData[activeSubjectId];
     const q = data.questions[data.currentQ];
     document.getElementById('qText').innerHTML = `Q${data.currentQ+1}. ${q.q}`;
     
@@ -413,10 +441,10 @@ function renderQuestion() {
 window.saveAnswer = function(idx) {
     if (isFreeUser) {
         let totalAnswers = 0;
-        for (const code in examData) {
-            totalAnswers += examData[code].answers.filter(a => a !== null).length;
+        for (const id in examData) {
+            totalAnswers += examData[id].answers.filter(a => a !== null).length;
         }
-        const currentSub = examData[activeSubjectCode];
+        const currentSub = examData[activeSubjectId];
         const isAlreadyAnswered = currentSub.answers[currentSub.currentQ] !== null;
         
         if (!isAlreadyAnswered && totalAnswers >= 10) {
@@ -426,31 +454,31 @@ window.saveAnswer = function(idx) {
         }
     }
 
-    examData[activeSubjectCode].answers[examData[activeSubjectCode].currentQ] = idx;
+    examData[activeSubjectId].answers[examData[activeSubjectId].currentQ] = idx;
     renderGrid();
     renderQuestion(); 
 };
 
 window.toggleFlag = function() {
-    const d = examData[activeSubjectCode];
+    const d = examData[activeSubjectId];
     d.flags[d.currentQ] = !d.flags[d.currentQ];
     renderGrid();
 };
 
 window.nextQuestion = function() {
-    if (isFreeUser && examData[activeSubjectCode].currentQ + 1 >= 10) {
+    if (isFreeUser && examData[activeSubjectId].currentQ + 1 >= 10) {
         document.getElementById('examTrapModal').style.display = 'flex';
         return;
     }
-    if(examData[activeSubjectCode].currentQ < examData[activeSubjectCode].questions.length - 1) {
-        examData[activeSubjectCode].currentQ++;
+    if(examData[activeSubjectId].currentQ < examData[activeSubjectId].questions.length - 1) {
+        examData[activeSubjectId].currentQ++;
         renderGrid(); renderQuestion();
     }
 };
 
 window.prevQuestion = function() {
-    if(examData[activeSubjectCode].currentQ > 0) {
-        examData[activeSubjectCode].currentQ--;
+    if(examData[activeSubjectId].currentQ > 0) {
+        examData[activeSubjectId].currentQ--;
         renderGrid(); renderQuestion();
     }
 };
@@ -501,8 +529,8 @@ async function submitExam(auto) {
         <tbody>
     `;
     
-    for(const code in examData) {
-        const d = examData[code];
+    for(const id in examData) {
+        const d = examData[id];
         let subScore = 0;
         let maxPossible = d.type === 'test' ? 40 : 60; // SCORING RULES
         
@@ -521,21 +549,21 @@ async function submitExam(auto) {
                     <p style="color:${correct?'#10b981':'var(--ion-color-danger)'}; font-weight:bold;">Your Answer: ${userAns!==null ? q.opts[userAns] : 'None'}</p>
                     ${!correct ? `<p style="color:#10b981; font-weight:bold;">Correct: ${q.opts[q.ans]}</p>` : ''}
                     
-                    <ion-button size="small" class="green-outline-btn" style="margin-top: 15px;" onclick="toggleNexusWidget('${code}', ${i})">
+                    <ion-button size="small" class="green-outline-btn" style="margin-top: 15px;" onclick="toggleNexusWidget('${id}', ${i})">
                         Ask Nexus <img src="Logo.png" alt="Nexus" style="height: 16px; margin-left: 6px; vertical-align: middle;">
                     </ion-button>
 
-                    <div id="nexus-widget-${code}-${i}" style="display: none; margin-top: 15px; background: var(--card-bg); border: 1.5px solid var(--ion-color-primary); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <div id="nexus-widget-${id}-${i}" style="display: none; margin-top: 15px; background: var(--card-bg); border: 1.5px solid var(--ion-color-primary); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                         <div style="background: var(--ion-color-primary); color: white; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-weight: bold; font-size: 13px;">Nexus AI Tutor</span>
-                            <span onclick="toggleNexusWidget('${code}', ${i})" style="cursor: pointer; font-size: 16px;">✖</span>
+                            <span onclick="toggleNexusWidget('${id}', ${i})" style="cursor: pointer; font-size: 16px;">✖</span>
                         </div>
-                        <div id="nexus-chat-${code}-${i}" style="padding: 15px; max-height: 250px; overflow-y: auto; font-size: 14px; line-height: 1.6; color: var(--ion-text-color);">
+                        <div id="nexus-chat-${id}-${i}" style="padding: 15px; max-height: 250px; overflow-y: auto; font-size: 14px; line-height: 1.6; color: var(--ion-text-color);">
                             <div style="color: var(--muted); text-align: center; font-style: italic;">Ask a specific question below.</div>
                         </div>
                         <div style="display: flex; border-top: 1px solid rgba(128,128,128,0.2);">
-                            <input type="text" id="nexus-input-${code}-${i}" placeholder="Ask about this..." style="flex: 1; padding: 12px; border: none; outline: none; background: transparent; color: var(--ion-text-color);">
-                            <button onclick="sendToNexus('${code}', ${i}, false)" style="background: transparent; color: var(--ion-color-primary); border: none; padding: 0 16px; font-weight: bold; cursor: pointer;">Send</button>
+                            <input type="text" id="nexus-input-${id}-${i}" placeholder="Ask about this..." style="flex: 1; padding: 12px; border: none; outline: none; background: transparent; color: var(--ion-text-color);">
+                            <button onclick="sendToNexus('${id}', ${i}, false)" style="background: transparent; color: var(--ion-color-primary); border: none; padding: 0 16px; font-weight: bold; cursor: pointer;">Send</button>
                         </div>
                     </div>
                 </div>`;
@@ -612,7 +640,7 @@ window.triggerPaystack = function() {
         metadata: { 
             user_id: user.id, 
             email: user.email,
-            plan_type: 'semester' // Added for the webhook
+            plan_type: 'semester' 
         },
         callback: function(response) {
             showGlobalLoading("Verifying Payment Securely...");
@@ -629,17 +657,17 @@ window.triggerPaystack = function() {
 };
 
 // --- 8. NEXUS WIDGET ---
-window.toggleNexusWidget = function(code, qIndex) {
-    const widget = document.getElementById(`nexus-widget-${code}-${qIndex}`);
+window.toggleNexusWidget = function(id, qIndex) {
+    const widget = document.getElementById(`nexus-widget-${id}-${qIndex}`);
     widget.style.display = widget.style.display === 'block' ? 'none' : 'block';
 };
 
-window.sendToNexus = async function(code, qIndex, isAutoExplain) {
-    const chatArea = document.getElementById(`nexus-chat-${code}-${qIndex}`);
-    const inputField = document.getElementById(`nexus-input-${code}-${qIndex}`);
+window.sendToNexus = async function(id, qIndex, isAutoExplain) {
+    const chatArea = document.getElementById(`nexus-chat-${id}-${qIndex}`);
+    const inputField = document.getElementById(`nexus-input-${id}-${qIndex}`);
     
     let userMessage = inputField.value.trim();
-    const qData = examData[code].questions[qIndex];
+    const qData = examData[id].questions[qIndex];
     const questionText = qData.q;
     const correctAnswer = qData.opts[qData.ans];
     const optionsList = qData.opts.map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`).join('\n');

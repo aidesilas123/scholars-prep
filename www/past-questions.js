@@ -20,13 +20,13 @@ const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- 2. STATE & FAST PASS ENGINE ---
 let subjectsData = [];
-let activeSubjectCode = null;
+let activeSubjectId = null;
 let currentPQData = []; 
 let isFastPass = false;
 
 // Read URL Parameters
 const urlParams = new URLSearchParams(window.location.search);
-const fpCourse = urlParams.get('course');
+const fpCourseId = urlParams.get('id');
 const fpYear = urlParams.get('year');
 const fpType = urlParams.get('type') || 'exam';
 const fpAutoStart = urlParams.get('autoStart');
@@ -34,16 +34,16 @@ const fpAutoStart = urlParams.get('autoStart');
 // Theme Synchronization
 if (localStorage.getItem('sp_theme') === 'dark') {
     document.body.classList.add('dark');
-    document.getElementById('theme-color-meta').setAttribute('content', '#121212');
+    document.getElementById('theme-color-meta')?.setAttribute('content', '#121212');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     // Check if coming from Course Details Fast Pass
-    if (fpAutoStart === 'true' && fpCourse && fpYear) {
+    if (fpAutoStart === 'true' && fpCourseId && fpYear) {
         isFastPass = true;
-        activeSubjectCode = fpCourse;
+        activeSubjectId = fpCourseId;
         switchView('view-questions', false);
-        fetchQuestionsEngine(fpCourse, fpYear, fpType);
+        fetchQuestionsEngine(fpCourseId, fpYear, fpType);
     } else {
         // Normal Dashboard Navigation
         switchView('view-selection', true);
@@ -65,7 +65,7 @@ window.goBackToDashboard = function() {
 window.handleQuestionBackNav = function() {
     if (isFastPass) {
         // Return exactly to the Course Details hub they came from
-        window.location.replace(`course-details.html?course=${activeSubjectCode}`);
+        window.location.replace(`course-details.html?id=${activeSubjectId}`);
     } else {
         // Return to the selection list
         switchView('view-selection', false);
@@ -94,22 +94,22 @@ async function loadSubjects() {
             const iconName = sub.icon || 'book-outline';
             // We use 'exam' as default if they use the direct selector
             container.innerHTML += `
-            <div class="subject-card" id="card-${sub.code}" onclick="toggleSubject('${sub.code}')">
+            <div class="subject-card" id="card-${sub.id}" onclick="toggleSubject('${sub.id}')">
                 <ion-item lines="none" style="--background: transparent; cursor: pointer;">
                     <ion-icon name="${iconName}" slot="start" color="primary"></ion-icon>
                     <ion-label style="font-weight: bold; color: var(--ion-text-color);">${sub.code}</ion-label>
-                    <ion-checkbox slot="end" id="chk-${sub.code}" style="pointer-events: none;"></ion-checkbox>
+                    <ion-checkbox slot="end" id="chk-${sub.id}" style="pointer-events: none;"></ion-checkbox>
                 </ion-item>
                 <div class="config-area" onclick="event.stopPropagation()">
                     <ion-item lines="none" style="--background: transparent; border: 1.5px solid var(--ion-color-primary); border-radius: 8px;">
                         <ion-label position="stacked" style="color: var(--ion-color-primary);">Select Type</ion-label>
-                        <ion-select id="type-${sub.code}" interface="popover" value="exam">
+                        <ion-select id="type-${sub.id}" interface="popover" value="exam">
                             <ion-select-option value="exam">Exam</ion-select-option>
                             <ion-select-option value="test">Test</ion-select-option>
                         </ion-select>
                     </ion-item>
                     <div style="margin-top: 10px;">
-                        <ion-input type="number" id="yr-${sub.code}" placeholder="e.g. 2023" style="border: 1.5px solid var(--ion-color-primary); border-radius: 8px; padding-left: 10px;"></ion-input>
+                        <ion-input type="number" id="yr-${sub.id}" placeholder="e.g. 2023" style="border: 1.5px solid var(--ion-color-primary); border-radius: 8px; padding-left: 10px;"></ion-input>
                     </div>
                 </div>
             </div>`;
@@ -132,33 +132,33 @@ window.filterSubjects = function(event) {
     });
 };
 
-window.toggleSubject = function(code) {
+window.toggleSubject = function(id) {
     document.querySelectorAll('.subject-card').forEach(card => {
-        if(card.id !== `card-${code}`) {
+        if(card.id !== `card-${id}`) {
             card.classList.remove('selected');
             card.querySelector('ion-checkbox').checked = false;
         }
     });
 
-    const card = document.getElementById(`card-${code}`);
-    const chk = document.getElementById(`chk-${code}`);
+    const card = document.getElementById(`card-${id}`);
+    const chk = document.getElementById(`chk-${id}`);
     
     card.classList.toggle('selected');
     chk.checked = card.classList.contains('selected');
     
-    activeSubjectCode = card.classList.contains('selected') ? code : null;
-    document.getElementById('continueBtn').disabled = !activeSubjectCode;
+    activeSubjectId = card.classList.contains('selected') ? id : null;
+    document.getElementById('continueBtn').disabled = !activeSubjectId;
 };
 
 // Triggered by the "Start Studying" button
 window.loadPastQuestions = function() {
-    const yearOpt = document.getElementById(`yr-${activeSubjectCode}`).value;
-    const typeOpt = document.getElementById(`type-${activeSubjectCode}`).value;
+    const yearOpt = document.getElementById(`yr-${activeSubjectId}`).value;
+    const typeOpt = document.getElementById(`type-${activeSubjectId}`).value;
     
     if(!yearOpt) return alert("Please enter a year.");
     
     switchView('view-questions', true);
-    fetchQuestionsEngine(activeSubjectCode, yearOpt, typeOpt);
+    fetchQuestionsEngine(activeSubjectId, yearOpt, typeOpt);
 };
 
 window.showGenericModal = function(title, message, isError = false) {
@@ -173,24 +173,49 @@ window.showGenericModal = function(title, message, isError = false) {
 };
 
 // --- Questions & Paywall ---
-async function fetchQuestionsEngine(courseCode, year, tableType) {
+async function fetchQuestionsEngine(courseId, year, tableType) {
     showLoading(true, "Loading...");
-    document.getElementById('pqTitle').innerText = `${courseCode} (${year})`;
+    document.getElementById('pqTitle').innerText = `Loading... (${year})`;
 
     try {
         // Retrieve the full user object to use the ID
         const authUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
         const targetTable = tableType === 'test' ? 'ss_test_questions' : 'ss_exam_questions';
 
-        // Check Questions, App Settings, and Profile (matching by ID)
-        const [qRes, settingsRes, subRes] = await Promise.all([
-            _sb.from(targetTable).select('*').eq('course_code', courseCode).eq('year', year),
+        // --- NETWORK RETRY WRAPPER ---
+        let rawData = null;
+        let fetchError = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const { data, error } = await _sb.from(targetTable)
+                    .select('*')
+                    .eq('course_id', courseId)
+                    .eq('year', year)
+                    .order('id', { ascending: true }); // FIXES WRONG/MISSING DATA GLITCH
+
+                if (error) throw error;
+                rawData = data;
+                fetchError = null;
+                break;
+            } catch (err) {
+                fetchError = err;
+                console.warn(`Fetch attempt ${attempt} failed. Retrying...`);
+                await new Promise(res => setTimeout(res, 1000));
+            }
+        }
+        
+        if (fetchError) throw fetchError;
+
+        // Fetch the Course Code for the UI Header
+        const courseRes = await _sb.from('ss_courses').select('code').eq('id', courseId).single();
+        if (courseRes.data) {
+            document.getElementById('pqTitle').innerText = `${courseRes.data.code} (${year})`;
+        }
+
+        const [settingsRes, subRes] = await Promise.all([
             _sb.from('app_settings').select('payment_active').single(),
             _sb.from('profiles').select('subscription_end').eq('id', authUser.id).maybeSingle()
         ]);
-
-        if (qRes.error) throw qRes.error;
-        const rawData = qRes.data;
 
         // REAL-TIME SECURITY CHECK
         let isSwitchActive = true; 
@@ -213,8 +238,6 @@ async function fetchQuestionsEngine(courseCode, year, tableType) {
         const contentArea = document.getElementById('pqContent');
         contentArea.innerHTML = '';
         currentPQData = []; 
-
-      
 
         if (rawData && rawData.length > 0) {
             let htmlBlock = '';
@@ -396,6 +419,7 @@ window.triggerPutmePaystack = function() {
 
 function showLoading(show, text="Processing...") {
     const loader = document.getElementById('globalLoading');
-    document.getElementById('loadText').textContent = text;
+    const loadTextEl = document.getElementById('loadText');
+    if(loadTextEl) loadTextEl.textContent = text;
     loader.style.display = show ? 'flex' : 'none';
 }

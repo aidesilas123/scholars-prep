@@ -117,7 +117,7 @@ function renderCourseGrids(courseArray) {
     }
 }
 
-// Generates the Course Card HTML (With Jiggle Engine Attached)
+
 function createCourseCard(course, isMyCourse) {
     const card = document.createElement('div');
     card.className = 'course-card';
@@ -132,28 +132,26 @@ function createCourseCard(course, isMyCourse) {
     `;
 
     if (isMyCourse) {
-        // LONG PRESS LOGIC
         card.addEventListener('touchstart', (e) => {
             longPressTimer = setTimeout(() => triggerJiggleMode(), 500);
         });
         card.addEventListener('touchend', () => clearTimeout(longPressTimer));
         card.addEventListener('touchmove', () => clearTimeout(longPressTimer));
 
-        // Click Logic: Only open details if NOT jiggling
         card.onclick = (event) => {
-            event.stopPropagation(); // Prevents click from bubbling to body (which cancels jiggle)
+            event.stopPropagation();
             if (!isJiggling) {
-                window.location.href = `course-details.html?course=${course.code}`;
+                // FIX: Route using ID instead of course code
+                window.location.href = `course-details.html?id=${course.id}`;
             }
         };
     } else {
-        // Available courses just open normally
-        card.onclick = () => window.location.href = `course-details.html?course=${course.code}`;
+        // FIX: Route using ID instead of course code
+        card.onclick = () => window.location.href = `course-details.html?id=${course.id}`;
     }
 
     return card;
 }
-
 // --- JIGGLE ENGINE (Delete Mode) ---
 function triggerJiggleMode() {
     isJiggling = true;
