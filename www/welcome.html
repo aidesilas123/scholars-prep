@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Scholars Prep</title>
+  <link rel="icon" type="image" href="favicon1.png">
+
+  <script defer type="module" src="assets/ionic-core/dist/ionic/ionic.esm.js"></script>
+  <script defer nomodule src="assets/ionic-core/dist/ionic/ionic.js"></script>
+  <link rel="stylesheet" href="assets/ionic-core/css/ionic.bundle.css" />
+  <script defer src="app-init.js"></script>
+
+  <style id="desktop-guard-css">
+  .desktop-locked .auth-hide { display: none !important; }
+  .desktop-locked .desktop-notice { display: block !important; }
+  
+  .desktop-notice {
+    display: none;
+    color: #ff4b5c;
+    font-weight: bold;
+    margin: 10px 0;
+  }
+  </style>
+
+  <style>
+    /* --- YOUR ORIGINAL DESIGN VARIABLES --- */
+    :root {
+      --accent: #dde7da;
+      --accent-hover: #5c925e;
+      --text-main: #184607;
+      --text-muted: #bcdfdd;
+      /* Mapping your accent to Ionic's primary color */
+      --ion-color-primary: #dde7da;
+      --ion-color-primary-contrast: #13421d;
+    }
+
+    /* --- RESET & LAYOUT --- */
+    html, body {
+      min-height: 100%; margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #02040a; 
+      /* FIXED: Replaced overflow: hidden to allow scrolling if content overflows on short screens */
+      overflow-x: hidden; 
+      overflow-y: auto; 
+      color: var(--text-main); -webkit-font-smoothing: antialiased;
+    }
+
+    .slideshow {
+      position: fixed; width: 100%; height: 100%;
+      top: 0; left: 0; z-index: 0; list-style: none; margin: 0; padding: 0;
+    }
+    
+    .slideshow::after {
+      content: ''; position: absolute; inset: 0;
+      background: rgba(0, 0, 0, 0.6); z-index: 1;
+    }
+
+    .slideshow li span {
+      width: 100%; height: 100%; position: absolute;
+      top: 0; left: 0; background-size: cover; background-position: center;
+      background-repeat: no-repeat; opacity: 0; z-index: 0;
+      animation: imageAnimation 15s linear infinite; 
+    }
+
+    .slideshow li:nth-child(1) span { background-image: url('img/slider9.jpg'); }
+    .slideshow li:nth-child(2) span { background-image: url('img/slider6.jpg'); animation-delay: 5s; }
+    .slideshow li:nth-child(3) span { background-image: url('img/slider7.jpg'); animation-delay: 10s; }
+    .slideshow li:nth-child(4) span { background-image: url('img/slider5.jpg'); animation-delay: 10s; }
+
+    @keyframes imageAnimation { 
+      0% { opacity: 0; } 10% { opacity: 1; } 33% { opacity: 1; } 43% { opacity: 0; } 100% { opacity: 0; }
+    }
+
+    .container {
+      /* FIXED: Account for the 60px header and added padding so nothing is cropped */
+      min-height: calc(100vh - 60px); 
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 40px 20px; position: relative; z-index: 10; 
+    }
+
+    .logo-img { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 24px; border: 2px solid rgba(255,255,255,0.1); object-fit: cover; }
+    h1 { font-size: 64px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin: 0 0 20px; color: #fff; }
+    .highlight { color: var(--accent); display: block; }
+    p.lead { font-size: 18px; color: var(--text-muted); max-width: 600px; margin: 0 0 20px; line-height: 1.6; }
+    .btn-group { display: flex; flex-direction: row; gap: 12px; align-items: center; justify-content: center; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 42px; }
+    }
+
+    /* --- PAGE LOAD PROGRESS BAR --- */
+    .progress-container {
+      width: 100%; max-width: 300px; margin: 20px auto 0;
+      text-align: center; transition: opacity 0.5s ease;
+    }
+    .progress-bar-bg {
+      width: 100%; height: 6px; background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px; overflow: hidden; margin-top: 8px;
+    }
+    .progress-bar-fill {
+      height: 100%; width: 0%; background: var(--accent); transition: width 0.2s ease;
+    }
+    .progress-text {
+      color: var(--accent); font-size: 14px; font-weight: bold; letter-spacing: 1px;
+    }
+
+    /* --- PREMIUM GLOBAL LOADING OVERLAY --- */
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7); display: none;
+      align-items: center; justify-content: center;
+      z-index: 9999; backdrop-filter: blur(4px);
+    }
+    .page-loading {
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      background: rgba(19, 1, 1, 0.85); padding: 40px; border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+    }
+    .loading-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%; border-top-color: var(--accent);
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header style="position: relative; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); min-height: 60px; flex-wrap: wrap; gap: 10px;">
+    <div class="logo" style="font-size: 20px; font-weight: bold; color: #063b08; flex-shrink: 0;">Scholars Prep</div>
+
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap;">
+      <ion-button fill="clear" style="--color: #063b08; font-weight: bold;" href="login.html" class="loading-trigger auth-hide">
+          Student Login
+      </ion-button>
+
+      <ion-button fill="solid" style="--background: #053006; --color: white; font-weight: bold; --border-radius: 8px;" href="post-utme-login.html" class="loading-trigger auth-hide">
+          Post UTME
+      </ion-button>
+    </div>
+</header>
+
+  <ul class="slideshow">
+    <li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li>
+  </ul>
+
+  <div class="container">
+    <img src="favicon1.png" alt="Logo" class="logo-img">
+    <h1>Ace Your Exams<span class="highlight">Scholars Prep</span></h1>
+    <p class="lead">Ignite your potentials with world-class learning resources, Join our community today</p>
+    
+    <div class="btn-group locked-blur" id="mainAuthGroup">
+      <ion-button id="center-download-btn" fill="solid" style="--background: var(--accent); --color: #13421d; font-weight: bold; --border-radius: 50px; --padding-start: 24px; --padding-end: 24px;" href="https://github.com/aidesilas123/scholars-prep/releases/download/v6.1.5/Scholars-Prep.apk">
+        <ion-icon name="logo-android" slot="start" style="font-size: 20px;"></ion-icon>
+        Download App To Get Started
+      </ion-button>
+    </div> 
+
+    <div class="progress-container" id="loadProgress">
+      <div class="progress-text">LOADING... <span id="loadPercent">0</span>%</div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="loadFill"></div>
+      </div>
+    </div>
+    
+    <div class="loading-overlay" id="globalLoading">
+      <div class="page-loading">
+        <div class="loading-spinner"></div>
+        <div style="font-size: 18px; font-weight: 600; color: white;">Connecting...</div>
+        <div style="color: #bcdfdd; font-size: 14px;">Please wait</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // 1. APP ENVIRONMENT DETECTION
+  // Hides the download button if the user is viewing this from inside the Scholars Prep Android APK
+  function detectAppEnvironment() {
+    const downloadBtn = document.getElementById('center-download-btn');
+    
+    // Check if running inside Capacitor or an Android WebView (wv)
+    const isCapacitor = window.Capacitor && window.Capacitor.isNative;
+    const isWebView = navigator.userAgent.includes('wv') || navigator.userAgent.includes('Android') && !navigator.userAgent.includes('Chrome');
+
+    if (isCapacitor || isWebView) {
+        // We are inside the Android App -> Hide the download button
+        if(downloadBtn) downloadBtn.style.display = 'none';
+    }
+  }
+
+  // Dummy checkDevice function to prevent console errors if it's missing
+  function checkDevice() {
+    // Your existing desktop check logic goes here
+  }
+
+  // 2. PAGE LOAD PROGRESS BAR
+  function simulateLoading() {
+    let percent = 0;
+    const fill = document.getElementById('loadFill');
+    const text = document.getElementById('loadPercent');
+    const progressContainer = document.getElementById('loadProgress');
+    const blurredElements = document.querySelectorAll('.locked-blur');
+
+    const interval = setInterval(() => {
+      if (percent < 90) {
+        percent += Math.floor(Math.random() * 10) + 1;
+        if (percent > 90) percent = 90;
+        if(fill) fill.style.width = percent + '%';
+        if(text) text.innerText = percent;
+      }
+    }, 150);
+
+    window.addEventListener('load', () => {
+      clearInterval(interval);
+      if(fill) fill.style.width = '100%';
+      if(text) text.innerText = '100';
+      
+      setTimeout(() => {
+        if(progressContainer) progressContainer.style.opacity = '0';
+        blurredElements.forEach(el => el.classList.remove('locked-blur'));
+        setTimeout(() => { if(progressContainer) progressContainer.style.display = 'none'; }, 500);
+      }, 400); 
+    });
+  }
+
+  // 3. PREMIUM LOADING UI (On Click)
+  function setupClickLoading() {
+    const triggers = document.querySelectorAll('.loading-trigger');
+    const loader = document.getElementById('globalLoading');
+
+    triggers.forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault(); 
+        if(loader) loader.style.display = 'flex'; 
+        const target = this.getAttribute('href');
+        
+        setTimeout(() => {
+          window.location.href = target;
+        }, 400);
+      });
+    });
+  }
+
+  // 4. BFCache Fix (Fixes endless loading on back button)
+  window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+      const loader = document.getElementById('globalLoading');
+      if(loader) loader.style.display = 'none';
+    }
+  });
+
+  // INITIATE ALL SYSTEMS
+  checkDevice();
+  detectAppEnvironment(); 
+  simulateLoading();
+  setupClickLoading();
+  </script>
+</body>
+</html>
