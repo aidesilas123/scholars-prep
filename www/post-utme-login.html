@@ -53,8 +53,8 @@
     .modal { background: #fff; border-radius: 10px; padding: 18px 20px; width: 380px; box-shadow: 0 10px 30px rgba(12,20,40,0.25); }
     .modal h3 { margin: 0 0 8px; font-size: 18px; color: #21324a; }
     .modal p { margin: 0 0 12px; color: #445; font-size: 14px; }
-    header {
-  padding-top: env(safe-area-inset-top);
+   header {
+  padding-top: max(env(safe-area-inset-top), 10px);
 }
     
     .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }

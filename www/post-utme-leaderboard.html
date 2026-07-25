@@ -45,7 +45,7 @@
         box-shadow: 0 4px 6px rgba(0,0,0,0.03); cursor: pointer; transition: transform 0.2s;
     }
     header {
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(env(safe-area-inset-top), 10px);
 }
     .rank-card:active { transform: scale(0.98); }
     

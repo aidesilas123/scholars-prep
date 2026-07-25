@@ -21,9 +21,7 @@
     font-weight: bold;
     margin: 10px 0;
   }
-  header {
-  padding-top: env(safe-area-inset-top);
-}
+ 
   </style>
 
   <style>
@@ -38,7 +36,7 @@
       --ion-color-primary-contrast: #13421d;
     }
     header {
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(env(safe-area-inset-top), 10px);
 }
 
 
