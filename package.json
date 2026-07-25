@@ -1,11 +1,11 @@
 {
   "name": "scholars-prep",
-  "version": "6.6.3",
+  "version": "6.6.4",
   "description": "",
   "main": "cbt-app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-   "build": "npx javascript-obfuscator ./www --output ./www --self-defending true && node build-update.js && cd www && zip -r update.zip . -x update.zip",
+    "build": "npx javascript-obfuscator ./www --output ./www --self-defending true && node build-update.js && cd www && zip -r update.zip . -x update.zip",
     "push": "capgo bundle upload com.scholarsprep.app.app --path ./www --channel production --no-code-check"
   },
   "repository": {
@@ -24,6 +24,12 @@
     "@capacitor/android": "^8.0.2",
     "@capacitor/cli": "^8.0.2",
     "@capacitor/core": "^8.0.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/local-notifications": "^8.2.1",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/push-notifications": "^8.1.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@capgo/capacitor-updater": "^8.47.3",
     "@google/generative-ai": "^0.24.1",
     "@ionic/core": "^8.8.8",

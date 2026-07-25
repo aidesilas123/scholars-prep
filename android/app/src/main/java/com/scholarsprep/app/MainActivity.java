@@ -13,7 +13,7 @@ public class MainActivity extends BridgeActivity {
         
         // 1. BLOCK SCREENSHOTS
         // This must be inside the APK to work.
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        //getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
 
         // 2. CACHE SETTINGS
         WebView webView = this.bridge.getWebView();

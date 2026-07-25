@@ -1,4 +1,36 @@
 window.addEventListener('DOMContentLoaded', async () => {
+    
+    // ==========================================
+    // 1. TRANSPARENT STATUS BAR CONFIGURATION
+    // ==========================================
+    if (window.Capacitor && window.Capacitor.Plugins.StatusBar) {
+        try {
+            const StatusBar = window.Capacitor.Plugins.StatusBar;
+            
+            // Tell the webview to flow UNDER the status bar
+            await StatusBar.setOverlaysWebView({ overlay: true });
+
+            // Make the status bar background completely transparent
+            await StatusBar.setBackgroundColor({ color: '#00000000' });
+
+            // Set text color based on theme
+            const isDarkMode = document.documentElement.classList.contains('dark') || 
+                               window.location.pathname.includes('welcome.html');
+
+            if (isDarkMode) {
+                await StatusBar.setStyle({ style: 'DARK' }); // White text
+            } else {
+                await StatusBar.setStyle({ style: 'LIGHT' }); // Black text
+            }
+            
+        } catch (err) {
+            console.warn("Status Bar configuration bypassed or failed:", err);
+        }
+    }
+
+    // ==========================================
+    // 2. CAPGO OTA UPDATER LOGIC
+    // ==========================================
     if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorUpdater) {
         try {
             const Updater = window.Capacitor.Plugins.CapacitorUpdater;
