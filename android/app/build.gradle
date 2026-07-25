@@ -4,7 +4,7 @@ android {
     namespace = "com.scholarsprep.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.scholarsprep.app"
+        applicationId "com.scholarsprep.app.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 650
