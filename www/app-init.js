@@ -1,27 +1,43 @@
 window.addEventListener('DOMContentLoaded', async () => {
     
     // ==========================================
-    // 1. TRANSPARENT STATUS BAR CONFIGURATION
+    // 1. DYNAMIC SOLID STATUS BAR CONFIGURATION
     // ==========================================
     if (window.Capacitor && window.Capacitor.Plugins.StatusBar) {
         try {
             const StatusBar = window.Capacitor.Plugins.StatusBar;
             
-            // Tell the webview to flow UNDER the status bar
-            await StatusBar.setOverlaysWebView({ overlay: true });
+            // 1. Stop the webview from sliding under the status bar
+            await StatusBar.setOverlaysWebView({ overlay: false });
 
-            // Make the status bar background completely transparent
-            await StatusBar.setBackgroundColor({ color: '#00000000' });
+            // 2. Check current page and theme state
+            const isWelcomePage = window.location.pathname.includes('welcome.html');
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            
+            let targetColor = '#ffffff';
+            let textStyle = 'LIGHT';
 
-            // Set text color based on theme
-            const isDarkMode = document.documentElement.classList.contains('dark') || 
-                               window.location.pathname.includes('welcome.html');
-
-            if (isDarkMode) {
-                await StatusBar.setStyle({ style: 'DARK' }); // White text
+            if (isWelcomePage) {
+                // Welcome page has a specific solid white header regardless of the dark body
+                targetColor = '#ffffff';
+                textStyle = 'LIGHT'; 
             } else {
-                await StatusBar.setStyle({ style: 'LIGHT' }); // Black text
+                // For Dashboards/CBT: Dynamically read your app's exact CSS variables!
+                // We pull the '--card' variable since that matches your header background.
+                const rootStyles = getComputedStyle(document.documentElement);
+                
+                if (isDarkMode) {
+                    targetColor = rootStyles.getPropertyValue('--card').trim() || '#1e1e1e';
+                    textStyle = 'DARK'; // White text
+                } else {
+                    targetColor = rootStyles.getPropertyValue('--card').trim() || '#ffffff';
+                    textStyle = 'LIGHT'; // Black text
+                }
             }
+
+            // 3. Apply the colors dynamically
+            await StatusBar.setBackgroundColor({ color: targetColor });
+            await StatusBar.setStyle({ style: textStyle });
             
         } catch (err) {
             console.warn("Status Bar configuration bypassed or failed:", err);

@@ -1,6 +1,6 @@
 {
   "name": "scholars-prep",
-  "version": "6.6.4",
+  "version": "6.6.5",
   "description": "",
   "main": "cbt-app.js",
   "scripts": {
