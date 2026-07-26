@@ -121,11 +121,36 @@ window.addEventListener('DOMContentLoaded', async () => {
 
             PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
                 console.log('User tapped the notification:', notification);
+                // Instantly route the user to the notifications page
+                window.location.href = 'notifications.html';
             });
 
         } catch (err) {
             console.warn("Push Notifications configuration failed:", err);
         }
+    }
+
+    // ==========================================
+    // 4. DEEP LINKING (APP URL OPEN)
+    // ==========================================
+    if (window.Capacitor && window.Capacitor.Plugins.App) {
+        window.Capacitor.Plugins.App.addListener('appUrlOpen', (event) => {
+            console.log('App opened with URL:', event.url);
+            
+            try {
+                const incomingUrl = new URL(event.url);
+                
+                if (incomingUrl.hostname === 'scholars-prep.vercel.app') {
+                    const routePath = incomingUrl.pathname + incomingUrl.search;
+                    
+                    if (routePath !== '/' && routePath !== '') {
+                        window.location.href = routePath.replace(/^\//, ''); 
+                    }
+                }
+            } catch (err) {
+                console.error('Error parsing deep link URL:', err);
+            }
+        });
     }
 });
 
