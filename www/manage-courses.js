@@ -60,9 +60,9 @@ function renderLists(searchTerm = "") {
             <ion-item class="course-item">
                 <ion-icon name="${course.icon || 'book-outline'}" slot="start" color="medium"></ion-icon>
                 <ion-label style="font-weight: bold;">${course.code}</ion-label>
-                <ion-button fill="clear" color="primary" slot="end" onclick="addCourse('${course.code}')">
-                    <ion-icon name="add" style="font-size: 24px;"></ion-icon>
-                </ion-button>
+                <ion-button id="add-btn-${course.code}" fill="clear" color="primary" slot="end" onclick="addCourse('${course.code}')">
+    <ion-icon name="add" style="font-size: 24px;"></ion-icon>
+</ion-button>
             </ion-item>
         `;
     });
@@ -93,8 +93,19 @@ window.addCourse = function(code) {
         alert("You have reached the maximum limit of 13 courses.");
         return;
     }
-    addedCourseCodes.push(code);
-    renderLists(document.getElementById('searchBar').value);
+    
+    // 1. Target the button and swap the '+' icon for a green spinner
+    const btn = document.getElementById(`add-btn-${code}`);
+    if (btn) {
+        btn.innerHTML = `<ion-spinner name="crescent" color="primary" style="width: 24px; height: 24px;"></ion-spinner>`;
+    }
+
+    // 2. Add a slight delay (500ms) so the user actually sees the loading animation
+    setTimeout(() => {
+        addedCourseCodes.push(code);
+        renderLists(document.getElementById('searchBar').value);
+        showToast(`${code} added`);
+    }, 500);
 }
 
 window.removeCourse = function(code) {
@@ -133,4 +144,14 @@ window.saveCoursesAndExit = async function() {
         document.getElementById('loadingSpinner').style.display = 'none';
         document.getElementById('contentArea').style.display = 'block';
     }
+}
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.innerText = message;
+    toast.style.opacity = '1';
+    
+    // Disappear after 3 seconds
+    setTimeout(() => { 
+        toast.style.opacity = '0'; 
+    }, 3000);
 }

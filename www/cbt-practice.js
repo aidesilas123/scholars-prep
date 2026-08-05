@@ -29,7 +29,8 @@ const MAX_COURSES = 13;
 
 let isFreeUser = false;
 let isFastPass = false;
-let globalYearsMap = {}; 
+let globalYearsMap = {};
+let lastAttemptTimestamp = 0;
 
 const urlParams = new URLSearchParams(window.location.search);
 const fpCourseId = urlParams.get('id');
@@ -146,6 +147,11 @@ async function loadSubjects() {
                 yearsOptions = sortedYears.map(y => `<ion-select-option value="${y}">${y}</ion-select-option>`).join('');
             }
 
+            // --- FETCH PREFERENCES OR APPLY NEW DEFAULTS ---
+            const savedType = localStorage.getItem(`sp_pref_type_${sub.id}`) || 'test';
+            const savedLimit = localStorage.getItem(`sp_pref_limit_${sub.id}`) || '30';
+            const savedYear = localStorage.getItem(`sp_pref_year_${sub.id}`) || '2025';
+
             const cardHTML = `
             <div class="subject-card" id="card-${sub.id}" onclick="toggleSubject('${sub.id}')">
                 <ion-item lines="none" style="--background: transparent; cursor: pointer;">
@@ -157,14 +163,14 @@ async function loadSubjects() {
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <ion-item fill="outline" style="--border-radius: 8px; --background: transparent; flex: 1;">
                             <ion-label position="stacked" style="color: var(--ion-color-primary);">Type</ion-label>
-                            <ion-select id="type-${sub.id}" interface="popover" value="exam" style="color: var(--ion-text-color);">
+                            <ion-select id="type-${sub.id}" interface="popover" value="${savedType}" style="color: var(--ion-text-color);">
                                 <ion-select-option value="exam">Exam</ion-select-option>
                                 <ion-select-option value="test">Test</ion-select-option>
                             </ion-select>
                         </ion-item>
                         <ion-item fill="outline" style="--border-radius: 8px; --background: transparent; flex: 1;">
                             <ion-label position="stacked" style="color: var(--ion-color-primary);">Questions</ion-label>
-                            <ion-select id="qc-${sub.id}" interface="popover" value="50" style="color: var(--ion-text-color);">
+                            <ion-select id="qc-${sub.id}" interface="popover" value="${savedLimit}" style="color: var(--ion-text-color);">
                                 <ion-select-option value="10">10</ion-select-option>
                                 <ion-select-option value="20">20</ion-select-option>
                                 <ion-select-option value="30">30</ion-select-option>
@@ -176,7 +182,7 @@ async function loadSubjects() {
                     <div style="margin-top: 10px;">
                         <ion-item fill="outline" style="--border-radius: 8px; --background: transparent;">
                             <ion-label position="stacked" style="color: var(--ion-color-primary);">Select Year</ion-label>
-                            <ion-select id="yr-${sub.id}" interface="popover" placeholder="Select Year" style="color: var(--ion-text-color);">
+                            <ion-select id="yr-${sub.id}" interface="popover" value="${savedYear}" placeholder="Select Year" style="color: var(--ion-text-color);">
                                 ${yearsOptions}
                             </ion-select>
                         </ion-item>
@@ -235,14 +241,21 @@ window.goToInstructions = function() {
     for (let card of selectedCards) {
         const id = card.id.replace('card-', '');
         const courseCodeForAlert = subjectsData.find(s => s.id == id)?.code || "this course";
-        if(!document.getElementById(`yr-${id}`).value) {
+        const selectedYear = document.getElementById(`yr-${id}`).value;
+        
+        if(!selectedYear) {
             showGenericModal("Notice", `Please select a year for ${courseCodeForAlert} from the dropdown.`);
             return;
         }
+        
+        // --- SAVE PREFERENCES FOR NEXT TIME ---
+        localStorage.setItem(`sp_pref_type_${id}`, document.getElementById(`type-${id}`).value);
+        localStorage.setItem(`sp_pref_limit_${id}`, document.getElementById(`qc-${id}`).value);
+        localStorage.setItem(`sp_pref_year_${id}`, selectedYear);
     }
+    
     switchView('view-instructions');
 }
-
 window.handleBackFromInstructions = function() {
     if (isFastPass) window.location.replace(`course-details.html?id=${fpCourseId}`);
     else switchView('view-selection');
@@ -293,9 +306,11 @@ async function startExam() {
     const authUser = JSON.parse(localStorage.getItem('abupq_logged_in_user'));
 
     try {
-        const [settingsRes, subRes] = await Promise.all([
+        // 1. Add the new table query to Promise.all
+        const [settingsRes, subRes, attemptRes] = await Promise.all([
             _sb.from('app_settings').select('payment_active').single(),
-            _sb.from('profiles').select('subscription_end').eq('id', authUser.id).maybeSingle()
+            _sb.from('profiles').select('subscription_end').eq('id', authUser.id).maybeSingle(),
+            _sb.from('sp_free_attempts').select('last_attempt_time').eq('user_id', authUser.id).maybeSingle()
         ]);
 
         let isSwitchActive = settingsRes.data?.payment_active ?? true;
@@ -304,6 +319,31 @@ async function startExam() {
             if (new Date(subRes.data.subscription_end) > new Date()) isPremium = true;
         }
         isFreeUser = (isSwitchActive && !isPremium);
+
+        // 2. Extract the last attempt timestamp
+        if (attemptRes.data?.last_attempt_time) {
+            lastAttemptTimestamp = new Date(attemptRes.data.last_attempt_time).getTime();
+        }
+
+        // 3. --- 1-HOUR COOLDOWN GUARD ---
+        if (isFreeUser) {
+            const now = Date.now();
+            const diffSec = Math.floor((now - lastAttemptTimestamp) / 1000);
+            
+            if (lastAttemptTimestamp > 0 && diffSec < 3600) {
+                const minLeft = Math.ceil((3600 - diffSec) / 60);
+                hideGlobalLoading();
+                showGenericModal("Anti-Spam Cooldown", `Free practice limit reached. Please wait ${minLeft} minutes before starting another session, or activate Scholars Prep for unlimited CBT access.`);
+                return; // Stop exam from starting
+            }
+            
+            // 4. Log the new attempt to the database
+            _sb.from('sp_free_attempts')
+               .upsert({ user_id: authUser.id, last_attempt_time: new Date().toISOString() })
+               .then(({error}) => { if(error) console.error("Failed to log free attempt:", error); });
+            
+            lastAttemptTimestamp = Date.now();
+        }
 
         let isFirst = true;
 

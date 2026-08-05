@@ -20,6 +20,7 @@ let activeCourse = null;
 let activePhase = null; 
 let cbtData = { questions: [], answers: [], flags: [], currentQ: 0, duration: 0 };
 let timerId = null;
+let lastAttemptTimestamp = 0;
 
 // The missing function that caused the CBT engine crash
 function shuffleArray(array) {
@@ -75,16 +76,22 @@ function showModal(title, msg, onOk = null, showCancel = true) {
     document.getElementById('genericModal').style.display = 'flex';
 }
 
-// --- 2. INITIALIZATION ---
 async function checkPremiumStatus() {
-    const [settingsRes, subRes] = await Promise.all([
+    const [settingsRes, subRes, attemptRes] = await Promise.all([
         _sb.from('app_settings').select('payment_active').single(),
-        _sb.from('profiles').select('subscription_end').eq('id', authUser.id).maybeSingle()
+        _sb.from('profiles').select('subscription_end').eq('id', authUser.id).maybeSingle(),
+        _sb.from('mock_free_attempts').select('last_attempt_time').eq('user_id', authUser.id).maybeSingle()
     ]);
+    
     let isSwitchActive = settingsRes.data?.payment_active ?? true;
     let isPremium = false;
     if (subRes.data?.subscription_end && new Date(subRes.data.subscription_end) > new Date()) isPremium = true;
     isFreeUser = (isSwitchActive && !isPremium);
+
+    // Store the last attempt timestamp if it exists
+    if (attemptRes.data?.last_attempt_time) {
+        lastAttemptTimestamp = new Date(attemptRes.data.last_attempt_time).getTime();
+    }
 }
 
 async function initializeSystem() {
@@ -140,6 +147,7 @@ async function loadSetupPage() {
             const code = c.course_code;
             const cSetting = settingsRes.data?.find(s => s.course_code === code);
             const credits = cSetting ? cSetting.credit_units : 2;
+            const prefMode = localStorage.getItem(`pref_mode_${code}`) || 'test';
 
             let yearsHTML = '<ion-select-option value="random">Random</ion-select-option>';
             if (yearMap[code] && yearMap[code].size > 0) {
@@ -158,13 +166,14 @@ async function loadSetupPage() {
                         <ion-select class="yr-select" value="random">${yearsHTML}</ion-select>
                     </ion-item>
                     <ion-item fill="outline" style="--border-radius:8px; flex:1; --background:transparent;">
-                        <ion-label position="stacked">Type</ion-label>
-                        <ion-select class="mod-select" value="both">
-                            <ion-select-option value="test">Test Only</ion-select-option>
-                            <ion-select-option value="exam">Exam Only</ion-select-option>
-                            <ion-select-option value="both">Test & Exam</ion-select-option>
-                        </ion-select>
-                    </ion-item>
+            <ion-label position="stacked">Type</ion-label>
+            <!-- 2. Inject the preference variable here -->
+            <ion-select class="mod-select" value="${prefMode}">
+                <ion-select-option value="test">Test Only</ion-select-option>
+                <ion-select-option value="exam">Exam Only</ion-select-option>
+                <ion-select-option value="both">Test & Exam</ion-select-option>
+            </ion-select>
+        </ion-item>
                 </div>
             </div>`;
         });
@@ -184,6 +193,7 @@ window.generateSession = async function() {
     document.querySelectorAll('#setupListContainer .subject-card').forEach(card => {
         const code = card.getAttribute('data-code');
         const mode = card.querySelector('.mod-select').value;
+        localStorage.setItem(`pref_mode_${code}`, mode);
         payload.push({
             session_id: globalSessionId,
             user_id: authUser.id,
@@ -286,6 +296,20 @@ function fixMathText(text) {
 }
 
 window.preparePhase = async function(code, phase) {
+    if (isFreeUser) {
+        const now = Date.now();
+        const diffSec = Math.floor((now - lastAttemptTimestamp) / 1000);
+        
+        if (lastAttemptTimestamp > 0 && diffSec < 3600) {
+            const minLeft = Math.ceil((3600 - diffSec) / 60);
+            showModal("Anti-Spam Cooldown", `Free practice limit reached. Please wait <b>${minLeft} minutes</b> before starting another session, or activate Scholars Prep for unlimited CBT access.`, null, false);
+            return; 
+        }
+    }
+
+    activeCourse = code;
+    activePhase = phase;
+    showLoading(true, "Fetching Course Data...");
     activeCourse = code;
     activePhase = phase;
     showLoading(true, "Fetching Course Data...");
@@ -300,7 +324,8 @@ window.preparePhase = async function(code, phase) {
         const rowData = hubData.find(r => r.course_code === code);
         const table = phase === 'test' ? 'ss_test_questions' : 'ss_exam_questions';
         
-        let query = _sb.from(table).select('*').eq('course_code', code);
+        
+let query = _sb.from(table).select('*').eq('course_id', settings.id);
         if (rowData.year !== 'random') query = query.eq('year', rowData.year);
         
         let { data: qData, error } = await query;
@@ -326,6 +351,7 @@ window.preparePhase = async function(code, phase) {
         document.getElementById('instPhaseName').innerText = phase === 'test' ? 'Continuous Assessment (Test)' : 'Examination';
         document.getElementById('instQCount').innerText = cbtData.questions.length;
         document.getElementById('instTime').innerText = `${durationMins} Minutes`;
+        document.getElementById('activeCourseBadge').innerText = code;
 
         switchView('view-instructions');
     } catch (err) { 
@@ -336,6 +362,15 @@ window.preparePhase = async function(code, phase) {
 };
 
 window.beginExam = function() {
+    // LOG THE FREE ATTEMPT TO THE NEW TABLE
+    if (isFreeUser) {
+        _sb.from('mock_free_attempts')
+           .upsert({ user_id: authUser.id, last_attempt_time: new Date().toISOString() })
+           .then(({error}) => { if(error) console.error("Failed to log free attempt:", error); });
+        
+        lastAttemptTimestamp = Date.now();
+    }
+
     switchView('view-exam');
     renderCbtGrid();
     renderCbtQuestion();

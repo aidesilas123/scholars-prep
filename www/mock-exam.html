@@ -121,6 +121,7 @@
     <div id="view-setup" class="cbt-view active">
       <ion-header class="ion-no-border"><ion-toolbar style="--background:var(--page-bg);"><ion-buttons slot="start"><ion-button color="primary" onclick="window.location.replace('dashboard.html')"><ion-icon name="arrow-back-outline" style="font-size:24px;"></ion-icon></ion-button></ion-buttons><ion-title style="font-weight: 800;">Mock Setup</ion-title></ion-toolbar></ion-header>
       <ion-content class="ion-padding" style="--background:var(--page-bg);">
+        
         <div style="background: rgba(234, 179, 8, 0.15); border-radius: 10px; padding: 12px; margin-bottom: 20px; color: #b45309; font-size: 13px;">
             <ion-icon name="information-circle-outline" style="vertical-align: middle;"></ion-icon> Only courses saved to your Dashboard appear here. To add or drop courses, check your Dashboard.
         </div>
@@ -180,6 +181,9 @@
     <div id="view-exam" class="cbt-view">
       <ion-header class="ion-no-border" style="background: var(--ion-color-primary);"><ion-toolbar style="--background: transparent; color: white;"><ion-buttons slot="start"><ion-button style="font-weight: bold; font-size: 13px;" onclick="promptSubmit()">Quit</ion-button></ion-buttons><ion-title style="text-align:center; font-family: monospace; font-size: 20px; font-weight:bold;" id="timerDisplay">00:00:00</ion-title><ion-buttons slot="end"><ion-button color="danger" fill="solid" style="margin-right: 10px; font-weight: bold; --border-radius: 6px;" onclick="promptSubmit()">Submit</ion-button></ion-buttons></ion-toolbar></ion-header>
       <ion-content class="ion-padding" style="--background:var(--page-bg);">
+        <div style="margin-bottom: 12px;">
+        <span id="activeCourseBadge" style="background: var(--ion-color-primary); color: white; padding: 6px 18px; border-radius: 20px; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-block;"></span>
+    </div>
         <div class="qwrap">
           <aside class="qnav">
             <div style="display:flex; gap:10px; margin-bottom:10px;">

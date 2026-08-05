@@ -39,6 +39,23 @@
     header {
   padding-top: max(env(safe-area-inset-top), 10px);
 }
+.custom-toast {
+  position: fixed;
+  top: 80px; /* Positions it just below the header */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(4, 73, 8, 0.85); /* Semi-transparent primary green */
+  color: white;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
     
     .section-title { font-weight: 800; font-size: 16px; color: var(--ion-text-color); margin: 20px 0 10px 10px; }
   </style>
@@ -50,8 +67,10 @@
       <ion-header class="ion-no-border" style="background: var(--background);">
         <ion-toolbar style="--background: transparent; padding-top: 5px;">
           <ion-buttons slot="start">
-            <ion-back-button default-href="dashboard.html" color="primary"></ion-back-button>
-          </ion-buttons>
+  <ion-button fill="clear" color="primary" onclick="window.location.replace('dashboard.html')">
+    <ion-icon name="arrow-back-outline" style="font-size: 24px;"></ion-icon>
+  </ion-button>
+</ion-buttons>
           <ion-title style="font-weight: 800; font-size: 16px;">Choose Your Courses</ion-title>
           <ion-buttons slot="end">
             <ion-button color="primary" style="font-weight: bold;" onclick="saveCoursesAndExit()">Done</ion-button>
@@ -79,6 +98,7 @@
       </ion-content>
     </div>
   </ion-app>
+  <div id="toast" class="custom-toast">Course added</div>
 
   <script defer src="manage-courses.js"></script>
 </body>

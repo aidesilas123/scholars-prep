@@ -39,24 +39,39 @@ window.addEventListener('popstate', (e) => {
 // --- DATA CRUNCHING LOGIC ---
 async function fetchLeaderboard() {
     try {
-        // Fetch ALL completed sessions and course settings
-        const [historyRes, settingsRes, profilesRes] = await Promise.all([
+        // 1. Fetch ALL required tables concurrently, including user_final_results
+        const [historyRes, settingsRes, profilesRes, finalResultsRes] = await Promise.all([
             _sb.from('mock_sessions').select('session_id, user_id, course_code, mode, test_score, exam_score').eq('is_active', false),
             _sb.from('course_settings').select('course_code, credit_units'),
-            _sb.from('profiles').select('id, full_name') // Fetch user names securely
+            _sb.from('profiles').select('id, full_name'),
+            _sb.from('user_final_results').select('auth_id, course_code, gpa') // New Fetch for CPA
         ]);
 
         if (historyRes.error) throw historyRes.error;
         const data = historyRes.data;
         const settings = settingsRes.data;
         const profiles = profilesRes.data || [];
+        const finalResults = finalResultsRes.data || [];
 
         if (!data || data.length === 0) {
             document.getElementById('emptyState').style.display = 'block';
             return;
         }
 
-        // STEP 1: Group by session_id to calculate the GPA for EVERY session
+        // 2. Calculate actual CPA per user from user_final_results
+        const userCPAData = {};
+        finalResults.forEach(row => {
+            const uid = row.auth_id;
+            const credits = settings?.find(s => s.course_code === row.course_code)?.credit_units || 2;
+            const courseGpa = parseFloat(row.gpa) || 0;
+            
+            if (!userCPAData[uid]) userCPAData[uid] = { totalPoints: 0, totalCredits: 0 };
+            
+            userCPAData[uid].totalPoints += (courseGpa * credits);
+            userCPAData[uid].totalCredits += credits;
+        });
+
+        // 3. Group by session_id to calculate the GPA for EVERY session
         const sessionGPAs = {};
         data.forEach(row => {
             if (!sessionGPAs[row.session_id]) {
@@ -96,34 +111,39 @@ async function fetchLeaderboard() {
             });
         });
 
-        // STEP 2: Group by user to find their MAX GPA
+        // 4. Group by user to find their MAX GPA
         Object.values(sessionGPAs).forEach(session => {
             const finalGPA = session.totalCredits > 0 ? (session.totalQualityPoints / session.totalCredits) : 0.00;
             const uId = session.user_id;
 
             if (!bestSessionsData[uId] || finalGPA > bestSessionsData[uId].gpa) {
-                // Attach the profile name if available, otherwise fallback to "Student"
                 const userProfile = profiles.find(p => p.id === uId);
                 const rawName = userProfile ? userProfile.full_name : 'Student';
                 
-                // Capitalize first letters securely
                 let displayName = rawName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
                 displayName = displayName.replace(/\b\w/g, l => l.toUpperCase()); 
                 if (displayName.length > 15) displayName = displayName.substring(0, 15) + '...';
 
+                // Resolve CPA
+                const calculatedCPA = userCPAData[uId] && userCPAData[uId].totalCredits > 0 
+                    ? (userCPAData[uId].totalPoints / userCPAData[uId].totalCredits) 
+                    : 0.00;
+
                 bestSessionsData[uId] = {
                     gpa: finalGPA,
+                    cpa: calculatedCPA, // Map the CPA here
                     displayName: displayName,
                     courses: session.courses
                 };
             }
         });
 
-        // STEP 3: Convert to Array, Sort Descending, and Limit to Top 20
+        // 5. Convert to Array, Sort Descending by Mock GPA, and Limit to Top 20
         const leaderboardArray = Object.keys(bestSessionsData).map(uId => ({
             userId: uId,
             name: bestSessionsData[uId].displayName,
-            gpa: bestSessionsData[uId].gpa
+            gpa: bestSessionsData[uId].gpa,
+            cpa: bestSessionsData[uId].cpa
         }))
         .sort((a, b) => b.gpa - a.gpa)
         .slice(0, 20);
@@ -154,6 +174,7 @@ function renderLeaderboard(rankedUsers) {
         const isMeClass = (user.userId === authUser.id) ? 'is-me' : '';
         const initial = user.name.charAt(0).toUpperCase() || 'S';
         const displayGPA = user.gpa.toFixed(2);
+        const displayCPA = user.cpa > 0 ? user.cpa.toFixed(2) : '--'; // Fallback if no final results exist
 
         container.innerHTML += `
         <div class="rank-card ${rankClass} ${isMeClass}" onclick="openCompetitorTranscript('${user.userId}')">
@@ -167,7 +188,10 @@ function renderLeaderboard(rankedUsers) {
             </div>
             <div class="score-box">
                 <div class="score-val">${displayGPA}</div>
-                <div class="score-total">GPA</div>
+                <div class="score-total">Mock GPA</div>
+                <div style="font-size: 11px; font-weight: bold; color: var(--ion-color-primary); margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--table-border);">
+                    CPA: ${displayCPA}
+                </div>
             </div>
         </div>`;
     });
