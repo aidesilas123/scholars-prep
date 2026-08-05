@@ -325,7 +325,11 @@ window.preparePhase = async function(code, phase) {
         const table = phase === 'test' ? 'ss_test_questions' : 'ss_exam_questions';
         
         
-let query = _sb.from(table).select('*').eq('course_id', settings.id);
+// Fetch the integer ID from ss_courses using the text code
+const { data: courseObj } = await _sb.from('ss_courses').select('id').eq('code', code).single();
+
+// Query using the correct integer ID
+let query = _sb.from(table).select('*').eq('course_id', courseObj.id);
         if (rowData.year !== 'random') query = query.eq('year', rowData.year);
         
         let { data: qData, error } = await query;

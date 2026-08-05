@@ -91,7 +91,6 @@ async function fetchCourseInfo() {
 }
 
 async function fetchAvailableYears() {
-    // Fetching ss_test_questions using the exact table name and course_id
     const [testRes, examRes] = await Promise.all([
         supabaseClient.from('ss_test_questions').select('year').eq('course_id', currentCourseId),
         supabaseClient.from('ss_exam_questions').select('year').eq('course_id', currentCourseId)
@@ -120,17 +119,19 @@ async function fetchAvailableYears() {
             yearDropdown.innerHTML += `<ion-select-option value="${year}">${year}</ion-select-option>`;
         });
         
-        // Restore last selected using the ID
-        const savedYear = localStorage.getItem(`sp_last_year_${currentCourseId}`);
-        const savedType = localStorage.getItem(`sp_last_type_${currentCourseId}`);
+        // --- DEFAULT INJECTIONS ---
+        // Fetch saved prefs, but default to 2025 and test if none exist
+        const savedYear = localStorage.getItem(`sp_last_year_${currentCourseId}`) || '2025';
+        const savedType = localStorage.getItem(`sp_last_type_${currentCourseId}`) || 'test';
 
-        if (savedYear && sortedYears.includes(Number(savedYear))) {
+        // Check if the requested year actually exists in the database for this course
+        if (sortedYears.includes(Number(savedYear))) {
             yearDropdown.value = savedYear;
         } else {
-            yearDropdown.value = sortedYears[0];
+            yearDropdown.value = sortedYears[0]; // fallback to latest year available
         }
 
-        if (savedType && typeDropdown) {
+        if (typeDropdown) {
             typeDropdown.value = savedType;
         }
     }
