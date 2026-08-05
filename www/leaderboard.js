@@ -54,56 +54,72 @@ async function fetchLeaderboard() {
             return;
         }
 
-        // 2. Group the courses by User ID
-        const groupedUsers = {};
+        // 2. Group the database rows by session_id FIRST
+        const sessions = {};
         
         results.forEach(row => {
-            const uid = row.auth_id;
+            const sid = row.session_id;
             
-            if (!groupedUsers[uid]) {
-                const userObj = users.find(u => u.id === uid);
-                let displayName = userObj && userObj.full_name ? userObj.full_name : 'Student';
-                
-                // Format the name nicely
-                displayName = displayName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-                displayName = displayName.replace(/\b\w/g, l => l.toUpperCase()); 
-                if (displayName.length > 15) displayName = displayName.substring(0, 15) + '...';
-
-                groupedUsers[uid] = {
-                    userId: uid,
-                    name: displayName,
+            if (!sessions[sid]) {
+                sessions[sid] = {
+                    sessionId: sid,
+                    userId: row.auth_id,
                     courses: [],
                     sumGpa: 0,
                     totalScoreSum: 0
                 };
             }
 
-            // Push the course directly as it comes from the DB
-            groupedUsers[uid].courses.push({
+            sessions[sid].courses.push({
                 code: row.course_code,
                 testScore: row.test_score !== null ? row.test_score : '-',
                 examScore: row.exam_score !== null ? row.exam_score : '-',
                 total: `${row.total_score}/100`,
-                grade: row.grade, 
+                grade: row.grade,
                 gpa: row.gpa
             });
 
-            // Tally up values for sorting purposes
-            groupedUsers[uid].sumGpa += parseFloat(row.gpa) || 0;
-            groupedUsers[uid].totalScoreSum += parseInt(row.total_score) || 0;
+            // Tally up values for this specific session
+            sessions[sid].sumGpa += parseFloat(row.gpa) || 0;
+            sessions[sid].totalScoreSum += parseInt(row.total_score) || 0;
         });
 
-        // 3. Map to array, determine overall GPA, sort, and slice Top 10
-        const leaderboardArray = Object.values(groupedUsers).map(user => {
-            // Average the GPA from all their rows for the leaderboard display
-            const overallGpa = user.courses.length > 0 ? (user.sumGpa / user.courses.length) : 0;
-            user.finalGpa = overallGpa; // Save for the transcript modal
-            
+        // 3. Group by User ID to find their single BEST session
+        const bestUserSessions = {};
+
+        Object.values(sessions).forEach(session => {
+            const uid = session.userId;
+            // Calculate the overall GPA for this specific session
+            const sessionGpa = session.courses.length > 0 ? (session.sumGpa / session.courses.length) : 0;
+
+            // If the user isn't tracked yet, OR if this session's GPA beats their previous best
+            if (!bestUserSessions[uid] || sessionGpa > bestUserSessions[uid].finalGpa) {
+                
+                const userObj = users.find(u => u.id === uid);
+                let displayName = userObj && userObj.full_name ? userObj.full_name : 'Student';
+                
+                displayName = displayName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+                displayName = displayName.replace(/\b\w/g, l => l.toUpperCase()); 
+                if (displayName.length > 15) displayName = displayName.substring(0, 15) + '...';
+
+                // Save ONLY this winning session to the user
+                bestUserSessions[uid] = {
+                    userId: uid,
+                    name: displayName,
+                    finalGpa: sessionGpa,
+                    tieBreaker: session.totalScoreSum,
+                    courses: session.courses // Only courses from this specific session_id
+                };
+            }
+        });
+
+        // 4. Map to array, sort, and slice Top 10
+        const leaderboardArray = Object.values(bestUserSessions).map(user => {
             return {
                 userId: user.userId,
                 name: user.name,
-                gpa: overallGpa,
-                tieBreaker: user.totalScoreSum
+                gpa: user.finalGpa,
+                tieBreaker: user.tieBreaker
             };
         })
         .sort((a, b) => {
@@ -112,7 +128,7 @@ async function fetchLeaderboard() {
         })
         .slice(0, 10); // Fetch only 10 highest GPAs
 
-        bestSessionsData = groupedUsers; // Store globally for clicking into transcripts
+        bestSessionsData = bestUserSessions; // Store globally for clicking into transcripts
         renderLeaderboard(leaderboardArray);
 
     } catch (err) {
